@@ -50,10 +50,10 @@ extensions = [
 # Add mappings
 # https://kevin.burke.dev/kevin/sphinx-interlinks/
 intersphinx_mapping = {
-    'python': ('http://docs.python.org/3', None),
+    'python': ('https://docs.python.org/3', None),
     'torch': ('https://pytorch.org/docs/master/', None),  # https://github.com/pytorch/fairseq/blob/adb5b9c71f7ef4fe2f258e0da102d819ab9920ef/docs/conf.py#L131
     'torchvision': ('https://pytorch.org/docs/master/', None),
-    'nibabel': ('http://nipy.org/nibabel/', None),
+    'nibabel': ('https://nipy.org/nibabel/', None),
 }
 
 # Add any paths that contain templates here, relative to this directory.
@@ -95,7 +95,9 @@ html_theme = 'sphinx_rtd_theme'
 # further.  For a list of options available for each theme, see the
 # documentation.
 #
-# html_theme_options = {}
+html_theme_options = {
+    'navigation_depth': 3,
+}
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
