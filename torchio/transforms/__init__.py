@@ -31,3 +31,4 @@ from .preprocessing import HistogramStandardization
 from .preprocessing import Rescale, RescaleIntensity
 from .preprocessing import CropOrPad, CenterCropOrPad
 from .preprocessing.intensity.histogram_standardization import train as train_histogram
+from .preprocessing import ApplyMask
