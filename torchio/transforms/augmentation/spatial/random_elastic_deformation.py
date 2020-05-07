@@ -235,6 +235,21 @@ class RandomElasticDeformation(RandomTransform):
         sample.add_transform(self, random_parameters_dict)
         return sample
 
+    def apply_given_transform(self, sample: Subject, bspline_params) -> dict:
+        for image_dict in sample.get_images(intensity_only=False):
+            if image_dict[TYPE] == LABEL:
+                interpolation = Interpolation.NEAREST
+            else:
+                interpolation = self.interpolation
+            image_dict[DATA] = self.apply_bspline_transform(
+                image_dict[DATA],
+                image_dict[AFFINE],
+                bspline_params,
+                interpolation,
+            )
+        return sample
+
+
     def apply_bspline_transform(
             self,
             tensor: torch.Tensor,
