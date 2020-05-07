@@ -8,11 +8,13 @@ from typing import (
 )
 from torch.utils.data import Dataset
 from ..utils import get_stem
-from ..torchio import DATA, AFFINE, TYPE, PATH, STEM, TypePath
+from ..torchio import DATA, AFFINE, TYPE, PATH, STEM, TypePath, LABEL
 from .image import Image
 from .io import write_image
 from .subject import Subject
 import torch
+
+from utils_file import gfile, get_parent_path
 
 class ImagesDataset(Dataset):
     """Base TorchIO dataset.
@@ -100,9 +102,13 @@ class ImagesDataset(Dataset):
             check_nans: bool = True,
             save_to_dir = None,
             load_from_dir = None,
+            add_to_load = None,
+            add_to_load_regexp = None,
             load_image_data: bool = True,
             ):
         self.load_from_dir = load_from_dir
+        self.add_to_load = add_to_load
+        self.add_to_load_regexp = add_to_load_regexp
         if not load_from_dir:
             self._parse_subjects_list(subjects)
         self.subjects = subjects
@@ -122,6 +128,22 @@ class ImagesDataset(Dataset):
 
         if self.load_from_dir:
             sample = torch.load(self.subjects[index])
+            if self.add_to_load is not None:
+                ii = sample.get_images()
+                image_path = ii[0]['path']
+                image_add = gfile(get_parent_path(image_path), self.add_to_load_regexp)[0]
+                #print('adding image {} to {}'.format(image_add,self.add_to_load))
+                ss = Subject(image = Image(image_add, LABEL))
+                sss = self._get_sample_dict_from_subject(ss)
+                hh = sample.history
+                for hhh in hh:
+                    if 'RandomElasticDeformation' in hhh[0]:
+                        from torchio.transforms import RandomElasticDeformation
+                        num_cp =  hhh[1]['coarse_grid'].shape[1]
+                        rr = RandomElasticDeformation(num_control_points=num_cp)
+                        sss = rr.apply_given_transform(sss, hhh[1]['coarse_grid'])
+
+                sample[self.add_to_load] = sss['image']
         else:
             subject = self.subjects[index]
             sample = self._get_sample_dict_from_subject(subject)
