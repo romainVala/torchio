@@ -54,6 +54,7 @@ res, extra_info = pd.DataFrame(), dict()
 suj_type='suj'
 if suj_type=='suj':
     suj = [ Subject(image=Image('/data/romain/data_exemple/suj_150423/mT1w_1mm.nii', INTENSITY)), ]
+    suj = [ Subject(image=Image('/data/romain/data_exemple/s_S02_t1_mpr_sag_1iso_p2.nii.gz', INTENSITY)), ]
 else:
     suj = [ Subject(image=Image('/data/romain/data_exemple/suj_150423/mask_brain.nii', INTENSITY)), ]
 
@@ -247,7 +248,7 @@ dico_params = {"maxDisp": (1, 6),  "maxRot": (1, 6),    "noiseBasePars": (5, 20,
                "suddenFrequency": (2, 6, 0.5),  "suddenMagnitude": (1, 6),
                "verbose": True, "keep_original": True, "compare_to_original": True, "oversampling_pct":0,
                "preserve_center_pct":0.01}
-dico_params = {"maxDisp": (10, 10),  "maxRot": (0, 0),    "noiseBasePars": (5, 20, 0.8),
+dico_params = {"maxDisp": (6,6),  "maxRot": (6, 6),    "noiseBasePars": (5, 20, 0.8),
                "swallowFrequency": (2, 6, 0),  "swallowMagnitude": (3, 6),
                "suddenFrequency": (2, 6, 0),  "suddenMagnitude": (3, 6),
                "verbose": False, "keep_original": True, "proba_to_augment": 1,
@@ -261,7 +262,7 @@ dataset = ImagesDataset(suj, transform=t)
 dirpath = ['/data/romain/data_exemple/motion_correct/'];
 s1 = dataset[0]
 s2 = dataset[0]
-fout = dirpath[0] + 'mot_trans2'
+fout = dirpath[0] + 'suj_mot'
 
 fit_pars = t.fitpars
 fig = plt.figure(); plt.plot(fit_pars.T); plt.savefig(fout + '.png');plt.close(fig)
@@ -269,7 +270,7 @@ fig = plt.figure(); plt.plot(fit_pars.T); plt.savefig(fout + '.png');plt.close(f
 dataset.save_sample(s1, dict(image=fout + '.nii'))
 s1['image']['data'] = s1['image']['data_cor']
 dataset.save_sample(s1, dict(image=fout + '_corr.nii'))
-
+img1, img2 = s1['image']['data'].unsqueeze(0), s1['image_orig']['data'].unsqueeze(0)
 
 res = pd.DataFrame()
 dirpath = ['/data/romain/data_exemple/motion_random_preserve01/'];
