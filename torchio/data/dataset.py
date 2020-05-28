@@ -8,7 +8,7 @@ from typing import (
 )
 from torch.utils.data import Dataset
 from ..utils import get_stem
-from ..torchio import DATA, AFFINE, TYPE, PATH, STEM, TypePath, LABEL
+from ..torchio import DATA, AFFINE, TYPE, PATH, STEM, TypePath, LABEL, INTENSITY
 from .image import Image
 from .io import write_image
 from .subject import Subject
@@ -129,21 +129,37 @@ class ImagesDataset(Dataset):
         if self.load_from_dir:
             sample = torch.load(self.subjects[index])
             if self.add_to_load is not None:
+                #print('adding sample with {}'.format(self.add_to_load))
                 ii = sample.get_images()
                 image_path = ii[0]['path']
-                image_add = gfile(get_parent_path(image_path), self.add_to_load_regexp)[0]
-                #print('adding image {} to {}'.format(image_add,self.add_to_load))
-                ss = Subject(image = Image(image_add, LABEL))
-                sss = self._get_sample_dict_from_subject(ss)
-                hh = sample.history
-                for hhh in hh:
-                    if 'RandomElasticDeformation' in hhh[0]:
-                        from torchio.transforms import RandomElasticDeformation
-                        num_cp =  hhh[1]['coarse_grid'].shape[1]
-                        rr = RandomElasticDeformation(num_control_points=num_cp)
-                        sss = rr.apply_given_transform(sss, hhh[1]['coarse_grid'])
+                if 'original' in self.add_to_load:
+                    #print('adding original sample')
+                    ss = Subject(image = Image(image_path, INTENSITY))
+                    sss = self._get_sample_dict_from_subject(ss)
+                    sample['original'] = sss['image']
 
-                sample[self.add_to_load] = sss['image']
+                    if self.add_to_load=='original': #trick to use both orig and mask :hmmm....
+                        add_to_load = None
+                    else:
+                        add_to_load = self.add_to_load[8:]
+                else:
+                    add_to_load = self.add_to_load
+
+                if add_to_load is not None:
+                    image_add = gfile(get_parent_path(image_path), self.add_to_load_regexp)[0]
+                    #print('adding image {} to {}'.format(image_add,self.add_to_load))
+                    ss = Subject(image = Image(image_add, LABEL))
+                    sss = self._get_sample_dict_from_subject(ss)
+                    hh = sample.history
+                    for hhh in hh:
+                        if 'RandomElasticDeformation' in hhh[0]:
+                            from torchio.transforms import RandomElasticDeformation
+                            num_cp =  hhh[1]['coarse_grid'].shape[1]
+                            rr = RandomElasticDeformation(num_control_points=num_cp)
+                            sss = rr.apply_given_transform(sss, hhh[1]['coarse_grid'])
+
+                    sample[add_to_load] = sss['image']
+            #print('sample with keys {}'.format(sample.keys()))
         else:
             subject = self.subjects[index]
             sample = self._get_sample_dict_from_subject(subject)
