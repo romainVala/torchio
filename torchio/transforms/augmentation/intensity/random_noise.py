@@ -27,10 +27,12 @@ class RandomNoise(RandomTransform):
             std: Union[float, Tuple[float, float]] = (0, 0.25),
             p: float = 1,
             seed: Optional[int] = None,
+            abs_after_noise: bool = False,
             ):
         super().__init__(p=p, seed=seed)
         self.mean_range = self.parse_range(mean, 'mean')
         self.std_range = self.parse_range(std, 'std')
+        self.abs_after_noise = abs_after_noise
         if any(np.array(self.std_range) < 0):
             message = (
                 'Standard deviation std must greater or equal to zero,'
@@ -44,7 +46,7 @@ class RandomNoise(RandomTransform):
             mean, std = self.get_params(self.mean_range, self.std_range)
             random_parameters_dict = {'std': std}
             random_parameters_images_dict[image_name] = random_parameters_dict
-            image_dict[DATA] = add_noise(image_dict[DATA], mean, std)
+            image_dict[DATA] = add_noise(image_dict[DATA], mean, std, self.abs_after_noise)
         sample.add_transform(self, random_parameters_images_dict)
         return sample
 
@@ -58,7 +60,10 @@ class RandomNoise(RandomTransform):
         return mean, std
 
 
-def add_noise(tensor: torch.Tensor, mean: float, std: float) -> torch.Tensor:
+def add_noise(tensor: torch.Tensor, mean: float, std: float, abs_after_noise: bool ) -> torch.Tensor:
     noise = torch.FloatTensor(*tensor.shape).normal_(mean=mean, std=std)
     tensor = tensor + noise
+    if abs_after_noise:
+        tensor = torch.abs(tensor)
+
     return tensor
