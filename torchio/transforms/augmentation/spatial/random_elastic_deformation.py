@@ -46,9 +46,7 @@ class RandomElasticDeformation(RandomTransform):
             border of the coarse grid will also be set to ``0``.
             If ``2``, displacement of control points at the border of the image
             will also be set to ``0``.
-        image_interpolation: Value in
-            :py:class:`torchio.transforms.interpolation.Interpolation` (see
-            :ref:`Interpolation`).
+        image_interpolation: See :ref:`Interpolation`.
             Note that this is the interpolation used to compute voxel
             intensities when resampling using the dense displacement field.
             The value of the dense displacement at each voxel is always
@@ -114,7 +112,7 @@ class RandomElasticDeformation(RandomTransform):
             num_control_points: Union[int, Tuple[int, int, int]] = 7,
             max_displacement: Union[float, Tuple[float, float, float]] = 7.5,
             locked_borders: int = 2,
-            image_interpolation: Interpolation = Interpolation.LINEAR,
+            image_interpolation: str = 'linear',
             p: float = 1,
             seed: Optional[int] = None,
             ):
@@ -220,18 +218,20 @@ class RandomElasticDeformation(RandomTransform):
             self.max_displacement,
             self.num_locked_borders,
         )
-        random_parameters_dict = {'coarse_grid': bspline_params}
-        for image_dict in sample.get_images(intensity_only=False):
-            if image_dict[TYPE] == LABEL:
+        for image in sample.get_images(intensity_only=False):
+            if image[TYPE] == LABEL:
                 interpolation = Interpolation.NEAREST
             else:
                 interpolation = self.interpolation
-            image_dict[DATA] = self.apply_bspline_transform(
-                image_dict[DATA],
-                image_dict[AFFINE],
+            if image.is_2d():
+                bspline_params[..., -3] = 0  # no displacement in LR axis
+            image[DATA] = self.apply_bspline_transform(
+                image[DATA],
+                image[AFFINE],
                 bspline_params,
                 interpolation,
             )
+        random_parameters_dict = {'coarse_grid': bspline_params}
         sample.add_transform(self, random_parameters_dict)
         return sample
 

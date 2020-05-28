@@ -1,6 +1,6 @@
-import warnings
 import numpy as np
 import torchio
+from torchio import Interpolation
 from torchio.transforms import RandomElasticDeformation
 from ...utils import TorchioTestCase
 
@@ -18,8 +18,8 @@ class TestRandomElasticDeformation(TorchioTestCase):
         fixtures = 2916.7192, 2955.1265, 2950
         transformed = transform(self.sample)
         for key, fixture in zip(keys, fixtures):
-            sample_data = self.sample[key][torchio.DATA].numpy()
-            transformed_data = transformed[key][torchio.DATA].numpy()
+            sample_data = self.sample[key].numpy()
+            transformed_data = transformed[key].numpy()
             transformed_total = transformed_data.sum()
             # Make sure that intensities have changed
             assert not np.array_equal(sample_data, transformed_data)
@@ -37,9 +37,9 @@ class TestRandomElasticDeformation(TorchioTestCase):
         with self.assertRaises(TypeError):
             RandomElasticDeformation(image_interpolation=1)
 
-    def test_inputs_interpolation_string(self):
-        with self.assertRaises(TypeError):
-            RandomElasticDeformation(image_interpolation='linear')
+    def test_inputs_interpolation(self):
+        with self.assertWarns(FutureWarning):
+            RandomElasticDeformation(image_interpolation=Interpolation.LINEAR)
 
     def test_num_control_points_noint(self):
         with self.assertRaises(ValueError):

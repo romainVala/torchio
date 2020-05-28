@@ -48,7 +48,7 @@ class RandomAffine(RandomTransform):
         ...     degrees=(10),
         ...     isotropic=False,
         ...     default_pad_value='otsu',
-        ...     image_interpolation=Interpolation.BSPLINE,
+        ...     image_interpolation='bspline',
         ... )
         >>> transformed = transform(sample)
 
@@ -63,7 +63,7 @@ class RandomAffine(RandomTransform):
             degrees: TypeRangeFloat = 10,
             isotropic: bool = False,
             default_pad_value: Union[str, float] = 'otsu',
-            image_interpolation: Interpolation = Interpolation.LINEAR,
+            image_interpolation: str = 'linear',
             p: float = 1,
             seed: Optional[int] = None,
             ):
@@ -88,22 +88,25 @@ class RandomAffine(RandomTransform):
         sample.check_consistent_shape()
         scaling_params, rotation_params = self.get_params(
             self.scales, self.degrees, self.isotropic)
+        for image in sample.get_images(intensity_only=False):
+            if image[TYPE] == LABEL:
+                interpolation = Interpolation.NEAREST
+            else:
+                interpolation = self.interpolation
+            if image.is_2d():
+                scaling_params[0] = 1
+                rotation_params[-2:] = 0
+            image[DATA] = self.apply_affine_transform(
+                image[DATA],
+                image[AFFINE],
+                scaling_params.tolist(),
+                rotation_params.tolist(),
+                interpolation,
+            )
         random_parameters_dict = {
             'scaling': scaling_params,
             'rotation': rotation_params,
         }
-        for image_dict in sample.get_images(intensity_only=False):
-            if image_dict[TYPE] == LABEL:
-                interpolation = Interpolation.NEAREST
-            else:
-                interpolation = self.interpolation
-            image_dict[DATA] = self.apply_affine_transform(
-                image_dict[DATA],
-                image_dict[AFFINE],
-                scaling_params,
-                rotation_params,
-                interpolation,
-            )
         sample.add_transform(self, random_parameters_dict)
         return sample
 
@@ -112,12 +115,12 @@ class RandomAffine(RandomTransform):
             scales: Tuple[float, float],
             degrees: Tuple[float, float],
             isotropic: bool,
-            ) -> Tuple[List[float], List[float]]:
+            ) -> Tuple[np.ndarray, np.ndarray]:
         scaling_params = torch.FloatTensor(3).uniform_(*scales)
         if isotropic:
             scaling_params.fill_(scaling_params[0])
         rotation_params = torch.FloatTensor(3).uniform_(*degrees)
-        return scaling_params.tolist(), rotation_params.tolist()
+        return scaling_params.numpy(), rotation_params.numpy()
 
     @staticmethod
     def get_scaling_transform(

@@ -25,30 +25,30 @@ class ImagesDataset(Dataset):
     It can be used with a :class:`torch.utils.data.DataLoader`
     for efficient loading and augmentation.
     It receives a list of subjects, where each subject is an instance of
-    :class:`~torchio.data.subject.Subject` containing instances of
-    :class:`~torchio.data.image.Image`.
+    :py:class:`~torchio.data.subject.Subject` containing instances of
+    :py:class:`~torchio.data.image.Image`.
     The file format must be compatible with `NiBabel`_ or `SimpleITK`_ readers.
     It can also be a directory containing
     `DICOM`_ files.
 
-    Indexing an :class:`~torchio.data.dataset.ImagesDataset` returns a
+    Indexing an :py:class:`~torchio.data.dataset.ImagesDataset` returns a
     Python dictionary with the data corresponding to the queried subject.
     The keys in the dictionary are the names of the images passed to that
     subject, for example ``('t1', 't2', 'segmentation')``.
 
-    The value corresponding to each image name is another dictionary
-    ``image_dict`` with information about the image.
-    The data is stored in ``image_dict[torchio.IMAGE]``,
+    The value corresponding to each image name is typically an instance of
+    :py:class:`~torchio.data.image.Image` with information about the image.
+    The data is stored in ``image[torchio.DATA]`` (or just ``image.data``),
     and the corresponding `affine matrix`_
-    is in ``image_dict[torchio.AFFINE]``:
+    is in ``image[torchio.AFFINE]`` (or just ``image.affine``):
 
         >>> sample = images_dataset[0]
         >>> sample.keys()
         dict_keys(['image', 'label'])
-        >>> image_dict = sample['image']
-        >>> image_dict[torchio.DATA].shape
+        >>> image = sample['image']  # or sample.image
+        >>> image.shape
         torch.Size([1, 176, 256, 256])
-        >>> image_dict[torchio.AFFINE]
+        >>> image.affine
         array([[   0.03,    1.13,   -0.08,  -88.54],
                [   0.06,    0.08,    0.95, -129.66],
                [   1.18,   -0.06,   -0.11,  -67.15],
@@ -72,12 +72,17 @@ class ImagesDataset(Dataset):
         >>> from torchio.transforms import RescaleIntensity, RandomAffine, Compose
         >>> subject_a = Subject([
         ...     t1=Image('~/Dropbox/MRI/t1.nrrd', torchio.INTENSITY),
+        ...     t2=Image('~/Dropbox/MRI/t2.mha', torchio.INTENSITY),
         ...     label=Image('~/Dropbox/MRI/t1_seg.nii.gz', torchio.LABEL),
+        ...     age=31,
+        ...     name='Fernando Perez',
         >>> ])
         >>> subject_b = Subject(
         ...     t1=Image('/tmp/colin27_t1_tal_lin.nii.gz', torchio.INTENSITY),
         ...     t2=Image('/tmp/colin27_t2_tal_lin.nii', torchio.INTENSITY),
         ...     label=Image('/tmp/colin27_seg1.nii.gz', torchio.LABEL),
+        ...     age=56,
+        ...     name='Colin Holmes',
         ... )
         >>> subjects_list = [subject_a, subject_b]
         >>> transforms = [
@@ -185,9 +190,10 @@ class ImagesDataset(Dataset):
         subject_sample = copy.deepcopy(subject)
         for (key, value) in subject.items():
             if isinstance(value, Image):
-                subject_sample[key] = self._get_image_dict_from_image(value)
-            else:
-                subject_sample[key] = value
+                value = self._get_image_dict_from_image(value)
+            subject_sample[key] = value
+        # This allows me to do e.g. subject.t1
+        subject_sample.__dict__.update(subject_sample)
         subject_sample.is_sample = True
         return subject_sample
 
@@ -220,6 +226,7 @@ class ImagesDataset(Dataset):
         }
         image = copy.deepcopy(image)
         image.update(image_dict)
+        image.__dict__.update(image_dict)  # this allows me to do image.data
         image.is_sample = True
         return image
 
@@ -264,7 +271,7 @@ class ImagesDataset(Dataset):
             output_paths_dict: Dict[str, TypePath],
             ) -> None:
         for key, output_path in output_paths_dict.items():
-            tensor = sample[key][DATA][0]  # remove channels dim
+            tensor = sample[key][DATA].squeeze()  # assume 2D if (1, 1, H, W)
             affine = sample[key][AFFINE]
             write_image(tensor, affine, output_path)
 

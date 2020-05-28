@@ -46,14 +46,15 @@ class RandomMotion(RandomTransform):
         p: Probability that this transform will be applied.
         seed: See :py:class:`~torchio.transforms.augmentation.RandomTransform`.
 
-    .. warning:: Large numbers of movements lead to longer execution times.
+    .. warning:: Large numbers of movements lead to longer execution times for
+        3D images.
     """
     def __init__(
             self,
             degrees: float = 10,
             translation: float = 10,  # in mm
             num_transforms: int = 2,
-            image_interpolation: Interpolation = Interpolation.LINEAR,
+            image_interpolation: str = 'linear',
             p: float = 1,
             seed: Optional[int] = None,
             ):
@@ -61,15 +62,18 @@ class RandomMotion(RandomTransform):
         self.degrees_range = self.parse_degrees(degrees)
         self.translation_range = self.parse_translation(translation)
         self.num_transforms = num_transforms
-        self.image_interpolation = image_interpolation
+        self.image_interpolation = self.parse_interpolation(image_interpolation)
 
     def apply_transform(self, sample: Subject) -> dict:
         random_parameters_images_dict = {}
         for image_name, image_dict in sample.get_images_dict().items():
+            data = image_dict[DATA]
+            is_2d = data.shape[-3] == 1
             params = self.get_params(
                 self.degrees_range,
                 self.translation_range,
                 self.num_transforms,
+                is_2d=is_2d,
             )
             times_params, degrees_params, translation_params = params
             random_parameters_dict = {
@@ -78,7 +82,7 @@ class RandomMotion(RandomTransform):
                 'translation': translation_params,
             }
             random_parameters_images_dict[image_name] = random_parameters_dict
-            if (image_dict[DATA][0] < -0.1).any():
+            if (data[0] < -0.1).any():
                 # I use -0.1 instead of 0 because Python was warning me when
                 # a value in a voxel was -7.191084e-35
                 # There must be a better way of solving this
@@ -91,7 +95,7 @@ class RandomMotion(RandomTransform):
                 )
                 warnings.warn(message)
             image = self.nib_to_sitk(
-                image_dict[DATA][0],
+                data[0],
                 image_dict[AFFINE],
             )
             transforms = self.get_rigid_transforms(
@@ -99,15 +103,15 @@ class RandomMotion(RandomTransform):
                 translation_params,
                 image,
             )
-            image_dict[DATA] = self.add_artifact(
+            data = self.add_artifact(
                 image,
                 transforms,
                 times_params,
                 self.image_interpolation,
             )
             # Add channels dimension
-            image_dict[DATA] = image_dict[DATA][np.newaxis, ...]
-            image_dict[DATA] = torch.from_numpy(image_dict[DATA])
+            data = data[np.newaxis, ...]
+            image_dict[DATA] = torch.from_numpy(data)
         sample.add_transform(self, random_parameters_images_dict)
         return sample
 
@@ -117,12 +121,16 @@ class RandomMotion(RandomTransform):
             translation_range: Tuple[float, float],
             num_transforms: int,
             perturbation: float = 0.3,
+            is_2d: bool = False,
             ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, bool]:
         # If perturbation is 0, time intervals between movements are constant
         degrees_params = get_params_array(
             degrees_range, num_transforms)
         translation_params = get_params_array(
             translation_range, num_transforms)
+        if is_2d:  # imagine sagittal (1, A, S)
+            degrees_params[:, -2:] = 0  # rotate around R axis only
+            translation_params[:, 0] = 0  # translate in AS plane only
         step = 1 / (num_transforms + 1)
         times = torch.arange(0, 1, step)[1:]
         noise = torch.FloatTensor(num_transforms)

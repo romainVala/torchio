@@ -47,10 +47,10 @@ class RandomSpike(RandomTransform):
                 self.num_spikes_range,
                 self.intensity_range,
             )
-            num_spikes_param, intensity_param = params
+            spikes_positions_param, intensity_param = params
             random_parameters_dict = {
                 'intensity': intensity_param,
-                'num_spikes': num_spikes_param,
+                'spikes_positions': spikes_positions_param,
             }
             random_parameters_images_dict[image_name] = random_parameters_dict
             if (image_dict[DATA][0] < -0.1).any():
@@ -71,7 +71,7 @@ class RandomSpike(RandomTransform):
             )
             image_dict[DATA] = self.add_artifact(
                 image,
-                num_spikes_param,
+                spikes_positions_param,
                 intensity_param,
             )
             # Add channels dimension
@@ -88,23 +88,23 @@ class RandomSpike(RandomTransform):
         ns_min, ns_max = num_spikes_range
         num_spikes_param = torch.randint(ns_min, ns_max + 1, (1,)).item()
         intensity_param = torch.FloatTensor(1).uniform_(*intensity_range)
-        return num_spikes_param, intensity_param.item()
+        spikes_positions = torch.rand(num_spikes_param).numpy()
+        return spikes_positions, intensity_param.item()
 
     def add_artifact(
             self,
             image: sitk.Image,
-            num_spikes: int,
+            spikes_positions: np.ndarray,
             intensity_factor: float,
             ):
         array = sitk.GetArrayViewFromImage(image).transpose()
-        spectrum = self.fourier_transform(array).ravel(order='F')
-        for _ in range(num_spikes):
-            index = torch.randint(0, len(spectrum), (1,))
-            spectrum[index] = spectrum.max() * factor
-            spectrum[index-1] = spectrum.max() * factor*0.8
-            spectrum[index+1] = spectrum.max() * factor*0.8
-            #spectrum[index - 2] = spectrum.max() * factor * 0.4
-            #spectrum[index + 2] = spectrum.max() * factor * 0.4
-        spectrum = spectrum.reshape(array.shape, order='F')
+        spectrum = self.fourier_transform(array).ravel()
+        indices = (spikes_positions * len(spectrum)).round().astype(int)
+        for index in indices:
+            spectrum[index] = spectrum.max() * intensity_factor
+            #spectrum[index-1] = spectrum.max() * intensity_factor*0.8
+            #spectrum[index+1] = spectrum.max() * intensity_factor*0.8
+
+        spectrum = spectrum.reshape(array.shape)
         result = self.inv_fourier_transform(spectrum)
         return result.astype(np.float32)
