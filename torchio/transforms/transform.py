@@ -140,7 +140,7 @@ class Transform(ABC):
         return output
 
     @staticmethod
-    def _oversample(data, perc_oversampling=.10):
+    def _oversample(data, perc_oversampling=.10, padding_mode='constant', padding_normal=None):
         """
         Oversamples data with a zero padding. Adds perc_oversampling percentage values
         :param data (ndarray): array to pad
@@ -153,7 +153,40 @@ class Transform(ABC):
         #print("Pading at {}".format(to_pad))
         left_pad = np.floor(to_pad / 2).astype(int)
         right_pad = np.ceil(to_pad / 2).astype(int)
-        return np.pad(data, list(zip(left_pad, right_pad)))
+
+        if padding_mode == "random.normal":
+            pad_data = np.pad(data, list(zip(left_pad, right_pad)))
+            data_shape = list(pad_data.shape)
+
+            #replace the padding values by random nois
+            size_pad = left_pad[0] * data_shape[1] * data_shape[2]
+            pad_data[:left_pad[0],:, :] = np.random.normal(padding_normal[0], padding_normal[1],
+                                                           size_pad).reshape( left_pad[0], data_shape[1], data_shape[2])
+
+            size_pad = left_pad[1] * data_shape[0] * data_shape[2]
+            pad_data[:, :left_pad[1], :] = np.random.normal(padding_normal[0], padding_normal[1],
+                                                           size_pad).reshape(data_shape[0], left_pad[1], data_shape[2])
+
+            size_pad = left_pad[2] * data_shape[1] * data_shape[0]
+            pad_data[:, :, :left_pad[2]] = np.random.normal(padding_normal[0], padding_normal[1],
+                                                           size_pad).reshape( data_shape[0], data_shape[1], left_pad[2])
+
+            size_pad = right_pad[0] * data_shape[1] * data_shape[2]
+            pad_data[-right_pad[0]:,:, :] = np.random.normal(padding_normal[0], padding_normal[1],
+                                                           size_pad).reshape( right_pad[0], data_shape[1], data_shape[2])
+
+            size_pad = right_pad[1] * data_shape[0] * data_shape[2]
+            pad_data[:, -right_pad[1]:, :] = np.random.normal(padding_normal[0], padding_normal[1],
+                                                           size_pad).reshape(data_shape[0], right_pad[1], data_shape[2])
+
+            size_pad = right_pad[2] * data_shape[1] * data_shape[0]
+            pad_data[:, :, -right_pad[0]:] = np.random.normal(padding_normal[0], padding_normal[1],
+                                                           size_pad).reshape( data_shape[0], data_shape[1], right_pad[2])
+            #print('PADING with random nois {} {}'.format(padding_normal[0], padding_normal[1]))
+        else:
+            pad_data = np.pad(data, list(zip(left_pad, right_pad)), mode=padding_mode)
+
+        return pad_data
 
     @staticmethod
     def crop_volume(data, cropping_shape):
