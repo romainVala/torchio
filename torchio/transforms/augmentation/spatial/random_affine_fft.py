@@ -4,7 +4,7 @@ import torch
 import numpy as np
 import SimpleITK as sitk
 from ....data.subject import Subject
-from ....torchio import LABEL, DATA, AFFINE, TYPE, TypeRangeFloat
+from ....torchio import LABEL, DATA, AFFINE, TYPE, TypeRangeFloat, STEM
 from .. import Interpolation, get_sitk_interpolator
 from .. import RandomTransform
 
@@ -34,7 +34,6 @@ class RandomAffineFFT(RandomTransform):
             If ``'otsu'``, the fill value is the mean of the values at the
             border that lie under an
             `Otsu threshold <https://ieeexplore.ieee.org/document/4310076>`_.
-        image_interpolation: See :ref:`Interpolation`.
         p: Probability that this transform will be applied.
         seed: See :py:class:`~torchio.transforms.augmentation.RandomTransform`.
 
@@ -48,7 +47,6 @@ class RandomAffineFFT(RandomTransform):
         ...     degrees=(10),
         ...     isotropic=False,
         ...     default_pad_value='otsu',
-        ...     image_interpolation=Interpolation.BSPLINE,
         ... )
         >>> transformed = transform(sample)
 
@@ -63,7 +61,6 @@ class RandomAffineFFT(RandomTransform):
             degrees: TypeRangeFloat = 10,
             isotropic: bool = False,
             default_pad_value: Union[str, float] = 'otsu',
-            image_interpolation: Interpolation = Interpolation.LINEAR,
             p: float = 1,
             seed: Optional[int] = None,
             oversampling_pct = 0.2,
@@ -73,7 +70,6 @@ class RandomAffineFFT(RandomTransform):
         self.degrees = self.parse_degrees(degrees)
         self.isotropic = isotropic
         self.default_pad_value = self.parse_default_value(default_pad_value)
-        self.interpolation = self.parse_interpolation(image_interpolation)
         self.oversampling_pct = oversampling_pct
 
     @staticmethod
@@ -93,16 +89,22 @@ class RandomAffineFFT(RandomTransform):
         random_parameters_dict = {
             'scaling': scaling_params,
             'rotation': rotation_params,
+            'oversampling' : self.oversampling_pct
         }
         for image_dict in sample.get_images(intensity_only=False):
             if image_dict[TYPE] == LABEL:
-                interpolation = Interpolation.NEAREST
+                padding_values = [0]
             else:
-                interpolation = self.interpolation
+                padding_values = estimate_borders_mean_std(image_dict[DATA].numpy())
+                add_name = image_dict[STEM] if image_dict[STEM] is not None else '' #because when called directly with tensor, it is not define hmmm...
+                random_parameters_dict['noise_mean_' + add_name] = padding_values[0]
+                random_parameters_dict['noise_std_' + add_name] = padding_values[1]
+
             image_dict[DATA] = self.apply_affine_transform(
                 image_dict[DATA],
                 scaling_params,
                 rotation_params,
+                padding_values,
             )
         sample.add_transform(self, random_parameters_dict)
         return sample
@@ -124,6 +126,7 @@ class RandomAffineFFT(RandomTransform):
             tensor: torch.Tensor,
             scaling_params: List[float],
             rotation_params: List[float],
+            padding_values: List[float]
             ) -> torch.Tensor:
         assert tensor.ndim == 4
         assert len(tensor) == 1
@@ -137,8 +140,13 @@ class RandomAffineFFT(RandomTransform):
         noise_mean, nois_std = estimate_borders_mean_std(image.numpy())
         original_image_shape = image.shape
         if self.oversampling_pct > 0.0:
-            image = self._oversample(image, self.oversampling_pct, padding_mode='random.normal',
-                                     padding_normal=(noise_mean, nois_std))
+            if len(padding_values) == 2: #mean std
+                padd_mode = 'random.normal'
+            else:
+                padd_mode = 'constant'
+
+            image = self._oversample(image, self.oversampling_pct, padding_mode=padd_mode,
+                                     padding_normal=padding_values)
 
         #im_freq_domain = (np.fft.fftshift(np.fft.fftn(np.fft.ifftshift(image)))).astype(np.complex128)
         im_freq_domain = self._fft_im(image)
