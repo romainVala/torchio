@@ -46,6 +46,8 @@ class Transform(ABC):
         if isinstance(data, torch.Tensor):
             is_tensor = True
             sample = self.parse_tensor(data)
+        elif isinstance(data, list):
+            return [self.__call__(ii) for ii in data]
         else:
             is_tensor = False
             sample = data
