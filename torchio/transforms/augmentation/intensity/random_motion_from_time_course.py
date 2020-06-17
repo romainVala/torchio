@@ -111,8 +111,12 @@ class RandomMotionFromTimeCourse(RandomTransform):
             if self.simulate_displacement:
                 fitpars_interp = self._simulate_random_trajectory()
                 sample[image_name]['simu_param'] = self.simu_param
+                # histo_param={}
+                # histo_param[image_name] = self.simu_param
+                # sample.add_transform(self, histo_param)
+
             else:
-                if self.fitpars.ndim==4:
+                if self.fitpars.ndim == 4:
                     fitpars_interp = self.fitpars
                 else:
                     fitpars_interp = self._interpolate_space_timing(self.fitpars)
@@ -191,6 +195,12 @@ class RandomMotionFromTimeCourse(RandomTransform):
                 metrics['rmse_DispTF'] = calculate_mean_RMSE_displacment(ff_interp,original_image)
 
                 sample[image_name]['metrics'] = metrics
+
+                #histo_param={}
+                histo_param = metrics
+                if self.simulate_displacement:
+                    histo_param.update(self.simu_param) #because add_transform erase previous add ...
+                sample.add_transform(self, histo_param)
 
             if self.res_dir is not None:
                 self.save_to_dir(image_dict)
