@@ -6,6 +6,7 @@ from .lambda_transform import Lambda
 
 # Augmentation
 from .augmentation.composition import OneOf
+from .augmentation.composition import ListOf
 from .augmentation.composition import Compose
 
 from .augmentation.spatial import RandomFlip

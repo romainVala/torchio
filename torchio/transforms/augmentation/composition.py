@@ -106,3 +106,39 @@ class OneOf(RandomTransform):
             raise ValueError(message)
         for transform, probability in transforms_dict.items():
             transforms_dict[transform] = probability / probabilities.sum()
+
+class ListOf(RandomTransform):
+    """Apply sequencly all of the given transforms.
+
+    Args:
+        transforms: A list  of
+            :py:class:`~torchio.transforms.transform.Transform`
+        p : probabilities
+
+    Example:
+        >>> import torchio
+        >>> ixi = torchio.datasets.ixi.IXITiny('ixi', download=True)
+        >>> sample = ixi[0]
+        >>> transforms_dict = []
+        ...     torchio.transforms.RandomAffine(),
+        ...     torchio.transforms.RandomElasticDeformation(),
+        ... ]
+        >>> transform = torchio.transforms.OneOf(transforms_dict)
+
+    """
+    def __init__(
+            self,
+            transforms: Sequence[Transform],
+            p: float = 1,
+            ):
+        super().__init__(p=p)
+        self.transforms_list = transforms
+
+    def apply_transform(self, sample: Subject):
+
+        transformed_list=[]
+        for tt in self.transforms_list:
+            transformed_list.append(tt(sample))
+
+        return transformed_list
+
