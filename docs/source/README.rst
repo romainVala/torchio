@@ -2,15 +2,17 @@
 TorchIO
 #######
 
-|PyPI-downloads| |PyPI-version| |Google-Colab-notebook| |Docs-status| |Build-status|
-|Coverage-codecov| |Coverage-coveralls| |Code-Quality| |Code-Maintainability| |Slack|
+|PyPI-downloads| |PyPI-version| |Google-Colab-notebook| |Docs-status|
+|Build-status| |Coverage-codecov| |Coverage-coveralls| |Code-Quality|
+|Code-Maintainability| |Slack|
 
 
 TorchIO is a Python library for efficient loading, preprocessing, augmentation
 and patch-based sampling of 3D medical images in deep learning,
 following the design of PyTorch.
 
-It includes multiple intensity and spatial transforms for data augmentation and preprocessing.
+It includes multiple intensity and spatial transforms for data augmentation and
+preprocessing.
 These transforms include typical computer vision operations
 such as random affine transformations and also domain-specific ones such as
 simulation of intensity artifacts due to
@@ -19,6 +21,9 @@ or `k-space motion artifacts <http://proceedings.mlr.press/v102/shaw19a.html>`_.
 
 The code is available on `GitHub <https://github.com/fepegar/torchio>`_.
 
+See :doc:`Getting started <quickstart>` for installation instructions and a
+usage overview.
+
 
 Credits
 *******
@@ -26,11 +31,10 @@ Credits
 ..
   From https://stackoverflow.com/a/10766650/3956024
 
-If you use this library for your research, please cite the paper: |paper-url|_.
+If you use this library for your research,
+please cite our preprint: |paper-url|_.
 
 .. _paper-url: https://arxiv.org/abs/2003.04696
-
-This package has been greatly inspired by `NiftyNet <https://niftynet.io/>`_.
 
 .. |paper-url| replace:: Pérez-García et al., 2020, *TorchIO: a Python library for efficient loading, preprocessing, augmentation and patch-based sampling of medical images in deep learning*
 
@@ -47,6 +51,8 @@ BibTeX:
       archivePrefix={arXiv},
       primaryClass={eess.IV}
    }
+
+This package has been greatly inspired by `NiftyNet <https://niftynet.io/>`_.
 
 
 .. |PyPI-downloads| image:: https://img.shields.io/pypi/dm/torchio.svg?label=PyPI%20downloads&logo=python&logoColor=white

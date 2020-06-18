@@ -1,3 +1,5 @@
+.. _Getting started:
+
 ###############
 Getting started
 ###############
@@ -19,8 +21,8 @@ To upgrade to the latest published version, use::
 
 
 
-Hello World
-===========
+Hello, World!
+=============
 
 This example shows the basic usage of TorchIO, where an
 :py:class:`~torchio.data.dataset.ImagesDataset` is passed to

@@ -2,6 +2,7 @@
 .. include:: README.rst
 
 .. toctree::
+   :caption: Contents
    :maxdepth: 2
 
    quickstart.rst
@@ -10,6 +11,7 @@
    transforms/transforms.rst
    datasets.rst
    cli.rst
+   slicer.rst
 
 
 See also
