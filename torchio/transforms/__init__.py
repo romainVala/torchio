@@ -20,6 +20,7 @@ from .augmentation.intensity import RandomNoise
 from .augmentation.intensity import RandomSpike
 from .augmentation.intensity import RandomMotion
 from .augmentation.intensity import RandomMotionFromTimeCourse
+from .augmentation.intensity import TorchRandomMotionFromTimeCourse
 from .augmentation.intensity import RandomGhosting
 from .augmentation.intensity import RandomBiasField
 
