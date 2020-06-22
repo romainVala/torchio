@@ -12,12 +12,13 @@ with open('HISTORY.rst') as history_file:
 
 requirements = [
     'Click>=7.0',
+    'humanize',
     'nibabel',
     'numpy',
     'Python-Deprecated',
     'scipy',
     'SimpleITK',
-    'torch>=1.2',  # for IterableDataset
+    'torch>=1.1',
     'torchvision',
     'tqdm',
 ]
@@ -57,6 +58,6 @@ setup(
     test_suite='tests',
     tests_require=[],
     url='https://github.com/fepegar/torchio',
-    version='0.16.25',
+    version='0.16.30',
     zip_safe=False,
 )
