@@ -56,13 +56,7 @@ class Transform(ABC):
         else:
             is_tensor = is_array = False
             sample = data
-        """
-        if self.keep_original:
-            for image_name, image_dict in sample.get_images_dict().items():
-                new_key = image_name + '_orig'
-                if new_key not in sample:
-                    sample[new_key] = dict(data=image_dict['data'], type='original', affine=image_dict['affine'])
-        """
+
         if self.verbose:
             start = time.time()
 

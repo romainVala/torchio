@@ -5,10 +5,6 @@ from torchio.metrics.ssim import functional_ssim
 from torch.nn import MSELoss, L1Loss
 from nibabel.viewers import OrthoSlicer3D as ov
 
-"""
-Verifier composition de trsfms
-"""
-
 t1_path = "/data/romain/HCPdata/suj_100307/T1w_acpc_dc_restore.nii"
 mask_path = "/data/romain/HCPdata/suj_100307/cat12/fill_mask_head.nii.gz"
 dataset = ImagesDataset([
@@ -25,7 +21,7 @@ metrics = {
     "ssim_base": MetricWrapper('SSIM_base', ssim3D)
 }
 
-motion_trsfm = TorchRandomMotionFromTimeCourse(verbose=True, compare_to_original=False, metrics=metrics,
+motion_trsfm = RandomMotionFromTimeCourse(verbose=True, compare_to_original=False, metrics=metrics,
                                           oversampling_pct=0.0)
 
 dataset.set_transform(motion_trsfm)
