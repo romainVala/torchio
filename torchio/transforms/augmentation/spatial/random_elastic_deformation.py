@@ -6,7 +6,7 @@ import numpy as np
 import SimpleITK as sitk
 from ....data.subject import Subject
 from ....utils import to_tuple
-from ....torchio import INTENSITY, DATA, AFFINE, TYPE
+from ....torchio import INTENSITY, LABEL, DATA, AFFINE, TYPE
 from .. import Interpolation, get_sitk_interpolator
 from .. import RandomTransform
 
