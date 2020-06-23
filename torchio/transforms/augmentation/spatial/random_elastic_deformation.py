@@ -6,7 +6,7 @@ import numpy as np
 import SimpleITK as sitk
 from ....data.subject import Subject
 from ....utils import to_tuple
-from ....torchio import INTENSITY, DATA, AFFINE, TYPE
+from ....torchio import INTENSITY, LABEL, DATA, AFFINE, TYPE
 from .. import Interpolation, get_sitk_interpolator
 from .. import RandomTransform
 
@@ -258,7 +258,7 @@ class RandomElasticDeformation(RandomTransform):
             bspline_params: np.ndarray,
             interpolation: Interpolation,
             ) -> torch.Tensor:
-        assert tensor.ndim == 4
+        assert tensor.dim() == 4
         assert len(tensor) == 1
         image = self.nib_to_sitk(tensor[0], affine)
         floating = reference = image

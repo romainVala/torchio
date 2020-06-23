@@ -63,8 +63,7 @@ class RandomNoise(RandomTransform):
 
 def add_noise(tensor: torch.Tensor, mean: float, std: float, abs_after_noise: bool ) -> torch.Tensor:
     noise = torch.FloatTensor(*tensor.shape).normal_(mean=mean, std=std)
-    tensor = tensor + noise
+    tensor += noise
     if abs_after_noise:
         tensor = torch.abs(tensor)
-
     return tensor

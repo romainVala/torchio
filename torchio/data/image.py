@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Any, Dict, Tuple, Optional
 
 import torch
+import humanize
 import numpy as np
 import nibabel as nib
 import SimpleITK as sitk
@@ -32,7 +33,14 @@ class Image(dict):
         type: Type of image, such as :attr:`torchio.INTENSITY` or
             :attr:`torchio.LABEL`. This will be used by the transforms to
             decide whether to apply an operation, or which interpolation to use
-            when resampling.
+            when resampling. For example,
+            `preprocessing <https://torchio.readthedocs.io/transforms/preprocessing.html#intensity>`_
+            and
+            `augmentation <https://torchio.readthedocs.io/transforms/augmentation.html#intensity>`_
+            intensity transforms will only be applied to images with type
+            :attr:`torchio.INTENSITY`. Spatial transforms will be applied to
+            all types, and nearest neighbor interpolation is always used to
+            resample images with type :attr:`torchio.LABEL`.
         tensor: If :attr:`path` is not given, :attr:`tensor` must be a 4D
             :py:class:`torch.Tensor` with dimensions :math:`(C, D, H, W)`,
             where :math:`C` is the number of channels and :math:`D, H, W`
@@ -63,7 +71,8 @@ class Image(dict):
             self._affine = np.eye(4)
         for key in (DATA, AFFINE, TYPE, PATH, STEM):
             if key in kwargs:
-                raise ValueError(f'Key {key} is reserved. Use a different one')
+                message = f'Key "{key}" is reserved. Use a different one'
+                raise ValueError(message)
 
         super().__init__(**kwargs)
         self.path = self._parse_path(path)
@@ -75,6 +84,7 @@ class Image(dict):
             f'shape: {self.shape}',
             f'spacing: {self.get_spacing_string()}',
             f'orientation: {"".join(self.orientation)}+',
+            f'memory: {humanize.naturalsize(self.memory, binary=True)}',
         ]
         properties = '; '.join(properties)
         string = f'{self.__class__.__name__}({properties})'
@@ -104,6 +114,10 @@ class Image(dict):
     def spacing(self):
         _, spacing = get_rotation_and_spacing_from_affine(self.affine)
         return tuple(spacing)
+
+    @property
+    def memory(self):
+        return np.prod(self.shape) * 4  # float32, i.e. 4 bytes per voxel
 
     def get_spacing_string(self):
         strings = [f'{n:.2f}' for n in self.spacing]
