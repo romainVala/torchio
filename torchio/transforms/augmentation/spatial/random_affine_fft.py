@@ -97,8 +97,8 @@ class RandomAffineFFT(RandomTransform):
             else:
                 padding_values = estimate_borders_mean_std(image_dict[DATA].numpy())
                 add_name = image_dict[STEM] if image_dict[STEM] is not None else '' #because when called directly with tensor, it is not define hmmm...
-                random_parameters_dict['noise_mean_' + add_name] = padding_values[0]
-                random_parameters_dict['noise_std_' + add_name] = padding_values[1]
+                random_parameters_dict['noise_mean_' + add_name] = float(padding_values[0])
+                random_parameters_dict['noise_std_' + add_name] = float(padding_values[1])
 
             image_dict[DATA] = self.apply_affine_transform(
                 image_dict[DATA],
