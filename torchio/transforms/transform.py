@@ -31,10 +31,11 @@ class Transform(ABC):
         p: Probability that this transform will be applied.
     """
 
-    def __init__(self, p: float = 1, verbose: bool = False, keep_original=False):
+    def __init__(self, p: float = 1, verbose: bool = False, compare_to_original: bool = False, metrics: dict = None):
         self.probability = self.parse_probability(p)
         self.verbose = verbose
-        self.keep_original = keep_original
+        self.compare_to_original = compare_to_original
+        self.metrics = metrics
 
     def __call__(self, data: Union[Subject, torch.Tensor]):
         """Transform a sample and return the result.
@@ -59,12 +60,6 @@ class Transform(ABC):
             is_tensor = is_array = False
             sample = data
 
-        if self.keep_original:
-            for image_name, image_dict in sample.get_images_dict().items():
-                new_key = image_name + '_orig'
-                if new_key not in sample:
-                    sample[new_key] = dict(data=image_dict['data'], type='original', affine=image_dict['affine'])
-
         if self.verbose:
             start = time.time()
 
@@ -72,11 +67,16 @@ class Transform(ABC):
 
         # If the input is a tensor, it will be deepcopied when calling
         # ImagesDataset.__getitem__
+        orig = sample
         if not is_tensor:
             sample = deepcopy(sample)
 
         with np.errstate(all='raise'):
             transformed = self.apply_transform(sample)
+
+        # Compute the metrics after the transformation
+        if self.compare_to_original and self.metrics:
+            _ = [metric_func(orig, transformed) for metric_func in self.metrics.values()]
 
         if self.verbose:
             duration = time.time() - start

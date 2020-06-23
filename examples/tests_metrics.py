@@ -21,7 +21,7 @@ metrics = {
     "ssim_base": MetricWrapper('SSIM_base', ssim3D)
 }
 
-motion_trsfm = RandomMotionFromTimeCourse(verbose=True, compare_to_original=False, metrics=metrics,
+motion_trsfm = RandomMotionFromTimeCourse(verbose=True, compare_to_original=True, metrics=metrics,
                                           oversampling_pct=0.0)
 
 dataset.set_transform(motion_trsfm)
