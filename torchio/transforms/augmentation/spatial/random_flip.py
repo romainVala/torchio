@@ -25,8 +25,9 @@ class RandomFlip(RandomTransform):
             flip_probability: float = 0.5,
             p: float = 1,
             seed: Optional[int] = None,
+            **kwargs
             ):
-        super().__init__(p=p, seed=seed)
+        super().__init__(p=p, seed=seed, **kwargs)
         self.axes = self.parse_axes(axes)
         self.flip_probability = self.parse_probability(
             flip_probability,

@@ -57,8 +57,9 @@ class RandomMotion(RandomTransform):
             image_interpolation: str = 'linear',
             p: float = 1,
             seed: Optional[int] = None,
+            **kwargs
             ):
-        super().__init__(p=p, seed=seed)
+        super().__init__(p=p, seed=seed, **kwargs)
         self.degrees_range = self.parse_degrees(degrees)
         self.translation_range = self.parse_translation(translation)
         self.num_transforms = num_transforms

@@ -43,7 +43,7 @@ class MotionSimTransform(RandomTransform):
     def __init__(self, std_rotation_angle=0, std_translation=10,
                  corrupt_pct=(15, 20), freq_encoding_dim=(0, 1, 2), preserve_center_pct=0.07,
                  apply_mask=True, nufft=True, proc_scale=-1, num_pieces=8,
-                 mvt_param=None, verbose=False):
+                 mvt_param=None, verbose=False, **kwargs):
         """
         :param image_name (str): key in data dictionary
         :param std_rotation_angle (float) : std of rotations
@@ -58,7 +58,7 @@ class MotionSimTransform(RandomTransform):
        raises ImportError if nufft is true but finufft cannot be imported
         """
 
-        super(MotionSimTransform, self).__init__(verbose=verbose)
+        super(MotionSimTransform, self).__init__(verbose=verbose, **kwargs)
         self.trajectory = None
         self.preserve_center_frequency_pct = preserve_center_pct
         self.freq_encoding_choice = freq_encoding_dim

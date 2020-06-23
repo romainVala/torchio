@@ -115,8 +115,9 @@ class RandomElasticDeformation(RandomTransform):
             image_interpolation: str = 'linear',
             p: float = 1,
             seed: Optional[int] = None,
+            **kwargs
             ):
-        super().__init__(p=p, seed=seed)
+        super().__init__(p=p, seed=seed, **kwargs)
         self._bspline_transformation = None
         self.num_control_points = to_tuple(num_control_points, length=3)
         self.parse_control_points(self.num_control_points)

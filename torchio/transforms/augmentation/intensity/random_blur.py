@@ -25,8 +25,9 @@ class RandomBlur(RandomTransform):
             std: Union[float, Tuple[float, float]] = (0, 4),
             p: float = 1,
             seed: Optional[int] = None,
+            **kwargs
             ):
-        super().__init__(p=p, seed=seed)
+        super().__init__(p=p, seed=seed, **kwargs)
         self.std_range = self.parse_range(std, 'std')
         if any(np.array(self.std_range) < 0):
             message = (

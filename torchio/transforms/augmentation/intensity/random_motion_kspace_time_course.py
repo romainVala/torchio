@@ -16,8 +16,8 @@ from typing import Optional, List
 class RandomMotionTimeCourseAffines(RandomTransform):
 
     def __init__(self, fitpars, time_points=[0.0, 0.25, 0.5, 0.75], pct_oversampling=0.0, combine_axis=2,
-                 seed=None, verbose=False):
-        super().__init__(seed=seed, verbose=verbose)
+                 seed=None, verbose=False, **kwargs):
+        super().__init__(seed=seed, verbose=verbose, **kwargs)
         self.fitpars = fitpars
         self.time_points = time_points
         self.pct_oversampling = pct_oversampling

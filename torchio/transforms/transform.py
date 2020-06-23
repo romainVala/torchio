@@ -17,6 +17,7 @@ import numpy as np
 import time
 from .interpolation import Interpolation
 
+
 class Transform(ABC):
     """Abstract class for all TorchIO transforms.
 
@@ -29,10 +30,11 @@ class Transform(ABC):
     Args:
         p: Probability that this transform will be applied.
     """
-    def __init__(self, p: float = 1, verbose: bool = False, keep_original=False):
+    def __init__(self, p: float = 1, verbose: bool = False, compare_to_original=False, metrics=None):
         self.probability = self.parse_probability(p)
         self.verbose = verbose
-        self.keep_original = keep_original
+        self.compare_to_original = compare_to_original
+        self.metrics = self._check_metric_dict(metrics)
 
     def __call__(self, data: Union[Subject, torch.Tensor]):
         """Transform a sample and return the result.
@@ -54,21 +56,25 @@ class Transform(ABC):
         else:
             is_tensor = is_array = False
             sample = data
-
+        """
         if self.keep_original:
             for image_name, image_dict in sample.get_images_dict().items():
                 new_key = image_name + '_orig'
                 if new_key not in sample:
                     sample[new_key] = dict(data=image_dict['data'], type='original', affine=image_dict['affine'])
-
+        """
         if self.verbose:
             start = time.time()
 
         self.parse_sample(sample)
         if torch.rand(1).item() > self.probability:
             return sample
-        sample = deepcopy(sample)
-        transformed = self.apply_transform(sample)
+        transformed = deepcopy(sample)
+        transformed = self.apply_transform(transformed)
+        # Compute the metrics after the transformation
+        if self.metrics:
+            _ = [metric_func(sample, transformed) for metric_func in self.metrics.values()]
+
         if self.verbose:
             duration = time.time() - start
             print(f'{self.__class__.__name__}: {duration:.3f} seconds')
@@ -240,6 +246,15 @@ class Transform(ABC):
         slicing = [slice(dim_center - dim_range, dim_center + dim_range)
                    for dim_center, dim_range in zip(vol_centers, dim_ranges)]
         return data[tuple(slicing)]
+
+    @staticmethod
+    def _check_metric_dict(metrics):
+        if metrics is None:
+            return None
+        if not isinstance(metrics, dict):
+            warnings.warn("Specified metrics are not a dict. No metric will be computed")
+            return None
+        return metrics
 
     @property
     def name(self):

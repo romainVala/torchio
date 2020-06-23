@@ -14,8 +14,9 @@ class HistogramEqualize(NormalizationTransform):
             masking_method=None,
             nbins=256,
             verbose=False,
+            **kwargs
             ):
-        super().__init__(masking_method=masking_method, verbose=verbose)
+        super().__init__(masking_method=masking_method, verbose=verbose, **kwargs)
         self.out_min, self.out_max = out_min_max
         self.percentiles = percentiles
         self.nbins = nbins

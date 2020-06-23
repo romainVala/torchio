@@ -39,6 +39,7 @@ class NormalizationTransform(Transform):
             self,
             masking_method: TypeMaskingMethod = None,
             p: float = 1,
+            **kwargs
             ):
         """
         masking_method is used to choose the values used for normalization.
@@ -47,7 +48,7 @@ class NormalizationTransform(Transform):
          - A function: the mask will be computed using the function
          - None: all values are used
         """
-        super().__init__(p=p)
+        super().__init__(p=p, **kwargs)
         self.mask_name = None
         if masking_method is None:
             self.masking_method = self.ones

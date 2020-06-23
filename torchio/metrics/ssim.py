@@ -1,0 +1,122 @@
+import torch
+from .base_metric import Metric
+from .utils import spatial_filter_nd, gauss_kernel_3d
+from ..data import Subject
+from ..torchio import DATA
+
+
+class SSIM3D(Metric):
+
+    def __init__(self, k1=.001, k2=.001, k3=.001, L=None, alpha=1, beta=1, gamma=1, kernel="uniform", sigma=3.0,
+                 truncate=4.0, return_map=False, discard_zeros=False):
+        super(SSIM3D, self).__init__()
+        self.k1 = k1
+        self.k2 = k2
+        self.k3 = k3
+        self.L = L
+        self.alpha = alpha
+        self.beta = beta
+        self.gamma = gamma
+        self.return_map = return_map
+        self.discard_zeros = discard_zeros
+        self.kernel = kernel.lower()
+        if self.kernel == "gaussian":
+            self.sigma = sigma
+            self.truncate = truncate
+        else:
+            self.sigma, self.truncate = None, None
+
+    def apply_metric(self, sample1: Subject, sample2: Subject):
+        common_keys = sample1.keys() & sample2.keys()
+        for sample_key in common_keys:
+            data1 = sample1[sample_key][DATA]
+            data2 = sample2[sample_key][DATA]
+
+            if "metrics" not in sample2[sample_key].keys():
+                sample2[sample_key]["metrics"] = dict()
+            sample2[sample_key]["metrics"]["SSIM"] = functional_ssim(data1, data2, k1=self.k1, k2=self.k2, k3=self.k3,
+                                                    L=self.L, alpha=self.alpha, beta=self.beta, gamma=self.gamma,
+                                                    kernel=self.kernel, sigma=self.sigma, truncate=self.truncate,
+                                                    return_map=self.return_map, discard_zeros=self.discard_zeros)
+
+
+def functional_ssim(x, y, k1=.001, k2=.001, k3=.001, L=None, alpha=1, beta=1, gamma=1, kernel="uniform", sigma=3.0,
+                    truncate=4.0, return_map=False, discard_zeros=False):
+    """
+    Computes the structural similarity between x and y
+    Args:
+        x:
+        y:
+        k1:
+        k2:
+        k3:
+        L:
+        alpha:
+        beta:
+        gamma:
+        kernel:
+        sigma:
+        truncate:
+        return_map:
+        discard_zeros:
+
+    Returns:
+
+    """
+    if not L:
+        L = torch.max(torch.max(x), torch.max(y))
+
+    orig_ndim_x, orig_ndim_y = x.ndim, y.ndim
+    if orig_ndim_x == 4:
+        x = x.unsqueeze(0)
+
+    if orig_ndim_y == 4:
+        y = y.unsqueeze(0)
+
+    if kernel == "gaussian":
+        kernel_params = gauss_kernel_3d(sigma=sigma, truncate=truncate)
+        kernel_params = kernel_params.reshape(1, 1, *kernel_params.shape).float()
+    else:
+        kernel_params = torch.ones((1, 1, 3, 3, 3))
+        kernel_params /= 27
+
+    c1 = (k1 * L) ** 2
+    c2 = (k2 * L) ** 2
+    c3 = (k3 * L) ** 2
+
+    mu_x, mu_y = spatial_filter_nd(x, kernel_params), spatial_filter_nd(y, kernel_params)
+    x_sub, y_sub = x - mu_x, y - mu_y
+    std_x, std_y = spatial_filter_nd(x_sub.pow(2), kernel=kernel_params).sqrt(), \
+                   spatial_filter_nd(y_sub.pow(2), kernel=kernel_params).sqrt()
+    std_xy = spatial_filter_nd(torch.mul(x_sub, y_sub), torch.ones_like(kernel_params))
+    std_xy /= (kernel_params.numel() - 1)
+
+    luminance = (2 * mu_x * mu_y + c1) / (mu_x ** 2 + mu_y ** 2 + c1)
+    contrast = (2 * std_x * std_y + c2) / (std_x ** 2 + std_y ** 2 + c2)
+    structure = (std_xy + c3) / ((std_x * std_y) + c3)
+    #Keep values between 0.0 and 1.0
+    luminance = luminance.clamp(0.0, 1.0)
+    contrast = contrast.clamp(0.0, 1.0)
+    structure = structure.clamp(0.0, 1.0)
+    ssim = luminance ** alpha * contrast ** beta * structure ** gamma
+
+    if not return_map:
+
+        if discard_zeros:
+            non_zero_vals = torch.mul((x > 0.), (y > 0.))
+            luminance = luminance[non_zero_vals]
+            contrast = contrast[non_zero_vals]
+            structure = structure[non_zero_vals]
+            ssim = ssim[non_zero_vals]
+
+        luminance = luminance.mean()
+        contrast = contrast.mean()
+        structure = structure.mean()
+        ssim = ssim.mean()
+
+    return {
+        "luminance": luminance,
+        "contrast": contrast,
+        "structure": structure,
+        "ssim": ssim
+    }

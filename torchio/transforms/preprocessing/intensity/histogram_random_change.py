@@ -9,8 +9,8 @@ class HistogramRandomChange(NormalizationTransform):
     Same thins as HistogramStandardization but the landmarks is a random curve
     """
     def __init__(self, masking_method=None,
-                 nb_point_ini = 50, nb_smooth=5, verbose=False):
-        super().__init__(masking_method=masking_method, verbose=verbose)
+                 nb_point_ini = 50, nb_smooth=5, verbose=False, **kwargs):
+        super().__init__(masking_method=masking_method, verbose=verbose, **kwargs)
         self.nb_point_ini = nb_point_ini
         self.nb_smooth = nb_smooth
 
