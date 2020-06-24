@@ -90,12 +90,10 @@ class ImagesDataset(Dataset):
             self,
             subjects: Sequence[Subject],
             transform: Optional[Callable] = None,
-            check_nans: bool = True,
             save_to_dir = None,
             load_from_dir = None,
             add_to_load = None,
             add_to_load_regexp = None,
-            load_image_data: bool = True,
             ):
         self.load_from_dir = load_from_dir
         self.add_to_load = add_to_load
@@ -105,10 +103,7 @@ class ImagesDataset(Dataset):
         self.subjects = subjects
         self._transform: Optional[Callable]
         self.set_transform(transform)
-        self.check_nans = check_nans
         self.save_to_dir = save_to_dir
-        self._load_image_data: bool
-        self.set_load_image_data(load_image_data)
 
     def __len__(self):
         return len(self.subjects)
@@ -126,7 +121,10 @@ class ImagesDataset(Dataset):
                 if 'original' in self.add_to_load:
                     #print('adding original sample')
                     ss = Subject(image = Image(image_path, INTENSITY))
-                    sss = self._get_sample_dict_from_subject(ss)
+                    # sss = self._get_sample_dict_from_subject(ss)
+                    #sss = copy.deepcopy(ss)
+                    sss = ss
+
                     sample['original'] = sss['image']
 
                     if self.add_to_load=='original': #trick to use both orig and mask :hmmm....
@@ -140,7 +138,9 @@ class ImagesDataset(Dataset):
                     image_add = gfile(get_parent_path(image_path), self.add_to_load_regexp)[0]
                     #print('adding image {} to {}'.format(image_add,self.add_to_load))
                     ss = Subject(image = Image(image_add, LABEL))
-                    sss = self._get_sample_dict_from_subject(ss)
+                    #sss = self._get_sample_dict_from_subject(ss)
+                    #sss = copy.deepcopy(ss)
+                    sss = ss
                     hh = sample.history
                     for hhh in hh:
                         if 'RandomElasticDeformation' in hhh[0]:
