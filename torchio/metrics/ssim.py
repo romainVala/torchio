@@ -1,15 +1,15 @@
 import torch
-from .base_metric import Metric
+from .map_metric import MapMetric
 from .utils import spatial_filter_nd, gauss_kernel_3d
 from ..data import Subject
 from ..torchio import DATA
 
 
-class SSIM3D(Metric):
+class SSIM3D(MapMetric):
 
     def __init__(self, k1=.001, k2=.001, k3=.001, L=None, alpha=1, beta=1, gamma=1, kernel="uniform", sigma=3.0,
-                 truncate=4.0, return_map=False, discard_zeros=False):
-        super(SSIM3D, self).__init__()
+                 truncate=4.0, **kwargs):
+        super(SSIM3D, self).__init__(**kwargs)
         self.k1 = k1
         self.k2 = k2
         self.k3 = k3
@@ -17,8 +17,6 @@ class SSIM3D(Metric):
         self.alpha = alpha
         self.beta = beta
         self.gamma = gamma
-        self.return_map = return_map
-        self.discard_zeros = discard_zeros
         self.kernel = kernel.lower()
         if self.kernel == "gaussian":
             self.sigma = sigma
@@ -29,19 +27,26 @@ class SSIM3D(Metric):
     def apply_metric(self, sample1: Subject, sample2: Subject):
         common_keys = sample1.keys() & sample2.keys()
         for sample_key in common_keys:
+            if sample_key in self.mask_keys:
+                continue
             data1 = sample1[sample_key][DATA]
             data2 = sample2[sample_key][DATA]
 
             if "metrics" not in sample2[sample_key].keys():
                 sample2[sample_key]["metrics"] = dict()
-            sample2[sample_key]["metrics"]["SSIM"] = functional_ssim(data1, data2, k1=self.k1, k2=self.k2, k3=self.k3,
+            computed_metrics = functional_ssim(data1, data2, k1=self.k1, k2=self.k2, k3=self.k3,
                                                     L=self.L, alpha=self.alpha, beta=self.beta, gamma=self.gamma,
                                                     kernel=self.kernel, sigma=self.sigma, truncate=self.truncate,
-                                                    return_map=self.return_map, discard_zeros=self.discard_zeros)
+                                                    return_map=True)
+
+            computed_metrics = {m_name: self._apply_masks_and_averaging(sample=sample2, metric_map=m_map)
+                                for m_name, m_map in computed_metrics.items()}
+            sample2[sample_key]["metrics"]["SSIM"] = computed_metrics
+
 
 
 def functional_ssim(x, y, k1=.001, k2=.001, k3=.001, L=None, alpha=1, beta=1, gamma=1, kernel="uniform", sigma=3.0,
-                    truncate=4.0, return_map=False, discard_zeros=False):
+                    truncate=4.0, return_map=False):
     """
     Computes the structural similarity between x and y
     Args:
@@ -58,7 +63,6 @@ def functional_ssim(x, y, k1=.001, k2=.001, k3=.001, L=None, alpha=1, beta=1, ga
         sigma:
         truncate:
         return_map:
-        discard_zeros:
 
     Returns:
 
@@ -101,13 +105,6 @@ def functional_ssim(x, y, k1=.001, k2=.001, k3=.001, L=None, alpha=1, beta=1, ga
     ssim = luminance ** alpha * contrast ** beta * structure ** gamma
 
     if not return_map:
-
-        if discard_zeros:
-            non_zero_vals = torch.mul((x > 0.), (y > 0.))
-            luminance = luminance[non_zero_vals]
-            contrast = contrast[non_zero_vals]
-            structure = structure[non_zero_vals]
-            ssim = ssim[non_zero_vals]
 
         luminance = luminance.mean()
         contrast = contrast.mean()

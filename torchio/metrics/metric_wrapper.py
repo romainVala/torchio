@@ -23,16 +23,7 @@ class MetricWrapper(Metric):
                 mask_data1, mask_data2 = sample1[self.mask_key][DATA], sample2[self.mask_key][DATA]
                 data1 = torch.mul(data1, mask_data1)
                 data2 = torch.mul(data2, mask_data2)
-            #Apply mask if mask
-            """
-            Calculer la map puis moyenner
-            """
-            """
-            if self.use_mask and self.mask_key is not None:
-                mask_data = sample[self.mask_key][DATA]
-                orig_data = torch.mul(orig_data, mask_data)
-                transformed_data = torch.mul(transformed_data, mask_data)
-            """
+
             #Compute metric
             if "metrics" not in sample2[sample_key].keys():
                 sample2[sample_key]["metrics"] = dict()
