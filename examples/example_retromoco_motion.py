@@ -51,7 +51,7 @@ def corrupt_data_both( x0, sigma= 5, amplitude=20, method='gauss'):
 dt = do_training('/tmp', 'toto')
 res, extra_info = pd.DataFrame(), dict()
 
-suj_type='suj'
+suj_type='brain'#'suj'
 if suj_type=='suj':
     suj = [ Subject(image=Image('/data/romain/data_exemple/suj_150423/mT1w_1mm.nii', INTENSITY)), ]
     suj = [ Subject(image=Image('/data/romain/data_exemple/s_S02_t1_mpr_sag_1iso_p2.nii.gz', INTENSITY)), ]
@@ -63,7 +63,7 @@ dico_params = {    "fitpars": None,  "verbose": True, "displacement_shift":1 , "
                    'freq_encoding_dim':[2]}
 
 disp_str =  'no_shift' # 'center_zero'  'no_shift' #'center_TF'
-disp_str_list = ['center_zero', 'no_shift', 'center_TF']
+disp_str_list = ['center_zero'] # ['no_shift'] #['center_zero', 'no_shift', 'center_TF']
 
 x0=np.hstack((np.arange(90,102,2),np.arange(101,105,1))) #x0=[100]
 x0=np.hstack((np.arange(90,102,2))) #x0=[100]
@@ -75,6 +75,7 @@ x0s = [ np.array([ 10, 20, 30, 40, 50, 60, 70, 80, 90, 95, 96, 97, 98, 99, 100])
         np.array([ 10, 20, 30, 40, 50, 60, 70, 80, 88, 90, 92, 94, 96, 98, 100]) ]
 mvt_types=['step', 'gauss']
 mvt_type, x0 =mvt_types[1], x0s[0]
+x0 = [20, 50, 90, 95, 99];
 
 mvt_axe_str_list = ['transX', 'transY','transZ', 'rotX', 'rotY', 'rotZ']
 mvt_axes = [1]
@@ -84,7 +85,7 @@ if not os.path.exists(out_path): os.mkdir(out_path)
 #plt.ioff()
 #for mvt_type, x0 in zip(mvt_types, x0s):
 for disp_str in disp_str_list:
-    for s in [2]: #[2, 5, 10, 20]: #[1, 2, 3,  5, 7, 10, 12 , 15, 20 ] : # [2,4,6] : #[1, 3 , 5 , 8, 10 , 12, 15, 20 , 25 ]:
+    for s in [2, 5, 10, 20]: #[1, 2, 3,  5, 7, 10, 12 , 15, 20 ] : # [2,4,6] : #[1, 3 , 5 , 8, 10 , 12, 15, 20 , 25 ]:
         for xx in x0:
             if disp_str == 'center_TF': dico_params['displacement_shift'] = 2
             if disp_str == 'center_zero': dico_params['displacement_shift'] = 1
@@ -97,7 +98,7 @@ for disp_str in disp_str_list:
             #dataset = ImagesDataset(suj, transform=Compose((CenterCropOrPad(target_shape=(182, 218, 152)), t)))
             dataset = ImagesDataset(suj, transform=t)
             sample = dataset[0]
-            fout = out_path + '/{}_{}_{}_freq{}_{}'.format(suj_type, mvt_axe_str, mvt_type, xx, disp_str)
+            fout = out_path + '/{}_{}_{}_s{}_freq{}_{}'.format(suj_type, mvt_axe_str, mvt_type, s, xx, disp_str)
             fit_pars = t.fitpars
             fig = plt.figure()
             plt.plot(fit_pars.T)
@@ -109,6 +110,8 @@ for disp_str in disp_str_list:
             res = dt.add_motion_info(sample, res, extra_info=extra_info)
 fres = out_path+'/res_metrics_{}_{}.csv'.format(mvt_axe_str, disp_str)
 res.to_csv(fres)
+
+
 
 res = pd.read_csv('/data/romain/data_exemple/motion_gaussX/res_metrics_transX_center_TF.csv')
 #res = pd.read_csv('/data/romain/data_exemple/motion_gaussX_sigma2/res_metrics_transX_center_TF.csv')
