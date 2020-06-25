@@ -85,14 +85,13 @@ class RandomMotionFromTimeCourse(RandomTransform):
         self.nb_saved = 0
 
     def apply_transform(self, sample):
-        parameters_motion = {}
         for image_name, image_dict in sample.get_images_dict().items():
 
             do_it = np.random.uniform() <= self.proba_to_augment
-
+            """
             parameters_motion['simu_param'] = dict(noisPar=0.0, maxDisp=0.0, maxRot=0.0, swallowFrequency=0.0,
-            swallowMagnitude=[0.0,0.0], suddenFrequency=0.0, suddenMagnitude=[0.0,0.0])
-
+            swallowMagnitude=[0.0, 0.0], suddenFrequency=0.0, suddenMagnitude=[0.0, 0.0])
+            """
             if not do_it:
                 sample[image_name]['motion'] = False
                 return sample
@@ -110,7 +109,7 @@ class RandomMotionFromTimeCourse(RandomTransform):
 
             if self.simulate_displacement:
                 fitpars_interp = self._simulate_random_trajectory()
-                parameters_motion['simu_param'] = self.simu_param
+                #parameters_motion['simu_param'] = self.simu_param
 
             else:
                 if self.fitpars.ndim == 4:
@@ -159,18 +158,7 @@ class RandomMotionFromTimeCourse(RandomTransform):
             if self.res_dir is not None:
                 self.save_to_dir(image_dict)
 
-        metrics = dict()
-        if self.fitpars.ndim == 2:
-            metrics['mean_DispP'] = calculate_mean_Disp_P(self.fitpars)
-            metrics['rmse_Disp'] = calculate_mean_RMSE_displacment(self.fitpars)
-        metrics['mean_DispP_iterp'] = calculate_mean_Disp_P(fitpars_interp)
-        metrics['rmse_Disp_iterp'] = calculate_mean_RMSE_displacment(fitpars_interp)
-
-        ff_interp, to_substract = self.demean_fitpar(fitpars_interp, original_image)
-        metrics['TFsubstract'] = to_substract
-        metrics['rmse_DispTF'] = calculate_mean_RMSE_displacment(ff_interp, original_image)
-
-        parameters_motion['metrics_motion'] = metrics
+        parameters_motion = self._compute_motion_metrics(fitpars_interp=fitpars_interp, original_image=original_image)
 
         sample.add_transform(self, parameters_motion)
         return sample
@@ -368,23 +356,26 @@ class RandomMotionFromTimeCourse(RandomTransform):
             self.displacement_substract = to_substract
 
         if self.preserve_center_frequency_pct:
-            center = np.int(np.floor( fitpars.shape[1] /2 ))
-            nbpts =  np.int(np.floor(fitpars.shape[1] * self.preserve_center_frequency_pct/2))
+            center = np.int(np.floor(fitpars.shape[1]/2))
+            nbpts = np.int(np.floor(fitpars.shape[1] * self.preserve_center_frequency_pct/2))
             fitpars[:, center-nbpts:center+nbpts] = 0
-
         self.fitpars = fitpars
+
+        #Interpolation of the motion
+        fitpars_interp = self._interpolate_space_timing(fitpars)
+        fitpars_interp = self._tile_params_to_volume_dims(fitpars_interp)
+
+        #Compute movement metrics
         simu_param = dict(fitpars=fitpars, noisPar=noiseBasePars, maxDisp=maxDisp, maxRot=maxRot,
                           swallowFrequency=swallowFrequency, swallowMagnitudeT=swallowMagnitude[0],
                           swallowMagnitudeR=swallowMagnitude[1], suddenFrequency=suddenFrequency,
                           suddenMagnitudeT=suddenMagnitude[0], suddenMagnitude=suddenMagnitude[1])
         self.simu_param = simu_param
-        fitpars = self._interpolate_space_timing(fitpars)
-        fitpars = self._tile_params_to_volume_dims(fitpars)
 
-        return fitpars
+        return fitpars_interp
 
     def _interpolate_space_timing_1D(self, fitpars):
-        n_phase= self.phase_encoding_shape[0]
+        n_phase = self.phase_encoding_shape[0]
         nT = self.nT
         # Time steps
         mg_total = np.linspace(0,1,n_phase)
@@ -531,8 +522,21 @@ class RandomMotionFromTimeCourse(RandomTransform):
 
         return im_out
 
+    def _compute_motion_metrics(self, fitpars_interp, original_image):
+        motion_metrics = {
+            'mean_DispP': calculate_mean_Disp_P(self.fitpars),
+            'rmse_Disp': calculate_mean_RMSE_displacment(self.fitpars),
+            'mean_DispP_iterp': calculate_mean_Disp_P(fitpars_interp),
+            'rmse_Disp_iterp': calculate_mean_RMSE_displacment(fitpars_interp),
+        }
+        ff_interp, to_substract = self.demean_fitpar(fitpars_interp, original_image)
+        motion_metrics['TFsubstract'] = to_substract
+        motion_metrics['rmse_DispTF'] = calculate_mean_RMSE_displacment(ff_interp, original_image)
+        if self.simu_param:
+            motion_metrics.update(self.simu_param)
+        return motion_metrics
 
-    def demean_fitpar(self,fitpars_interp, original_image):
+    def demean_fitpar(self, fitpars_interp, original_image):
 
         o_shape = original_image.shape
         #original_image = np.moveaxis(original_image.numpy(), 1, 2)
