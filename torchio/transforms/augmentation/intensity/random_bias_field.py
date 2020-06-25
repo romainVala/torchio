@@ -24,8 +24,9 @@ class RandomBiasField(RandomTransform):
             order: int = 3,
             p: float = 1,
             seed: Optional[int] = None,
+            **kwargs
             ):
-        super().__init__(p=p, seed=seed)
+        super().__init__(p=p, seed=seed, **kwargs)
         self.coefficients_range = self.parse_range(
             coefficients, 'coefficients_range')
         self.order = order

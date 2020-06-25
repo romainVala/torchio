@@ -28,8 +28,9 @@ class RandomNoise(RandomTransform):
             p: float = 1,
             seed: Optional[int] = None,
             abs_after_noise: bool = False,
+            **kwargs
             ):
-        super().__init__(p=p, seed=seed)
+        super().__init__(p=p, seed=seed, **kwargs)
         self.mean_range = self.parse_range(mean, 'mean')
         self.std_range = self.parse_range(std, 'std')
         self.abs_after_noise = abs_after_noise

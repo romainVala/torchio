@@ -48,8 +48,9 @@ class HistogramStandardization(NormalizationTransform):
             landmarks: TypeLandmarks,
             masking_method: TypeMaskingMethod = None,
             p: float = 1,
+            **kwargs
             ):
-        super().__init__(masking_method=masking_method, p=p)
+        super().__init__(masking_method=masking_method, p=p, **kwargs)
         self.landmarks_dict = self.parse_landmarks(landmarks)
 
     @staticmethod

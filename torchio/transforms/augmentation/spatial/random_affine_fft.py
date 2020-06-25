@@ -64,8 +64,9 @@ class RandomAffineFFT(RandomTransform):
             p: float = 1,
             seed: Optional[int] = None,
             oversampling_pct = 0.2,
+            **kwargs
             ):
-        super().__init__(p=p, seed=seed)
+        super().__init__(p=p, seed=seed, **kwargs)
         self.scales = scales
         self.degrees = self.parse_degrees(degrees)
         self.isotropic = isotropic

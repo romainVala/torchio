@@ -35,6 +35,7 @@ class RandomGhosting(RandomTransform):
             intensity: Union[float, Tuple[float, float]] = (0.5, 1),
             p: float = 1,
             seed: Optional[int] = None,
+            **kwargs
             ):
         super().__init__(p=p, seed=seed)
         if not isinstance(axes, tuple):

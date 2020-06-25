@@ -20,8 +20,8 @@ class Compose(Transform):
     .. note::
         This is a thin wrapper of :py:class:`torchvision.transforms.Compose`.
     """
-    def __init__(self, transforms: Sequence[Transform], p: float = 1):
-        super().__init__(p=p)
+    def __init__(self, transforms: Sequence[Transform], p: float = 1, **kwargs):
+        super().__init__(p=p, **kwargs)
         self.transform = PyTorchCompose(transforms)
 
     def apply_transform(self, sample: Subject):
@@ -54,8 +54,9 @@ class OneOf(RandomTransform):
             self,
             transforms: Union[dict, Sequence[Transform]],
             p: float = 1,
+            **kwargs
             ):
-        super().__init__(p=p)
+        super().__init__(p=p, **kwargs)
         self.transforms_dict = self._get_transforms_dict(transforms)
 
     def apply_transform(self, sample: Subject):
@@ -130,8 +131,9 @@ class ListOf(RandomTransform):
             self,
             transforms: Sequence[Transform],
             p: float = 1,
+            **kwargs
             ):
-        super().__init__(p=p)
+        super().__init__(p=p, **kwargs)
         self.transforms_list = transforms
 
     def apply_transform(self, sample: Subject):

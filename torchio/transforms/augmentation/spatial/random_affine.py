@@ -82,8 +82,9 @@ class RandomAffine(RandomTransform):
             image_interpolation: str = 'linear',
             p: float = 1,
             seed: Optional[int] = None,
+            **kwargs
             ):
-        super().__init__(p=p, seed=seed)
+        super().__init__(p=p, seed=seed, **kwargs)
         self.scales = scales
         self.degrees = self.parse_degrees(degrees)
         self.translation = self.parse_range(translation, 'translation')

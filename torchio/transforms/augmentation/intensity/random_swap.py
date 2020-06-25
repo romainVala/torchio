@@ -24,8 +24,9 @@ class RandomSwap(RandomTransform):
             num_iterations: int = 100,
             p: float = 1,
             seed: Optional[int] = None,
+            **kwargs
             ):
-        super().__init__(p=p, seed=seed)
+        super().__init__(p=p, seed=seed, **kwargs)
         self.patch_size = to_tuple(patch_size)
         self.num_iterations = num_iterations
 

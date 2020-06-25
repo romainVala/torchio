@@ -25,10 +25,12 @@ class RandomTransform(Transform):
             p: float = 1,
             seed: Optional[int] = None,
             verbose: bool = False,
-            keep_original=False,
+            compare_to_original: bool =False,
+            metrics=None
             ):
 
-        super().__init__(p=p, verbose=verbose, keep_original=keep_original)
+        super().__init__(p=p, verbose=verbose, compare_to_original=compare_to_original,
+                         metrics=metrics)
         self._seed = seed
 
     def __call__(self, sample: Subject):

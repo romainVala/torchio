@@ -17,6 +17,7 @@ import numpy as np
 import time
 from .interpolation import Interpolation
 
+
 class Transform(ABC):
     """Abstract class for all TorchIO transforms.
 
@@ -29,10 +30,12 @@ class Transform(ABC):
     Args:
         p: Probability that this transform will be applied.
     """
-    def __init__(self, p: float = 1, verbose: bool = False, keep_original=False):
+
+    def __init__(self, p: float = 1, verbose: bool = False, compare_to_original: bool = False, metrics: dict = None):
         self.probability = self.parse_probability(p)
         self.verbose = verbose
-        self.keep_original = keep_original
+        self.compare_to_original = compare_to_original
+        self.metrics = metrics
 
     def __call__(self, data: Union[Subject, torch.Tensor, np.ndarray]):
         """Transform a sample and return the result.
@@ -57,12 +60,6 @@ class Transform(ABC):
             is_tensor = is_array = False
             sample = data
 
-        if self.keep_original:
-            for image_name, image_dict in sample.get_images_dict().items():
-                new_key = image_name + '_orig'
-                if new_key not in sample:
-                    sample[new_key] = dict(data=image_dict['data'], type='original', affine=image_dict['affine'])
-
         if self.verbose:
             start = time.time()
 
@@ -70,12 +67,17 @@ class Transform(ABC):
 
         # If the input is a tensor, it will be deepcopied when calling
         # ImagesDataset.__getitem__
+        orig = sample
         if not is_tensor:
             sample = deepcopy(sample)
 
         with np.errstate(all='raise'):
             transformed = self.apply_transform(sample)
-            
+
+        # Compute the metrics after the transformation
+        if self.compare_to_original and self.metrics:
+            _ = [metric_func(orig, transformed) for metric_func in self.metrics.values()]
+
         if self.verbose:
             duration = time.time() - start
             print(f'{self.__class__.__name__}: {duration:.3f} seconds')
@@ -197,9 +199,9 @@ class Transform(ABC):
         :return oversampled version of the data:
         """
         data_shape = list(data.shape)
-        to_pad = np.ceil(np.asarray(data_shape) * perc_oversampling/2) * 2
-        #to force an even number if odd, this will shift the volume when croping
-        #print("Pading at {}".format(to_pad))
+        to_pad = np.ceil(np.asarray(data_shape) * perc_oversampling / 2) * 2
+        # to force an even number if odd, this will shift the volume when croping
+        # print("Pading at {}".format(to_pad))
         left_pad = np.floor(to_pad / 2).astype(int)
         right_pad = np.ceil(to_pad / 2).astype(int)
 
@@ -207,31 +209,34 @@ class Transform(ABC):
             pad_data = np.pad(data, list(zip(left_pad, right_pad)))
             data_shape = list(pad_data.shape)
 
-            #replace the padding values by random nois
+            # replace the padding values by random nois
             size_pad = left_pad[0] * data_shape[1] * data_shape[2]
-            pad_data[:left_pad[0],:, :] = np.random.normal(padding_normal[0], padding_normal[1],
-                                                           size_pad).reshape( left_pad[0], data_shape[1], data_shape[2])
+            pad_data[:left_pad[0], :, :] = np.random.normal(padding_normal[0], padding_normal[1],
+                                                            size_pad).reshape(left_pad[0], data_shape[1], data_shape[2])
 
             size_pad = left_pad[1] * data_shape[0] * data_shape[2]
             pad_data[:, :left_pad[1], :] = np.random.normal(padding_normal[0], padding_normal[1],
-                                                           size_pad).reshape(data_shape[0], left_pad[1], data_shape[2])
+                                                            size_pad).reshape(data_shape[0], left_pad[1], data_shape[2])
 
             size_pad = left_pad[2] * data_shape[1] * data_shape[0]
             pad_data[:, :, :left_pad[2]] = np.random.normal(padding_normal[0], padding_normal[1],
-                                                           size_pad).reshape( data_shape[0], data_shape[1], left_pad[2])
+                                                            size_pad).reshape(data_shape[0], data_shape[1], left_pad[2])
 
             size_pad = right_pad[0] * data_shape[1] * data_shape[2]
-            pad_data[-right_pad[0]:,:, :] = np.random.normal(padding_normal[0], padding_normal[1],
-                                                           size_pad).reshape( right_pad[0], data_shape[1], data_shape[2])
+            pad_data[-right_pad[0]:, :, :] = np.random.normal(padding_normal[0], padding_normal[1],
+                                                              size_pad).reshape(right_pad[0], data_shape[1],
+                                                                                data_shape[2])
 
             size_pad = right_pad[1] * data_shape[0] * data_shape[2]
             pad_data[:, -right_pad[1]:, :] = np.random.normal(padding_normal[0], padding_normal[1],
-                                                           size_pad).reshape(data_shape[0], right_pad[1], data_shape[2])
+                                                              size_pad).reshape(data_shape[0], right_pad[1],
+                                                                                data_shape[2])
 
             size_pad = right_pad[2] * data_shape[1] * data_shape[0]
             pad_data[:, :, -right_pad[0]:] = np.random.normal(padding_normal[0], padding_normal[1],
-                                                           size_pad).reshape( data_shape[0], data_shape[1], right_pad[2])
-            #print('PADING with random nois {} {}'.format(padding_normal[0], padding_normal[1]))
+                                                              size_pad).reshape(data_shape[0], data_shape[1],
+                                                                                right_pad[2])
+            # print('PADING with random nois {} {}'.format(padding_normal[0], padding_normal[1]))
         else:
             pad_data = np.pad(data, list(zip(left_pad, right_pad)), mode=padding_mode)
 

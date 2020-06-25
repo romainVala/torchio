@@ -14,6 +14,7 @@ from torchio import INTENSITY
 from .. import RandomTransform
 from ...metrics import ssim3D, th_pearsonr
 
+
 class RandomMotionFromTimeCourse(RandomTransform):
 
     def __init__(self, nT=200, maxDisp=(2,5), maxRot=(2,5), noiseBasePars=(5,15),
@@ -22,8 +23,8 @@ class RandomMotionFromTimeCourse(RandomTransform):
                  fitpars=None, read_func=lambda x: pd.read_csv(x, header=None).values,
                  displacement_shift=1, freq_encoding_dim=[0], tr=2.3, es=4E-3,
                  nufft=True,  oversampling_pct=0.3, proba_to_augment: float = 1,
-                 verbose=False, keep_original=False, compare_to_original=False,
-                 preserve_center_pct=0, correct_motion=False, res_dir=None):
+                 verbose=False, compare_to_original=False,
+                 preserve_center_pct=0, correct_motion=False, res_dir=None, **kwargs):
         """
         parameters to simulate 3 types of displacement random noise swllow or sudden mouvement
         :param nT (int): number of points of the time course
@@ -49,8 +50,7 @@ class RandomMotionFromTimeCourse(RandomTransform):
         Note currently on freq_encoding_dim=0 give the same ringing direction for rotation and translation, dim 1 and 2 are not coherent
         Note fot suddenFrequency and swallowFrequency min max must differ and the max is never achieved, so to have 0 put (0,1)
         """
-        if compare_to_original: keep_original=True
-        super(RandomMotionFromTimeCourse, self).__init__(verbose=verbose, keep_original=keep_original)
+        super(RandomMotionFromTimeCourse, self).__init__(verbose=verbose, **kwargs)
         self.compare_to_original = compare_to_original
         self.tr = tr
         self.es = es
@@ -88,12 +88,10 @@ class RandomMotionFromTimeCourse(RandomTransform):
         for image_name, image_dict in sample.get_images_dict().items():
 
             do_it = np.random.uniform() <= self.proba_to_augment
-
-            sample[image_name]['simu_param'] = dict(noisPar=0.0, maxDisp=0.0, maxRot=0.0, swallowFrequency=0.0,
-            swallowMagnitude=[0.0,0.0], suddenFrequency=0.0, suddenMagnitude=[0.0,0.0])
-            if self.compare_to_original:
-                sample[image_name]['metrics'] = dict(ssim=0.0, corr=0.0, mean_DispP=0.0,rmse_Disp=0.0)
-
+            """
+            parameters_motion['simu_param'] = dict(noisPar=0.0, maxDisp=0.0, maxRot=0.0, swallowFrequency=0.0,
+            swallowMagnitude=[0.0, 0.0], suddenFrequency=0.0, suddenMagnitude=[0.0, 0.0])
+            """
             if not do_it:
                 sample[image_name]['motion'] = False
                 return sample
@@ -102,6 +100,7 @@ class RandomMotionFromTimeCourse(RandomTransform):
 
             image_data = np.squeeze(image_dict['data'])[..., np.newaxis, np.newaxis]
             original_image = np.squeeze(image_data[:, :, :, 0, 0])
+
             if self.oversampling_pct > 0.0:
                 original_image_shape = original_image.shape
                 original_image = self._oversample(original_image, self.oversampling_pct)
@@ -110,10 +109,7 @@ class RandomMotionFromTimeCourse(RandomTransform):
 
             if self.simulate_displacement:
                 fitpars_interp = self._simulate_random_trajectory()
-                sample[image_name]['simu_param'] = self.simu_param
-                # histo_param={}
-                # histo_param[image_name] = self.simu_param
-                # sample.add_transform(self, histo_param)
+                #parameters_motion['simu_param'] = self.simu_param
 
             else:
                 if self.fitpars.ndim == 4:
@@ -158,53 +154,13 @@ class RandomMotionFromTimeCourse(RandomTransform):
             #sample[image_name]['fit_pars'] = self.fitpars
             #sample[image_name]['fit_pars_interp'] = self.fitpars_interp
 
-            if self.compare_to_original:
-                metrics = dict()
-                if 'brain' in sample:
-                    mask, name_mask = [ sample['brain']['data'] ], ['brain']
-                    if 'p1' in sample:
-                        mask.append(sample['p1']['data'])
-                        name_mask.append('p1')
-                    if 'p2' in sample:
-                        mask.append(sample['p2']['data'])
-                        name_mask.append('p2')
-
-                    res_ssim = ssim3D(image_dict["data"], sample[image_name + '_orig']['data'],
-                                             verbose=self.verbose, mask=mask)
-                    for ii, nn in enumerate(name_mask):
-                        metrics['ssim_' + nn] = res_ssim[ii].numpy()
-                    metrics['ssim_all'] = res_ssim[-1]
-                    metrics['ssim'] = metrics['ssim_brain']
-
-                else:
-                    metrics['ssim'] = ssim3D(image_dict["data"], sample[image_name + '_orig']['data'],
-                                             verbose=self.verbose).numpy()
-
-                metrics['corr'] = th_pearsonr(image_dict["data"], sample[image_name+'_orig']['data']).numpy()
-                lossL2 = torch.nn.MSELoss()
-                lossL1 = torch.nn.L1Loss()
-                metrics['MSE'] = lossL2(image_dict["data"].unsqueeze(0), sample[image_name+'_orig']['data'].unsqueeze(0)).numpy()
-                metrics['L1'] = lossL1(image_dict["data"].unsqueeze(0), sample[image_name+'_orig']['data'].unsqueeze(0)).numpy()
-                metrics['mean_DispP'] = calculate_mean_Disp_P(self.fitpars)
-                metrics['rmse_Disp'] = calculate_mean_RMSE_displacment(self.fitpars)
-                metrics['mean_DispP_iterp'] = calculate_mean_Disp_P(fitpars_interp)
-                metrics['rmse_Disp_iterp'] = calculate_mean_RMSE_displacment(fitpars_interp)
-
-                ff_interp, to_substract = self.demean_fitpar(fitpars_interp, original_image)
-                metrics['TFsubstract'] = to_substract
-                metrics['rmse_DispTF'] = calculate_mean_RMSE_displacment(ff_interp,original_image)
-
-                sample[image_name]['metrics'] = metrics
-
-                #histo_param={}
-                histo_param = metrics
-                if self.simulate_displacement:
-                    histo_param.update(self.simu_param) #because add_transform erase previous add ...
-                sample.add_transform(self, histo_param)
 
             if self.res_dir is not None:
                 self.save_to_dir(image_dict)
 
+        parameters_motion = self._compute_motion_metrics(fitpars_interp=fitpars_interp, original_image=original_image)
+
+        sample.add_transform(self, parameters_motion)
         return sample
         #output type is double, TODO where to cast in Float ?
 
@@ -261,10 +217,10 @@ class RandomMotionFromTimeCourse(RandomTransform):
                 fpars = None
         if fpars.shape[0] != 6:
             warnings.warn("Given motion parameters has {} on the first dimension. "
-                          "Expected 6 (3 translations and 3 rotations). Setting motions to None".format(fpars.shape[0]))
+                          "Expected 6 (3 translations and 3 rotations). Setting motion to None".format(fpars.shape[0]))
             fpars = None
         elif len(fpars.shape) != 2:
-            warnings.warn("Expected motion parameters to be of shape (6, N), found {}. Setting motions to None".format(fpars.shape))
+            warnings.warn("Expected motion parameters to be of shape (6, N), found {}. Setting motion to None".format(fpars.shape))
             fpars = None
 
         if self.displacement_shift > 0:
@@ -295,7 +251,7 @@ class RandomMotionFromTimeCourse(RandomTransform):
         im_shape = list(im_shape)
         self.im_shape = im_shape.copy()
         im_shape.pop(self.frequency_encoding_dim)
-        self.phase_encoding_shape = im_shape #[ im_shape[pp-1] for pp in pe_dims]
+        self.phase_encoding_shape = im_shape
         self.num_phase_encoding_steps = self.phase_encoding_shape[0] * self.phase_encoding_shape[1]
         self.frequency_encoding_dim = len(self.im_shape) - 1 if self.frequency_encoding_dim == -1 \
             else self.frequency_encoding_dim
@@ -400,23 +356,26 @@ class RandomMotionFromTimeCourse(RandomTransform):
             self.displacement_substract = to_substract
 
         if self.preserve_center_frequency_pct:
-            center = np.int(np.floor( fitpars.shape[1] /2 ))
-            nbpts =  np.int(np.floor(fitpars.shape[1] * self.preserve_center_frequency_pct/2))
+            center = np.int(np.floor(fitpars.shape[1]/2))
+            nbpts = np.int(np.floor(fitpars.shape[1] * self.preserve_center_frequency_pct/2))
             fitpars[:, center-nbpts:center+nbpts] = 0
-
         self.fitpars = fitpars
-        #print(f' in _simul_motionfitpar shape fitpars {fitpars.shape}')
-        simu_param = dict(noisPar=noiseBasePars,maxDisp=maxDisp,maxRot=maxRot,
-                          swallowFrequency=swallowFrequency, swallowMagnitudeT=swallowMagnitude[0], swallowMagnitudeR=swallowMagnitude[1],
-                          suddenFrequency=suddenFrequency,suddenMagnitudeT=suddenMagnitude[0], suddenMagnitude=suddenMagnitude[1])
-        self.simu_param = simu_param
-        fitpars = self._interpolate_space_timing(fitpars)
-        fitpars = self._tile_params_to_volume_dims(fitpars)
 
-        return fitpars
+        #Interpolation of the motion
+        fitpars_interp = self._interpolate_space_timing(fitpars)
+        fitpars_interp = self._tile_params_to_volume_dims(fitpars_interp)
+
+        #Compute movement metrics
+        simu_param = dict(fitpars=fitpars, noisPar=noiseBasePars, maxDisp=maxDisp, maxRot=maxRot,
+                          swallowFrequency=swallowFrequency, swallowMagnitudeT=swallowMagnitude[0],
+                          swallowMagnitudeR=swallowMagnitude[1], suddenFrequency=suddenFrequency,
+                          suddenMagnitudeT=suddenMagnitude[0], suddenMagnitude=suddenMagnitude[1])
+        self.simu_param = simu_param
+
+        return fitpars_interp
 
     def _interpolate_space_timing_1D(self, fitpars):
-        n_phase= self.phase_encoding_shape[0]
+        n_phase = self.phase_encoding_shape[0]
         nT = self.nT
         # Time steps
         mg_total = np.linspace(0,1,n_phase)
@@ -427,8 +386,7 @@ class RandomMotionFromTimeCourse(RandomTransform):
         # Reshaping to phase encoding dimensions
         self.fitpars_interp = fitpars_interp
         # Add missing dimension
-        fitpars_interp = np.expand_dims(fitpars_interp, axis= [self.frequency_encoding_dim + 1,self.phase_encoding_dims[1] + 1])
-        print(fitpars_interp.shape)
+        fitpars_interp = np.expand_dims(fitpars_interp, axis=[self.frequency_encoding_dim + 1,self.phase_encoding_dims[1] + 1])
         return fitpars_interp
 
     def _interpolate_space_timing(self, fitpars):
@@ -564,8 +522,21 @@ class RandomMotionFromTimeCourse(RandomTransform):
 
         return im_out
 
+    def _compute_motion_metrics(self, fitpars_interp, original_image):
+        motion_metrics = {
+            'mean_DispP': calculate_mean_Disp_P(self.fitpars),
+            'rmse_Disp': calculate_mean_RMSE_displacment(self.fitpars),
+            'mean_DispP_iterp': calculate_mean_Disp_P(fitpars_interp),
+            'rmse_Disp_iterp': calculate_mean_RMSE_displacment(fitpars_interp),
+        }
+        ff_interp, to_substract = self.demean_fitpar(fitpars_interp, original_image)
+        motion_metrics['TFsubstract'] = to_substract
+        motion_metrics['rmse_DispTF'] = calculate_mean_RMSE_displacment(ff_interp, original_image)
+        if self.simu_param:
+            motion_metrics.update(self.simu_param)
+        return motion_metrics
 
-    def demean_fitpar(self,fitpars_interp, original_image):
+    def demean_fitpar(self, fitpars_interp, original_image):
 
         o_shape = original_image.shape
         #original_image = np.moveaxis(original_image.numpy(), 1, 2)

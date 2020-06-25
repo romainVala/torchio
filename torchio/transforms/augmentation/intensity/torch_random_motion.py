@@ -20,8 +20,7 @@ class TorchRandomMotionFromTimeCourse(RandomTransform):
                  fitpars=None, read_func=lambda x: pd.read_csv(x, header=None).values,
                  displacement_shift=1, freq_encoding_dim=[0], tr=2.3, es=4E-3,
                  nufft=True,  oversampling_pct=0.3, proba_to_augment: float = 1,
-                 verbose=False, keep_original=False, compare_to_original=False,
-                 preserve_center_pct=0, correct_motion=False, res_dir=None, cuda=False):
+                 verbose=False, preserve_center_pct=0, correct_motion=False, res_dir=None, cuda=False, **kwargs):
         """
         parameters to simulate 3 types of displacement random noise swllow or sudden mouvement
         :param nT (int): number of points of the time course
@@ -47,9 +46,7 @@ class TorchRandomMotionFromTimeCourse(RandomTransform):
         Note currently on freq_encoding_dim=0 give the same ringing direction for rotation and translation, dim 1 and 2 are not coherent
         Note fot suddenFrequency and swallowFrequency min max must differ and the max is never achieved, so to have 0 put (0,1)
         """
-        if compare_to_original: keep_original=True
-        super(TorchRandomMotionFromTimeCourse, self).__init__(verbose=verbose, keep_original=keep_original)
-        self.compare_to_original = compare_to_original
+        super(TorchRandomMotionFromTimeCourse, self).__init__(verbose=verbose, **kwargs)
         self.tr = tr
         self.es = es
         self.nT = nT
@@ -82,14 +79,13 @@ class TorchRandomMotionFromTimeCourse(RandomTransform):
         self.nb_saved = 0
 
     def apply_transform(self, sample):
+        parameters_motion = {}
         for image_name, image_dict in sample.get_images_dict().items():
 
             do_it = np.random.uniform() <= self.proba_to_augment
 
-            sample[image_name]['simu_param'] = dict(noisPar=0.0, maxDisp=0.0, maxRot=0.0, swallowFrequency=0.0,
+            parameters_motion['simu_param'] = dict(noisPar=0.0, maxDisp=0.0, maxRot=0.0, swallowFrequency=0.0,
             swallowMagnitude=[0.0,0.0], suddenFrequency=0.0, suddenMagnitude=[0.0,0.0])
-            if self.compare_to_original:
-                sample[image_name]['metrics'] = dict(ssim=0.0, corr=0.0, mean_DispP=0.0,rmse_Disp=0.0)
 
             if not do_it:
                 sample[image_name]['motion'] = False
@@ -108,7 +104,7 @@ class TorchRandomMotionFromTimeCourse(RandomTransform):
 
             if self.simulate_displacement:
                 fitpars_interp = self._simulate_random_trajectory()
-                sample[image_name]['simu_param'] = self.simu_param
+                parameters_motion['simu_param'] = self.simu_param
             else:
                 if self.fitpars.ndim==4:
                     fitpars_interp = self.fitpars
@@ -151,48 +147,23 @@ class TorchRandomMotionFromTimeCourse(RandomTransform):
             #add extra field to follow what have been done
             #sample[image_name]['fit_pars'] = self.fitpars
             #sample[image_name]['fit_pars_interp'] = self.fitpars_interp
-
-            if self.compare_to_original:
-                metrics = dict()
-                if 'brain' in sample:
-                    mask, name_mask = [ sample['brain']['data'] ], ['brain']
-                    if 'p1' in sample:
-                        mask.append(sample['p1']['data'])
-                        name_mask.append('p1')
-                    if 'p2' in sample:
-                        mask.append(sample['p2']['data'])
-                        name_mask.append('p2')
-
-                    res_ssim = ssim3D(image_dict["data"], sample[image_name + '_orig']['data'],
-                                             verbose=self.verbose, mask=mask)
-                    for ii, nn in enumerate(name_mask):
-                        metrics['ssim_' + nn] = res_ssim[ii].numpy()
-                    metrics['ssim_all'] = res_ssim[-1]
-                    metrics['ssim'] = metrics['ssim_brain']
-
-                else:
-                    metrics['ssim'] = ssim3D(image_dict["data"], sample[image_name + '_orig']['data'],
-                                             verbose=self.verbose).numpy()
-
-                metrics['corr'] = th_pearsonr(image_dict["data"], sample[image_name+'_orig']['data']).numpy()
-                lossL2 = torch.nn.MSELoss()
-                lossL1 = torch.nn.L1Loss()
-                metrics['MSE'] = lossL2(image_dict["data"].unsqueeze(0), sample[image_name+'_orig']['data'].unsqueeze(0)).numpy()
-                metrics['L1'] = lossL1(image_dict["data"].unsqueeze(0), sample[image_name+'_orig']['data'].unsqueeze(0)).numpy()
-                metrics['mean_DispP'] = calculate_mean_Disp_P(self.fitpars)
-                metrics['rmse_Disp'] = calculate_mean_RMSE_displacment(self.fitpars)
-                metrics['mean_DispP_iterp'] = calculate_mean_Disp_P(fitpars_interp)
-                metrics['rmse_Disp_iterp'] = calculate_mean_RMSE_displacment(fitpars_interp)
-
-                ff_interp, to_substract = self.demean_fitpar(fitpars_interp, original_image)
-                metrics['TFsubstract'] = to_substract
-                metrics['rmse_DispTF'] = calculate_mean_RMSE_displacment(ff_interp,original_image)
-
-                sample[image_name]['metrics'] = metrics
-
             if self.res_dir is not None:
                 self.save_to_dir(image_dict)
 
+        metrics = dict()
+        if self.fitpars.ndim == 2:
+            metrics['mean_DispP'] = calculate_mean_Disp_P(self.fitpars)
+            metrics['rmse_Disp'] = calculate_mean_RMSE_displacment(self.fitpars)
+        metrics['mean_DispP_iterp'] = calculate_mean_Disp_P(fitpars_interp)
+        metrics['rmse_Disp_iterp'] = calculate_mean_RMSE_displacment(fitpars_interp)
+
+        ff_interp, to_substract = self.demean_fitpar(fitpars_interp, original_image)
+        metrics['TFsubstract'] = to_substract
+        metrics['rmse_DispTF'] = calculate_mean_RMSE_displacment(ff_interp, original_image)
+
+        parameters_motion['metrics_motion'] = metrics
+
+        sample.add_transform(self, parameters_motion)
         return sample
         #output type is double, TODO where to cast in Float ?
 

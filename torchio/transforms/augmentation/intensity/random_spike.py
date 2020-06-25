@@ -31,8 +31,9 @@ class RandomSpike(RandomTransform):
             intensity: Union[float, Tuple[float, float]] = (0.1, 1),
             p: float = 1,
             seed: Optional[int] = None,
+            **kwargs
             ):
-        super().__init__(p=p, seed=seed)
+        super().__init__(p=p, seed=seed, **kwargs)
         self.intensity_range = self.parse_range(
             intensity, 'intensity_range')
         if isinstance(num_spikes, int):

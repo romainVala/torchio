@@ -16,8 +16,9 @@ class ZNormalization(NormalizationTransform):
             self,
             masking_method: TypeMaskingMethod = None,
             p: float = 1,
+            **kwargs
             ):
-        super().__init__(masking_method=masking_method, p=p)
+        super().__init__(masking_method=masking_method, p=p, **kwargs)
 
     def apply_normalization(
             self,
