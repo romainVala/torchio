@@ -39,10 +39,19 @@ class SSIM3D(MapMetric):
                                                     kernel=self.kernel, sigma=self.sigma, truncate=self.truncate,
                                                     return_map=True)
 
+            for m_name, m_map in computed_metrics.items():
+                metric_dict = self._apply_masks_and_averaging(sample=sample2, metric_map=m_map)
+                for mask_name, masked_metric in metric_dict.items():
+                    if mask_name is "no_mask":
+                        sample2[sample_key]["metrics"]["SSIM_{}".format(m_name)] = masked_metric
+                    else:
+                        sample2[sample_key]["metrics"]["SSIM_{}_{}".format(m_name, mask_name)] = masked_metric
+            """
             computed_metrics = {m_name: self._apply_masks_and_averaging(sample=sample2, metric_map=m_map)
                                 for m_name, m_map in computed_metrics.items()}
-            sample2[sample_key]["metrics"]["SSIM"] = computed_metrics
 
+            sample2[sample_key]["metrics"]["SSIM"] = computed_metrics
+            """
 
 
 def functional_ssim(x, y, k1=.001, k2=.001, k3=.001, L=None, alpha=1, beta=1, gamma=1, kernel="uniform", sigma=3.0,

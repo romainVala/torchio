@@ -23,4 +23,8 @@ class MapMetricWrapper(MapMetric):
             metric_map = self.metric_func(data1, data2)
 
             metric_map = self._apply_masks_and_averaging(sample2, metric_map=metric_map)
-            sample2[sample_key]["metrics"][self.metric_name] = metric_map
+            for mask_name, masked_metric in metric_map.items():
+                if mask_name is "no_mask":
+                    sample2[sample_key]["metrics"][self.metric_name] = masked_metric
+                else:
+                    sample2[sample_key]["metrics"][self.metric_name+"_"+mask_name] = masked_metric
