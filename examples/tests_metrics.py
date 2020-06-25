@@ -11,15 +11,16 @@ mask_path = "/data/romain/HCPdata/suj_100307/cat12/fill_mask_head.nii.gz"
 dataset = ImagesDataset([
     Subject({
         "T1": Image(t1_path),
-        "mask": Image(mask_path)
+        "mask": Image(mask_path, type="mask"),
+        "mask2": Image(mask_path, type="mask")
     })])
 
 metrics = {
     "L1": MetricWrapper("L1", L1Loss()),
-    "L1_map": MapMetricWrapper("L1_map", lambda x, y: torch.abs(x-y), average_method="mean"),
+    "L1_map": MapMetricWrapper("L1_map", lambda x, y: torch.abs(x-y), average_method="mean", mask_keys=['mask2']),
     "L2": MetricWrapper("L2", MSELoss()),
-    "SSIM": SSIM3D(average_method="mean"),
-    #"SSIM_mask": SSIM3D(average_method="mean", mask_keys=["mask"]),
+    #"SSIM": SSIM3D(average_method="mean"),
+    "SSIM_mask": SSIM3D(average_method="mean", mask_keys=["mask", "mask2"]),
     "SSIM_Wrapped": MetricWrapper("SSIM_wrapped", lambda x, y: functional_ssim(x, y, return_map=False), use_mask=True, mask_key="mask"),
     "ssim_base": MetricWrapper('SSIM_base', ssim3D)
 }

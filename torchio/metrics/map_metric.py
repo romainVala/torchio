@@ -30,18 +30,28 @@ class MapMetric(Metric, ABC):
             return average_func_dict["mean"]
 
     def _apply_masks_and_averaging(self, sample: Subject, metric_map: Union[torch.Tensor, np.ndarray]):
-        masked_map = metric_map
+        if metric_map.ndim == 5:
+            #We assume the first dimension is batch and the second is channel. We keep the batch dimension and discard
+            # the channel dimension
+            metric_map = metric_map[:, 0]
+        #Dictionary with all maps+average
+        masked_maps = dict()
+        #Adding the original metric map (without mask)
+        orig_map = metric_map
+        if self.average_method is not None:
+            orig_map = self.average_method(orig_map)
+        masked_maps["no_mask"] = orig_map
+        #Check if masks
         if self.mask_keys:
             mask_keys_in_sample = sample.keys() & set(self.mask_keys)
 
             if len(mask_keys_in_sample) == 0:
                 warnings.warn("None of the given masks {} found for the sample".format(self.mask_keys))
             else:
-
                 for mask_key in mask_keys_in_sample:
                     mask_data = sample[mask_key][DATA]
-                    masked_map = torch.mul(mask_data, metric_map)
-
-        if self.average_method is not None:
-            masked_map = self.average_method(masked_map)
-        return masked_map
+                    masked_map = metric_map[mask_data > 0]
+                    if self.average_method is not None:
+                        masked_map = self.average_method(masked_map)
+                    masked_maps[mask_key] = masked_map
+        return masked_maps
