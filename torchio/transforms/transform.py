@@ -77,6 +77,14 @@ class Transform(ABC):
         # Compute the metrics after the transformation
         if self.compare_to_original and self.metrics:
             _ = [metric_func(orig, transformed) for metric_func in self.metrics.values()]
+            histo_metrics = {}
+            for image_name, image_dict in transformed.get_images_dict().items():
+                if "metrics" in image_dict.keys():
+                    dict_metrics = image_dict["metrics"]
+                    for metric_name, metric_value in dict_metrics.items():
+                        histo_metrics["{}_{}".format(image_name, metric_name)] = metric_value
+
+            transformed.add_transform(self, histo_metrics)
 
         if self.verbose:
             duration = time.time() - start
