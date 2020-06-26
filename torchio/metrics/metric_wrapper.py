@@ -27,4 +27,9 @@ class MetricWrapper(Metric):
             #Compute metric
             if "metrics" not in sample2[sample_key].keys():
                 sample2[sample_key]["metrics"] = dict()
-            sample2[sample_key]["metrics"][self.metric_name] = self.metric_func(data1, data2)
+            result = self.metric_func(data1, data2)
+            if isinstance(result, dict):
+                for key_metric, value_metric in result.items():
+                    sample2[sample_key]["metrics"][self.metric_name+"_"+key_metric] = value_metric
+            else:
+                sample2[sample_key]["metrics"][self.metric_name] = self.metric_func(data1, data2)
