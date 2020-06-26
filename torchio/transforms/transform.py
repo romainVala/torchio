@@ -76,8 +76,7 @@ class Transform(ABC):
 
         # Compute the metrics after the transformation
         if self.compare_to_original and self.metrics:
-            dict_list = [metric_func(orig, transformed) for metric_func in self.metrics.values()]
-            transformed.add_transform(self, dict_list)
+            _ = [metric_func(orig, transformed) for metric_func in self.metrics.values()]
 
         if self.verbose:
             duration = time.time() - start
