@@ -21,7 +21,7 @@ metrics = {
     "L2": MetricWrapper("L2", MSELoss()),
     #"SSIM": SSIM3D(average_method="mean"),
     "SSIM_mask": SSIM3D(average_method="mean", mask_keys=["mask", "mask2"]),
-    "SSIM_Wrapped": MetricWrapper("SSIM_wrapped", lambda x, y: functional_ssim(x, y, return_map=False), use_mask=True, mask_key="mask"),
+    #"SSIM_Wrapped": MetricWrapper("SSIM_wrapped", lambda x, y: functional_ssim(x, y, return_map=False), use_mask=True, mask_key="mask"),
     "ssim_base": MetricWrapper('SSIM_base', ssim3D)
 }
 

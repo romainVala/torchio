@@ -121,4 +121,9 @@ class Subject(dict):
             transform: 'Transform',
             parameters_dict: dict,
             ) -> None:
+        for tf_history in self.history:
+            tf_name, tf_params = tf_history
+            if tf_name == transform.name:
+                tf_params.update(parameters_dict)
+                return
         self.history.append((transform.name, parameters_dict))
