@@ -155,6 +155,8 @@ class ImagesDataset(Dataset):
             subject = self.subjects[index]
             sample = copy.deepcopy(subject)
             # sample = self._get_sample_dict_from_subject(subject)
+            sample.load()
+
 
         # Apply transform (this is usually the bottleneck)
         if self._transform is not None:
