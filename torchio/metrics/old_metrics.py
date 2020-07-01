@@ -93,7 +93,7 @@ def _ssim_3D_dist(img1, img2, window, window_size, channel, aggregate="avg"):
     return res
 
 
-class SSIM3D(torch.nn.Module):
+class SSIM3D_old(torch.nn.Module):
     def __init__(self, window_size=3, size_average=True, distance=1):
         super(SSIM3D, self).__init__()
         self.window_size = window_size
