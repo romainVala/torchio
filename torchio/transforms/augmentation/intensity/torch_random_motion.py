@@ -8,7 +8,6 @@ import itertools
 from torchkbnufft import AdjKbNufft
 from torchkbnufft.math import complex_mult, imag_exp, absolute
 from torchio.transforms.augmentation.random_transform import RandomTransform
-from torchio.transforms.metrics import ssim3D, th_pearsonr
 import torch.nn.functional as F
 
 
