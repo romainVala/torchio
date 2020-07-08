@@ -12,7 +12,7 @@ except ImportError:
 
 from torchio import INTENSITY
 from .. import RandomTransform
-from ...metrics import ssim3D, th_pearsonr
+#from ...metrics import ssim3D, th_pearsonr
 
 
 class RandomMotionFromTimeCourse(RandomTransform):
