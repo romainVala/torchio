@@ -23,6 +23,7 @@ from .augmentation.intensity import RandomMotionFromTimeCourse
 from .augmentation.intensity import TorchRandomMotionFromTimeCourse
 from .augmentation.intensity import RandomGhosting
 from .augmentation.intensity import RandomBiasField
+from .augmentation.intensity import RandomSimulation
 
 # Preprocessing
 from .preprocessing import Pad

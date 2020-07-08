@@ -8,3 +8,4 @@ from .random_bias_field import RandomBiasField
 from .random_walk_motion import MotionSimTransform
 from .random_motion_from_time_course import RandomMotionFromTimeCourse
 from .torch_random_motion import TorchRandomMotionFromTimeCourse
+from .random_simulation import RandomSimulation
