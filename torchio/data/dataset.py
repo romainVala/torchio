@@ -153,10 +153,9 @@ class ImagesDataset(Dataset):
             #print('sample with keys {}'.format(sample.keys()))
         else:
             subject = self.subjects[index]
-            sample = copy.deepcopy(subject)
+            sample = copy.deepcopy(subject) # cheap since images not loaded yet
             # sample = self._get_sample_dict_from_subject(subject)
             sample.load()
-
 
         # Apply transform (this is usually the bottleneck)
         if self._transform is not None:

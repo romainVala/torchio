@@ -29,10 +29,12 @@ class Transform(ABC):
 
     Args:
         p: Probability that this transform will be applied.
+        copy: Make a deep copy of the input before applying the transform.
     """
-
-    def __init__(self, p: float = 1, verbose: bool = False, compare_to_original: bool = False, metrics: dict = None):
+    def __init__(self, p: float = 1, copy: bool = True,
+                 verbose: bool = False, compare_to_original: bool = False, metrics: dict = None):
         self.probability = self.parse_probability(p)
+        self.copy = copy
         self.verbose = verbose
         self.compare_to_original = compare_to_original
         self.metrics = metrics
@@ -65,10 +67,8 @@ class Transform(ABC):
 
         self.parse_sample(sample)
 
-        # If the input is a tensor, it will be deepcopied when calling
-        # ImagesDataset.__getitem__
         orig = sample
-        if not is_tensor:
+        if self.copy:
             sample = deepcopy(sample)
 
         with np.errstate(all='raise'):
@@ -168,9 +168,7 @@ class Transform(ABC):
             image = Image(tensor=channel_tensor, type=INTENSITY)
             subject_dict[name] = image
         subject = Subject(subject_dict)
-        dataset = ImagesDataset([subject])
-        sample = dataset[0]
-        return sample
+        return subject
 
     @staticmethod
     def nib_to_sitk(data: TypeData, affine: TypeData):
