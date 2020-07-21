@@ -32,4 +32,4 @@ class MetricWrapper(Metric):
                 for key_metric, value_metric in result.items():
                     sample2[sample_key]["metrics"][self.metric_name+"_"+key_metric] = value_metric
             else:
-                sample2[sample_key]["metrics"][self.metric_name] = self.metric_func(data1, data2)
+                sample2[sample_key]["metrics"][self.metric_name] = result
