@@ -295,15 +295,16 @@ class RandomMotionFromTimeCourse(RandomTransform):
         Simulates the parameters of the transformation through the vector fitpars using 6 dimensions (3 translations and
         3 rotations).
         """
-        maxDisp = np.random.uniform(low=self.maxDisp[0], high=self.maxDisp[1])
-        maxRot = np.random.uniform(low=self.maxRot[0], high=self.maxRot[1])
-        noiseBasePars = np.random.uniform(low=self.noiseBasePars[0], high=self.noiseBasePars[1])
-        swallowFrequency = np.random.randint(low=self.swallowFrequency[0], high=self.swallowFrequency[1])
-        swallowMagnitude = [np.random.uniform(low=self.swallowMagnitude[0], high=self.swallowMagnitude[1]),
-                            np.random.uniform(low=self.swallowMagnitude[0], high=self.swallowMagnitude[1])]
-        suddenFrequency = np.random.randint(low=self.suddenFrequency[0], high=self.suddenFrequency[1])
-        suddenMagnitude = [np.random.uniform(low=self.suddenMagnitude[0], high=self.suddenMagnitude[1]),
-                            np.random.uniform(low=self.suddenMagnitude[0], high=self.suddenMagnitude[1])]
+
+        maxDisp = torch.FloatTensor(1).uniform_(self.maxDisp[0], self.maxDisp[1]).item()
+        maxRot = torch.FloatTensor(1).uniform_(self.maxRot[0], self.maxRot[1]).item()
+        noiseBasePars = torch.FloatTensor(1).uniform_(self.noiseBasePars[0], self.noiseBasePars[1]).item()
+        swallowFrequency = torch.randint(self.swallowFrequency[0], self.swallowFrequency[1], (1,)).item()
+        swallowMagnitude = [torch.FloatTensor(1).uniform_(self.swallowMagnitude[0], self.swallowMagnitude[1]).item(),
+                            torch.FloatTensor(1).uniform_(self.swallowMagnitude[0], self.swallowMagnitude[1]).item()]
+        suddenFrequency = torch.randint(self.suddenFrequency[0], self.suddenFrequency[1], (1,)).item()
+        suddenMagnitude = [torch.FloatTensor(1).uniform_(self.suddenMagnitude[0], self.suddenMagnitude[1]).item(),
+                            torch.FloatTensor(1).uniform_(self.suddenMagnitude[0], self.suddenMagnitude[1]).item()]
 
         #prba to include the different type of noise
         proba_noiseBase = self.noiseBasePars[2] if len(self.noiseBasePars) == 3 else 1
