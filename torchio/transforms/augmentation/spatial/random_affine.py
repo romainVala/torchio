@@ -4,6 +4,7 @@ import torch
 import numpy as np
 import SimpleITK as sitk
 from ....data.subject import Subject
+from ....utils import nib_to_sitk
 from ....torchio import (
     INTENSITY,
     DATA,
@@ -12,11 +13,12 @@ from ....torchio import (
     TypeRangeFloat,
     TypeTripletFloat,
 )
+from ... import SpatialTransform
 from .. import Interpolation, get_sitk_interpolator
 from .. import RandomTransform
 
 
-class RandomAffine(RandomTransform):
+class RandomAffine(RandomTransform, SpatialTransform):
     r"""Random affine transformation.
 
     Args:
@@ -26,6 +28,8 @@ class RandomAffine(RandomTransform):
             For example, using ``scales=(0.5, 0.5)`` will zoom out the image,
             making the objects inside look twice as small while preserving
             the physical size and position of the image.
+            If only one value :math:`d` is provided,
+            :math:`\s_i \sim \mathcal{U}(0, d)`.
         degrees: Tuple :math:`(a, b)` defining the rotation range in degrees.
             The rotation angles around each axis are
             :math:`(\theta_1, \theta_2, \theta_3)`,
@@ -53,6 +57,7 @@ class RandomAffine(RandomTransform):
         image_interpolation: See :ref:`Interpolation`.
         p: Probability that this transform will be applied.
         seed: See :py:class:`~torchio.transforms.augmentation.RandomTransform`.
+        keys: See :py:class:`~torchio.transforms.Transform`.
 
     Example:
         >>> import torchio
@@ -73,7 +78,7 @@ class RandomAffine(RandomTransform):
     """
     def __init__(
             self,
-            scales: Tuple[float, float] = (0.9, 1.1),
+            scales: TypeRangeFloat = (0.9, 1.1),
             degrees: TypeRangeFloat = 10,
             translation: TypeRangeFloat = 0,
             isotropic: bool = False,
@@ -82,10 +87,10 @@ class RandomAffine(RandomTransform):
             image_interpolation: str = 'linear',
             p: float = 1,
             seed: Optional[int] = None,
-            **kwargs
+            keys: Optional[List[str]] = None,
             ):
-        super().__init__(p=p, seed=seed, **kwargs)
-        self.scales = scales
+        super().__init__(p=p, seed=seed, keys=keys)
+        self.scales = self.parse_range(scales, 'scales', min_constraint=0)
         self.degrees = self.parse_degrees(degrees)
         self.translation = self.parse_range(translation, 'translation')
         self.isotropic = isotropic
@@ -152,7 +157,7 @@ class RandomAffine(RandomTransform):
         return transform
 
     def apply_transform(self, sample: Subject) -> dict:
-        sample.check_consistent_shape()
+        sample.check_consistent_spatial_shape()
         params = self.get_params(
             self.scales,
             self.degrees,
@@ -160,30 +165,34 @@ class RandomAffine(RandomTransform):
             self.isotropic,
         )
         scaling_params, rotation_params, translation_params = params
-        for image in sample.get_images(intensity_only=False):
+        for image in self.get_images(sample):
             if image[TYPE] != INTENSITY:
                 interpolation = Interpolation.NEAREST
             else:
                 interpolation = self.interpolation
 
             if image.is_2d():
-                scaling_params[0] = 1
-                rotation_params[-2:] = 0
+                scaling_params[2] = 1
+                rotation_params[:-1] = 0
 
             if self.use_image_center:
                 center = image.get_center(lps=True)
             else:
                 center = None
 
-            image[DATA] = self.apply_affine_transform(
-                image[DATA],
-                image[AFFINE],
-                scaling_params.tolist(),
-                rotation_params.tolist(),
-                translation_params.tolist(),
-                interpolation,
-                center_lps=center,
-            )
+            transformed_tensors = []
+            for tensor in image[DATA]:
+                transformed_tensor = self.apply_affine_transform(
+                    tensor,
+                    image[AFFINE],
+                    scaling_params.tolist(),
+                    rotation_params.tolist(),
+                    translation_params.tolist(),
+                    interpolation,
+                    center_lps=center,
+                )
+                transformed_tensors.append(transformed_tensor)
+            image[DATA] = torch.stack(transformed_tensors)
         random_parameters_dict = {
             'scaling': scaling_params,
             'rotation': rotation_params,
@@ -202,10 +211,9 @@ class RandomAffine(RandomTransform):
             interpolation: Interpolation,
             center_lps: Optional[TypeTripletFloat] = None,
             ) -> torch.Tensor:
-        assert tensor.ndim == 4
-        assert len(tensor) == 1
+        assert tensor.ndim == 3
 
-        image = self.nib_to_sitk(tensor[0], affine)
+        image = nib_to_sitk(tensor[np.newaxis], affine, force_3d=True)
         floating = reference = image
 
         scaling_transform = self.get_scaling_transform(
@@ -240,10 +248,10 @@ class RandomAffine(RandomTransform):
 
         np_array = sitk.GetArrayFromImage(resampled)
         np_array = np_array.transpose()  # ITK to NumPy
-        tensor[0] = torch.from_numpy(np_array)
+        tensor = torch.from_numpy(np_array)
         return tensor
 
-
+# flake8: noqa: E201, E203, E243
 def get_borders_mean(image, filter_otsu=True):
     # pylint: disable=bad-whitespace
     array = sitk.GetArrayViewFromImage(image)

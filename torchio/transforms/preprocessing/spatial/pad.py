@@ -1,5 +1,5 @@
 from numbers import Number
-from typing import Callable, Union
+from typing import Callable, Union, List, Optional
 import SimpleITK as sitk
 from .bounds_transform import BoundsTransform, TypeBounds
 
@@ -9,17 +9,19 @@ class Pad(BoundsTransform):
 
     Args:
         padding: Tuple
-            :math:`(d_{ini}, d_{fin}, h_{ini}, h_{fin}, w_{ini}, w_{fin})`
+            :math:`(w_{ini}, w_{fin}, h_{ini}, h_{fin}, d_{ini}, d_{fin})`
             defining the number of values padded to the edges of each axis.
             If the initial shape of the image is
-            :math:`D \times H \times W`, the final shape will be
-            :math:`(d_{ini} + D + d_{fin}) \times (h_{ini} + H + h_{fin}) \times (w_{ini} + W + w_{fin})`.
-            If only three values :math:`(d, h, w)` are provided, then
-            :math:`d_{ini} = d_{fin} = d`,
+            :math:`W \times H \times D`, the final shape will be
+            :math:`(w_{ini} + W + w_{fin}) \times (h_{ini} + H + h_{fin})
+            \times (d_{ini} + D + d_{fin})`.
+            If only three values :math:`(w, h, d)` are provided, then
+            :math:`w_{ini} = w_{fin} = w`,
             :math:`h_{ini} = h_{fin} = h` and
-            :math:`w_{ini} = w_{fin} = w`.
+            :math:`d_{ini} = d_{fin} = d`.
             If only one value :math:`n` is provided, then
-            :math:`d_{ini} = d_{fin} = h_{ini} = h_{fin} = w_{ini} = w_{fin} = n`.
+            :math:`w_{ini} = w_{fin} = h_{ini} = h_{fin} =
+            d_{ini} = d_{fin} = n`.
         padding_mode:
             Type of padding. Should be one of:
 
@@ -38,7 +40,7 @@ class Pad(BoundsTransform):
             - ``wrap`` Same as ``circular``.
 
         p: Probability that this transform will be applied.
-
+        keys: See :py:class:`~torchio.transforms.Transform`.
     """
 
     PADDING_FUNCTIONS = {
@@ -55,13 +57,14 @@ class Pad(BoundsTransform):
             padding: TypeBounds,
             padding_mode: Union[str, float] = 0,
             p: float = 1,
+            keys: Optional[List[str]] = None,
             ):
         """
         padding_mode can be 'constant', 'reflect', 'replicate' or 'circular'.
         See https://pytorch.org/docs/stable/nn.functional.html#pad for more
         information about this transform.
         """
-        super().__init__(padding, p=p)
+        super().__init__(padding, p=p, keys=keys)
         self.padding_mode, self.fill = self.parse_padding_mode(padding_mode)
 
     @classmethod

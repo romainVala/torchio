@@ -1,10 +1,12 @@
 import warnings
-from typing import Union, Tuple, Optional
+from typing import Union, Tuple, Optional, List
+
 import numpy as np
 from deprecated import deprecated
+
 from .pad import Pad
 from .crop import Crop
-from .bounds_transform import BoundsTransform, TypeShape, TypeSixBounds
+from .bounds_transform import BoundsTransform, TypeTripletInt, TypeSixBounds
 from ....data.subject import Subject
 from ....utils import round_up
 
@@ -16,8 +18,8 @@ class CropOrPad(BoundsTransform):
     physical positions of the voxels are maintained.
 
     Args:
-        target_shape: Tuple :math:`(D, H, W)`. If a single value :math:`N` is
-            provided, then :math:`D = H = W = N`.
+        target_shape: Tuple :math:`(W, H, D)`. If a single value :math:`N` is
+            provided, then :math:`H = W = D = N`.
         padding_mode: Same as :attr:`padding_mode` in
             :py:class:`~torchio.transforms.Pad`.
         mask_name: If ``None``, the centers of the input and output volumes
@@ -26,13 +28,14 @@ class CropOrPad(BoundsTransform):
             of the bounding box of non-zero values in the image named
             :py:attr:`mask_name`.
         p: Probability that this transform will be applied.
+        keys: See :py:class:`~torchio.transforms.Transform`.
 
     Example:
         >>> import torchio
         >>> from torchio.transforms import CropOrPad
         >>> subject = torchio.Subject(
-        ...     torchio.Image('chest_ct', 'subject_a_ct.nii.gz', torchio.INTENSITY),
-        ...     torchio.Image('heart_mask', 'subject_a_heart_seg.nii.gz', torchio.LABEL),
+        ...     torchio.ScalarImage('chest_ct', 'subject_a_ct.nii.gz'),
+        ...     torchio.LabelMap('heart_mask', 'subject_a_heart_seg.nii.gz'),
         ... )
         >>> subject['chest_ct'].shape
         torch.Size([1, 512, 512, 289])
@@ -46,12 +49,13 @@ class CropOrPad(BoundsTransform):
     """
     def __init__(
             self,
-            target_shape: Union[int, TypeShape],
+            target_shape: Union[int, TypeTripletInt],
             padding_mode: Union[str, float] = 0,
             mask_name: Optional[str] = None,
             p: float = 1,
+            keys: Optional[List[str]] = None,
             ):
-        super().__init__(target_shape, p=p)
+        super().__init__(target_shape, p=p, keys=keys)
         self.padding_mode = padding_mode
         if mask_name is not None and not isinstance(mask_name, str):
             message = (
@@ -93,9 +97,9 @@ class CropOrPad(BoundsTransform):
         return bb_min, bb_max
 
     @staticmethod
-    def _get_sample_shape(sample: Subject) -> TypeShape:
+    def _get_sample_shape(sample: Subject) -> TypeTripletInt:
         """Return the shape of the first image in the sample."""
-        sample.check_consistent_shape()
+        sample.check_consistent_spatial_shape()
         for image_dict in sample.get_images(intensity_only=False):
             data = image_dict.spatial_shape  # remove channels dimension
             break
@@ -108,11 +112,11 @@ class CropOrPad(BoundsTransform):
         r"""Compute bounds parameters for ITK filters.
 
         Args:
-            parameters: Tuple :math:`(d, h, w)` with the number of voxels to be
+            parameters: Tuple :math:`(w, h, d)` with the number of voxels to be
                 cropped or padded.
 
         Returns:
-            Tuple :math:`(d_{ini}, d_{fin}, h_{ini}, h_{fin}, w_{ini}, w_{fin})`,
+            Tuple :math:`(w_{ini}, w_{fin}, h_{ini}, h_{fin}, d_{ini}, d_{fin})`,
             where :math:`n_{ini} = \left \lceil \frac{n}{2} \right \rceil` and
             :math:`n_{fin} = \left \lfloor \frac{n}{2} \right \rfloor`.
 
@@ -120,7 +124,6 @@ class CropOrPad(BoundsTransform):
             >>> p = np.array((4, 0, 7))
             >>> _get_six_bounds_parameters(p)
             (2, 2, 0, 0, 4, 3)
-
         """
         parameters = parameters / 2
         result = []
@@ -131,8 +134,8 @@ class CropOrPad(BoundsTransform):
 
     def _compute_cropping_padding_from_shapes(
             self,
-            source_shape: TypeShape,
-            target_shape: TypeShape,
+            source_shape: TypeTripletInt,
+            target_shape: TypeTripletInt,
             ) -> Tuple[Optional[TypeSixBounds], Optional[TypeSixBounds]]:
         diff_shape = target_shape - source_shape
 
@@ -155,8 +158,8 @@ class CropOrPad(BoundsTransform):
             sample: Subject,
             ) -> Tuple[Optional[TypeSixBounds], Optional[TypeSixBounds]]:
         source_shape = self._get_sample_shape(sample)
-        # The parent class turns the 3-element shape tuple (d, h, w)
-        # into a 6-element bounds tuple (d, d, h, h, w, w)
+        # The parent class turns the 3-element shape tuple (w, h, d)
+        # into a 6-element bounds tuple (w, w, h, h, d, d)
         target_shape = np.array(self.bounds_parameters[::2])
         parameters = self._compute_cropping_padding_from_shapes(
             source_shape, target_shape)

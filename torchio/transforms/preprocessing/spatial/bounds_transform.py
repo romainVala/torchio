@@ -1,35 +1,36 @@
-from typing import Union, Tuple
+from typing import Union, Tuple, List, Optional
 import torch
 import numpy as np
+import SimpleITK as sitk
 from ....data.subject import Subject
-from ....torchio import DATA, AFFINE
-from ... import Transform
+from ....torchio import DATA, AFFINE, TypeTripletInt
+from ... import SpatialTransform
 
 
-TypeShape = Tuple[int, int, int]
 TypeSixBounds = Tuple[int, int, int, int, int, int]
 TypeBounds = Union[
     int,
-    TypeShape,
+    TypeTripletInt,
     TypeSixBounds,
 ]
 
 
-class BoundsTransform(Transform):
+class BoundsTransform(SpatialTransform):
     """Base class for transforms that change image bounds.
 
     Args:
         bounds_parameters: The meaning of this argument varies according to the
             child class.
         p: Probability that this transform will be applied.
-
+        keys: See :py:class:`~torchio.transforms.Transform`.
     """
     def __init__(
             self,
             bounds_parameters: TypeBounds,
             p: float = 1,
+            keys: Optional[List[str]] = None,
             ):
-        super().__init__(p=p)
+        super().__init__(p=p, keys=keys)
         self.bounds_parameters = self.parse_bounds(bounds_parameters)
 
     @property
@@ -68,11 +69,27 @@ class BoundsTransform(Transform):
     def apply_transform(self, sample: Subject) -> dict:
         low = self.bounds_parameters[::2]
         high = self.bounds_parameters[1::2]
-        for image in sample.get_images(intensity_only=False):
+        for image in self.get_images(sample):
             itk_image = image.as_sitk()
-            result = self.bounds_function(itk_image, low, high)
+            result = self._apply_bounds_function(itk_image, low, high)
             data, affine = self.sitk_to_nib(result)
-            tensor = torch.from_numpy(data).unsqueeze(0)
+            tensor = torch.from_numpy(data)
             image[DATA] = tensor
             image[AFFINE] = affine
         return sample
+
+    def _apply_bounds_function(self, image, low, high):
+        num_components = image.GetNumberOfComponentsPerPixel()
+        if self.bounds_function == sitk.Crop or num_components == 1:
+            result = self.bounds_function(image, low, high)
+        else:  # padding not supported for vector images
+            components = [
+                sitk.VectorIndexSelectionCast(image, i)
+                for i in range(num_components)
+            ]
+            components_padded = [
+                self.bounds_function(component, low, high)
+                for component in components
+            ]
+            result = sitk.Compose(components_padded)
+        return result

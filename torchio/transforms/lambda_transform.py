@@ -1,4 +1,4 @@
-from typing import Sequence, Optional
+from typing import Sequence, Optional, List
 import torch
 from ..data.subject import Subject
 from ..torchio import DATA, TYPE, TypeCallable
@@ -9,12 +9,13 @@ class Lambda(Transform):
     """Applies a user-defined function as transform.
 
     Args:
-        function: Callable that receives and returns a 3D
+        function: Callable that receives and returns a 4D
             :py:class:`torch.Tensor`.
         types_to_apply: List of strings corresponding to the image types to
             which this transform should be applied. If ``None``, the transform
             will be applied to all images in the sample.
         p: Probability that this transform will be applied.
+        keys: See :py:class:`~torchio.transforms.Transform`.
 
     Example:
         >>> import torchio
@@ -30,9 +31,9 @@ class Lambda(Transform):
             function: TypeCallable,
             types_to_apply: Optional[Sequence[str]] = None,
             p: float = 1,
-            **kwargs
+            keys: Optional[List[str]] = None,
             ):
-        super().__init__(p=p, **kwargs)
+        super().__init__(p=p, keys=keys)
         self.function = function
         self.types_to_apply = types_to_apply
 
@@ -44,7 +45,7 @@ class Lambda(Transform):
                 if image_type not in self.types_to_apply:
                     continue
 
-            function_arg = image[DATA][0]
+            function_arg = image[DATA]
             result = self.function(function_arg)
             if not isinstance(result, torch.Tensor):
                 message = (
@@ -64,5 +65,5 @@ class Lambda(Transform):
                     f' be {function_arg.ndim}, not {result.ndim}'
                 )
                 raise ValueError(message)
-            image[DATA][0] = result
+            image[DATA] = result
         return sample

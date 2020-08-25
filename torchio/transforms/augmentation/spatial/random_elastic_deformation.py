@@ -1,20 +1,21 @@
 import warnings
 from numbers import Number
-from typing import Tuple, Optional, Union
+from typing import Tuple, Optional, Union, List
 import torch
 import numpy as np
 import SimpleITK as sitk
 from ....data.subject import Subject
-from ....utils import to_tuple
-from ....torchio import INTENSITY, LABEL, DATA, AFFINE, TYPE
+from ....utils import to_tuple, nib_to_sitk
+from ....torchio import INTENSITY, DATA, AFFINE, TYPE, TypeTripletInt
 from .. import Interpolation, get_sitk_interpolator
+from ... import SpatialTransform
 from .. import RandomTransform
 
 
 SPLINE_ORDER = 3
 
 
-class RandomElasticDeformation(RandomTransform):
+class RandomElasticDeformation(RandomTransform, SpatialTransform):
     r"""Apply dense random elastic deformation.
 
     A random displacement is assigned to a coarse grid of control points around
@@ -54,6 +55,7 @@ class RandomElasticDeformation(RandomTransform):
             points of the coarse grid.
         p: Probability that this transform will be applied.
         seed: See :py:class:`~torchio.transforms.augmentation.RandomTransform`.
+        keys: See :py:class:`~torchio.transforms.Transform`.
 
     `This gist <https://gist.github.com/fepegar/b723d15de620cd2a3a4dbd71e491b59d>`_
     can also be used to better understand the meaning of the parameters.
@@ -115,9 +117,9 @@ class RandomElasticDeformation(RandomTransform):
             image_interpolation: str = 'linear',
             p: float = 1,
             seed: Optional[int] = None,
-            **kwargs
+            keys: Optional[List[str]] = None,
             ):
-        super().__init__(p=p, seed=seed, **kwargs)
+        super().__init__(p=p, seed=seed, keys=keys)
         self._bspline_transformation = None
         self.num_control_points = to_tuple(num_control_points, length=3)
         self.parse_control_points(self.num_control_points)
@@ -137,7 +139,7 @@ class RandomElasticDeformation(RandomTransform):
 
     @staticmethod
     def parse_control_points(
-            num_control_points: Tuple[int, int, int],
+            num_control_points: TypeTripletInt,
             ) -> None:
         for axis, number in enumerate(num_control_points):
             if not isinstance(number, int) or number < 4:
@@ -162,7 +164,7 @@ class RandomElasticDeformation(RandomTransform):
 
     @staticmethod
     def get_params(
-            num_control_points: Tuple[int, int, int],
+            num_control_points: TypeTripletInt,
             max_displacement: Tuple[float, float, float],
             num_locked_borders: int,
             ) -> Tuple:
@@ -187,7 +189,7 @@ class RandomElasticDeformation(RandomTransform):
     @staticmethod
     def get_bspline_transform(
             image: sitk.Image,
-            num_control_points: Tuple[int, int, int],
+            num_control_points: TypeTripletInt,
             coarse_field: np.ndarray,
             ) -> sitk.BSplineTransformInitializer:
         mesh_shape = [n - SPLINE_ORDER for n in num_control_points]
@@ -213,19 +215,19 @@ class RandomElasticDeformation(RandomTransform):
             warnings.warn(message, RuntimeWarning)
 
     def apply_transform(self, sample: Subject) -> dict:
-        sample.check_consistent_shape()
+        sample.check_consistent_spatial_shape()
         bspline_params = self.get_params(
             self.num_control_points,
             self.max_displacement,
             self.num_locked_borders,
         )
-        for image in sample.get_images(intensity_only=False):
+        for image in self.get_images(sample):
             if image[TYPE] != INTENSITY:
                 interpolation = Interpolation.NEAREST
             else:
                 interpolation = self.interpolation
             if image.is_2d():
-                bspline_params[..., -3] = 0  # no displacement in LR axis
+                bspline_params[..., -1] = 0  # no displacement in IS axis
             image[DATA] = self.apply_bspline_transform(
                 image[DATA],
                 image[AFFINE],
@@ -259,25 +261,25 @@ class RandomElasticDeformation(RandomTransform):
             interpolation: Interpolation,
             ) -> torch.Tensor:
         assert tensor.dim() == 4
-        assert len(tensor) == 1
-        image = self.nib_to_sitk(tensor[0], affine)
-        floating = reference = image
-        bspline_transform = self.get_bspline_transform(
-            image,
-            self.num_control_points,
-            bspline_params,
-        )
-        self.parse_free_form_transform(
-            bspline_transform, self.max_displacement)
-        resampler = sitk.ResampleImageFilter()
-        resampler.SetReferenceImage(reference)
-        resampler.SetTransform(bspline_transform)
-        resampler.SetInterpolator(get_sitk_interpolator(interpolation))
-        resampler.SetDefaultPixelValue(tensor.min().item())
-        resampler.SetOutputPixelType(sitk.sitkFloat32)
-        resampled = resampler.Execute(floating)
-
-        np_array = sitk.GetArrayFromImage(resampled)
-        np_array = np_array.transpose()  # ITK to NumPy
-        tensor[0] = torch.from_numpy(np_array)
+        results = []
+        for component in tensor:
+            image = nib_to_sitk(component[np.newaxis], affine, force_3d=True)
+            floating = reference = image
+            bspline_transform = self.get_bspline_transform(
+                image,
+                self.num_control_points,
+                bspline_params,
+            )
+            self.parse_free_form_transform(
+                bspline_transform, self.max_displacement)
+            resampler = sitk.ResampleImageFilter()
+            resampler.SetReferenceImage(reference)
+            resampler.SetTransform(bspline_transform)
+            resampler.SetInterpolator(get_sitk_interpolator(interpolation))
+            resampler.SetDefaultPixelValue(component.min().item())
+            resampler.SetOutputPixelType(sitk.sitkFloat32)
+            resampled = resampler.Execute(floating)
+            result, _ = self.sitk_to_nib(resampled)
+            results.append(torch.from_numpy(result))
+        tensor = torch.cat(results)
         return tensor

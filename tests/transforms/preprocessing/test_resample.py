@@ -1,6 +1,7 @@
+import torch
 import numpy as np
-from numpy.testing import assert_array_equal
-from torchio import DATA, AFFINE
+from numpy.testing import assert_array_equal, assert_array_almost_equal
+from torchio import DATA, AFFINE, ScalarImage
 from torchio.transforms import Resample
 from torchio.utils import nib_to_sitk
 from ...utils import TorchioTestCase
@@ -13,33 +14,32 @@ class TestResample(TorchioTestCase):
         spacing = 2
         transform = Resample(spacing)
         transformed = transform(self.sample)
-        for image_dict in transformed.values():
-            image = image_dict.as_sitk()
-            self.assertEqual(image.GetSpacing(), 3 * (spacing,))
+        for image in transformed.get_images(intensity_only=False):
+            self.assertEqual(image.spacing, 3 * (spacing,))
 
     def test_reference_name(self):
         sample = self.get_inconsistent_sample()
         reference_name = 't1'
         transform = Resample(reference_name)
         transformed = transform(sample)
-        ref_image_dict = sample[reference_name]
-        for image_dict in transformed.values():
+        reference_image = sample[reference_name]
+        for image in transformed.get_images(intensity_only=False):
             self.assertEqual(
-                ref_image_dict.shape, image_dict.shape)
-            assert_array_equal(ref_image_dict[AFFINE], image_dict[AFFINE])
+                reference_image.shape, image.shape)
+            assert_array_equal(reference_image[AFFINE], image[AFFINE])
 
     def test_affine(self):
         spacing = 1
         affine_name = 'pre_affine'
         transform = Resample(spacing, pre_affine_name=affine_name)
         transformed = transform(self.sample)
-        for image_dict in transformed.values():
-            if affine_name in image_dict.keys():
-                new_affine = np.eye(4)
-                new_affine[0, 3] = 10
-                assert_array_equal(image_dict[AFFINE], new_affine)
+        for image in transformed.values():
+            if affine_name in image:
+                target_affine = np.eye(4)
+                target_affine[:3, 3] = 10, 0, -0.1
+                assert_array_almost_equal(image[AFFINE], target_affine)
             else:
-                assert_array_equal(image_dict[AFFINE], np.eye(4))
+                assert_array_equal(image[AFFINE], np.eye(4))
 
     def test_missing_affine(self):
         transform = Resample(1, pre_affine_name='missing')
@@ -70,3 +70,9 @@ class TestResample(TorchioTestCase):
         transform = Resample('missing')
         with self.assertRaises(ValueError):
             transform(self.sample)
+
+    def test_2d(self):
+        image = ScalarImage(tensor=torch.rand(1, 2, 3, 1))
+        transform = Resample(0.5)
+        shape = transform(image).shape
+        self.assertEqual(shape, (1, 4, 6, 1))

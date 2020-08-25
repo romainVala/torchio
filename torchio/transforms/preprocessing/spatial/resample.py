@@ -1,17 +1,18 @@
 from pathlib import Path
 from numbers import Number
-from typing import Union, Tuple, Optional
+from typing import Union, Tuple, Optional, List
 
 import torch
 import numpy as np
-import nibabel as nib
+import SimpleITK as sitk
 from nibabel.processing import resample_to_output, resample_from_to
 
 from ....data.subject import Subject
-from ....data.image import Image
-from ....torchio import DATA, AFFINE, TYPE, INTENSITY, TypeData
-from ... import Transform, Interpolation
-
+from ....data.image import Image, ScalarImage
+from ....torchio import DATA, AFFINE, TYPE, INTENSITY, TypeData, TypeTripletFloat
+from ....utils import sitk_to_nib
+from ... import SpatialTransform
+from ... import Interpolation, get_sitk_interpolator
 
 
 TypeSpacing = Union[float, Tuple[float, float, float]]
@@ -21,12 +22,12 @@ TypeTarget = Tuple[
 ]
 
 
-class Resample(Transform):
+class Resample(SpatialTransform):
     """Change voxel spacing by resampling.
 
     Args:
-        target: Tuple :math:`(s_d, s_h, s_w)`. If only one value
-            :math:`n` is specified, then :math:`s_d = s_h = s_w = n`.
+        target: Tuple :math:`(s_h, s_w, s_d)`. If only one value
+            :math:`n` is specified, then :math:`s_h = s_w = s_d = n`.
             If a string or :py:class:`~pathlib.Path` is given,
             all images will be resampled using the image
             with that name as reference or found at the path.
@@ -41,11 +42,7 @@ class Resample(Transform):
             supported for backward compatibility,
             but will be removed in a future version.
         p: Probability that this transform will be applied.
-
-    .. note:: Resampling is performed using
-        :py:meth:`nibabel.processing.resample_to_output` or
-        :py:meth:`nibabel.processing.resample_from_to`, depending on whether
-        the target is a spacing or a reference image.
+        keys: See :py:class:`~torchio.transforms.Transform`.
 
     Example:
         >>> import torchio
@@ -66,22 +63,26 @@ class Resample(Transform):
             image_interpolation: str = 'linear',
             pre_affine_name: Optional[str] = None,
             p: float = 1,
-            copy: bool = True,
+            keys: Optional[List[str]] = None,
             ):
-        super().__init__(p=p, copy=copy)
+        super().__init__(p=p, keys=keys)
         self.reference_image, self.target_spacing = self.parse_target(target)
-        self.interpolation_order = self.parse_interpolation(image_interpolation)
+        self.interpolation = self.parse_interpolation(image_interpolation)
         self.affine_name = pre_affine_name
 
     def parse_target(
             self,
             target: Union[TypeSpacing, str],
             ) -> TypeTarget:
+        """
+        If target is an existing path, return a torchio.ScalarImage
+        If it does not exist, return the string
+        If it is not a Path or string, return None
+        """
         if isinstance(target, (str, Path)):
             if Path(target).is_file():
                 path = target
-                image = Image(path)
-                reference_image = image.data, image.affine
+                reference_image = ScalarImage(path)
             else:
                 reference_image = target
             target_spacing = None
@@ -105,20 +106,6 @@ class Resample(Transform):
         if np.any(np.array(spacing) <= 0):
             raise ValueError(f'Spacing must be positive, not "{spacing}"')
         return result
-
-    def parse_interpolation(self, interpolation: str) -> int:
-        interpolation = super().parse_interpolation(interpolation)
-
-        if interpolation in (Interpolation.NEAREST, 'nearest'):
-            order = 0
-        elif interpolation in (Interpolation.LINEAR, 'linear'):
-            order = 1
-        elif interpolation in (Interpolation.BSPLINE, 'bspline'):
-            order = 3
-        else:
-            message = f'Interpolation not implemented yet: {interpolation}'
-            raise NotImplementedError(message)
-        return order
 
     @staticmethod
     def check_affine(affine_name: str, image_dict: dict):
@@ -155,77 +142,88 @@ class Resample(Transform):
         raise ValueError(message)
 
     def apply_transform(self, sample: Subject) -> dict:
-        use_reference = self.reference_image is not None
         use_pre_affine = self.affine_name is not None
         if use_pre_affine:
             self.check_affine_key_presence(self.affine_name, sample)
-        images_dict = sample.get_images_dict(intensity_only=False).items()
-        for image_name, image_dict in images_dict:
+        images_dict = self.get_images_dict(sample).items()
+        for image_name, image in images_dict:
             # Do not resample the reference image if there is one
-            if use_reference and image_name == self.reference_image:
+            if image is self.reference_image:
                 continue
 
-            # Choose interpolator
-            if image_dict[TYPE] != INTENSITY:
-                interpolation_order = 0  # nearest neighbor
+            # Choose interpolation
+            if image[TYPE] != INTENSITY:
+                interpolation = Interpolation.NEAREST
             else:
-                interpolation_order = self.interpolation_order
+                interpolation = self.interpolation
+            interpolator = get_sitk_interpolator(interpolation)
 
             # Apply given affine matrix if found in image
-            if use_pre_affine and self.affine_name in image_dict:
-                self.check_affine(self.affine_name, image_dict)
-                matrix = image_dict[self.affine_name]
+            if use_pre_affine and self.affine_name in image:
+                self.check_affine(self.affine_name, image)
+                matrix = image[self.affine_name]
                 if isinstance(matrix, torch.Tensor):
                     matrix = matrix.numpy()
-                image_dict[AFFINE] = matrix @ image_dict[AFFINE]
+                image[AFFINE] = matrix @ image[AFFINE]
+
+            floating_itk = image.as_sitk(force_3d=True)
 
             # Resample
-            args = image_dict[DATA], image_dict[AFFINE], interpolation_order
-            if use_reference:
-                if isinstance(self.reference_image, str):
-                    try:
-                        ref_image_dict = sample[self.reference_image]
-                    except KeyError as error:
-                        message = (
-                            f'Reference name "{self.reference_image}"'
-                            ' not found in sample'
-                        )
-                        raise ValueError(message) from error
-                    reference = ref_image_dict[DATA], ref_image_dict[AFFINE]
-                else:
-                    reference = self.reference_image
-                kwargs = dict(reference=reference)
-            else:
-                kwargs = dict(target_spacing=self.target_spacing)
-            image_dict[DATA], image_dict[AFFINE] = self.apply_resample(
-                *args,
-                **kwargs,
-            )
+            if isinstance(self.reference_image, str):
+                try:
+                    reference_image_sitk = sample[self.reference_image].as_sitk()
+                except KeyError as error:
+                    message = (
+                        f'Reference name "{self.reference_image}"'
+                        ' not found in sample'
+                    )
+                    raise ValueError(message) from error
+            elif isinstance(self.reference_image, ScalarImage):
+                reference_image_sitk = self.reference_image.as_sitk()
+            elif self.reference_image is None:  # target is a spacing
+                reference_image_sitk = self.get_reference_image(
+                    floating_itk,
+                    self.target_spacing,
+                )
+
+            resampler = sitk.ResampleImageFilter()
+            resampler.SetInterpolator(interpolator)
+            resampler.SetReferenceImage(reference_image_sitk)
+            resampled = resampler.Execute(floating_itk)
+
+            array, affine = sitk_to_nib(resampled)
+            image[DATA] = torch.from_numpy(array)
+            image[AFFINE] = affine
         return sample
 
     @staticmethod
-    def apply_resample(
-            tensor: torch.Tensor,
-            affine: np.ndarray,
-            interpolation_order: int,
-            target_spacing: Optional[Tuple[float, float, float]] = None,
-            reference: Optional[Tuple[torch.Tensor, np.ndarray]] = None,
-            ) -> Tuple[torch.Tensor, np.ndarray]:
-        array = tensor.numpy()[0]
-        if reference is None:
-            nii = resample_to_output(
-                nib.Nifti1Image(array, affine),
-                voxel_sizes=target_spacing,
-                order=interpolation_order,
-            )
-        else:
-            reference_tensor, reference_affine = reference
-            reference_array = reference_tensor.numpy()[0]
-            nii = resample_from_to(
-                nib.Nifti1Image(array, affine),
-                nib.Nifti1Image(reference_array, reference_affine),
-                order=interpolation_order,
-            )
-        tensor = torch.from_numpy(nii.get_fdata(dtype=np.float32))
-        tensor = tensor.unsqueeze(dim=0)
-        return tensor, nii.affine
+    def get_reference_image(
+            image: sitk.Image,
+            spacing: TypeTripletFloat,
+            ) -> sitk.Image:
+        old_spacing = np.array(image.GetSpacing())
+        new_spacing = np.array(spacing)
+        old_size = np.array(image.GetSize())
+        new_size = old_size * old_spacing / new_spacing
+        new_size = np.ceil(new_size).astype(np.uint16)
+        new_size[old_size == 1] = 1  # keep singleton dimensions
+        new_origin_index = 0.5 * (new_spacing / old_spacing - 1)
+        new_origin_lps = image.TransformContinuousIndexToPhysicalPoint(
+            new_origin_index)
+        reference = sitk.Image(*new_size.tolist(), sitk.sitkFloat32)
+        reference.SetDirection(image.GetDirection())
+        reference.SetSpacing(new_spacing.tolist())
+        reference.SetOrigin(new_origin_lps)
+        return reference
+
+    @staticmethod
+    def get_sigma(downsampling_factor, spacing):
+        """Compute optimal standard deviation for Gaussian kernel.
+
+        From Cardoso et al., "Scale factor point spread function matching:
+        beyond aliasing in image resampling", MICCAI 2015
+        """
+        k = downsampling_factor
+        variance = (k ** 2 - 1 ** 2) * (2 * np.sqrt(2 * np.log(2))) ** (-2)
+        sigma = spacing * np.sqrt(variance)
+        return sigma

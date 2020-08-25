@@ -1,25 +1,32 @@
-from typing import Tuple, Optional, Union
+from typing import Tuple, Optional, Union, List
 import torch
-import numpy as np
 from ....torchio import DATA
 from ....data.subject import Subject
+from ... import IntensityTransform
 from .. import RandomTransform
 
 
-class RandomNoise(RandomTransform):
+class RandomNoise(RandomTransform, IntensityTransform):
     r"""Add random Gaussian noise.
+
+    Adds noise sampled from a normal distribution.
 
     Args:
         mean: Mean :math:`\mu` of the Gaussian distribution
             from which the noise is sampled.
             If two values :math:`(a, b)` are provided,
             then :math:`\mu \sim \mathcal{U}(a, b)`.
+            If only one value :math:`d` is provided,
+            :math:`\mu \sim \mathcal{U}(-d, d)`.
         std: Standard deviation :math:`\sigma` of the Gaussian distribution
             from which the noise is sampled.
             If two values :math:`(a, b)` are provided,
             then :math:`\sigma \sim \mathcal{U}(a, b)`.
+            If only one value :math:`d` is provided,
+            :math:`\sigma \sim \mathcal{U}(0, d)`.
         p: Probability that this transform will be applied.
         seed: See :py:class:`~torchio.transforms.augmentation.RandomTransform`.
+        keys: See :py:class:`~torchio.transforms.Transform`.
     """
     def __init__(
             self,
@@ -28,22 +35,17 @@ class RandomNoise(RandomTransform):
             p: float = 1,
             seed: Optional[int] = None,
             abs_after_noise: bool = False,
-            **kwargs
+            keys: Optional[List[str]] = None,
             ):
-        super().__init__(p=p, seed=seed, **kwargs)
+        super().__init__(p=p, seed=seed, keys=keys)
         self.mean_range = self.parse_range(mean, 'mean')
-        self.std_range = self.parse_range(std, 'std')
+        self.std_range = self.parse_range(std, 'std', min_constraint=0)
         self.abs_after_noise = abs_after_noise
-        if any(np.array(self.std_range) < 0):
-            message = (
-                'Standard deviation std must greater or equal to zero,'
-                f' not "{self.std_range}"'
-            )
-            raise ValueError(message)
+
 
     def apply_transform(self, sample: Subject) -> dict:
         random_parameters_images_dict = {}
-        for image_name, image_dict in sample.get_images_dict().items():
+        for image_name, image_dict in self.get_images_dict(sample).items():
             mean, std = self.get_params(self.mean_range, self.std_range)
             random_parameters_dict = {'std': std}
             random_parameters_images_dict[image_name] = random_parameters_dict
@@ -61,9 +63,10 @@ class RandomNoise(RandomTransform):
         return mean, std
 
 
-def add_noise(tensor: torch.Tensor, mean: float, std: float, abs_after_noise: bool ) -> torch.Tensor:
-    noise = torch.FloatTensor(*tensor.shape).normal_(mean=mean, std=std)
-    tensor += noise
+def add_noise(tensor: torch.Tensor, mean: float, std: float, abs_after_noise: bool) -> torch.Tensor:
+    noise = torch.randn(*tensor.shape) * std + mean
+    tensor = tensor + noise
     if abs_after_noise:
         tensor = torch.abs(tensor)
+
     return tensor

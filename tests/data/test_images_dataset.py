@@ -1,15 +1,15 @@
 #!/usr/bin/env python
 
-"""Tests for ImagesDataset."""
+"""Tests for SubjectsDataset."""
 
 import nibabel as nib
 import torchio
-from torchio import DATA, ImagesDataset
+from torchio import DATA, SubjectsDataset, ImagesDataset
 from ..utils import TorchioTestCase
 
 
-class TestImagesDataset(TorchioTestCase):
-    """Tests for `ImagesDataset`."""
+class TestSubjectsDataset(TorchioTestCase):
+    """Tests for `SubjectsDataset`."""
 
     def test_images(self):
         self.iterate_dataset(self.subjects_list)
@@ -39,7 +39,7 @@ class TestImagesDataset(TorchioTestCase):
             self.dataset[:3]
 
     def test_save_sample(self):
-        dataset = ImagesDataset(
+        dataset = SubjectsDataset(
             self.subjects_list, transform=lambda x: x)
         _ = len(dataset)  # for coverage
         sample = dataset[0]
@@ -54,7 +54,7 @@ class TestImagesDataset(TorchioTestCase):
 
     def test_wrong_transform_init(self):
         with self.assertRaises(ValueError):
-            ImagesDataset(
+            SubjectsDataset(
                 self.subjects_list,
                 transform=dict(),
             )
@@ -65,15 +65,23 @@ class TestImagesDataset(TorchioTestCase):
 
     @staticmethod
     def iterate_dataset(subjects_list):
-        dataset = ImagesDataset(subjects_list)
+        dataset = SubjectsDataset(subjects_list)
         for _ in dataset:
             pass
 
     def test_data_loader(self):
         from torch.utils.data import DataLoader
         subj_list = [torchio.datasets.Colin27()]
-        dataset = ImagesDataset(subj_list)
+        dataset = SubjectsDataset(subj_list)
         loader = DataLoader(dataset, batch_size=1, shuffle=True)
         for batch in loader:
             batch['t1'][DATA]
             batch['brain'][DATA]
+
+    def test_save_deprecated(self):
+        with self.assertWarns(DeprecationWarning):
+            self.dataset.save_sample(self.sample, {})
+
+    def test_images_dataset_deprecated(self):
+        with self.assertWarns(DeprecationWarning):
+            ImagesDataset(self.subjects_list)

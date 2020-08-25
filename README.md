@@ -231,13 +231,17 @@ If you use this package for your research, please cite the paper:
 BibTeX entry:
 
 ```bibtex
-@misc{fern2020torchio,
-    title={TorchIO: a Python library for efficient loading, preprocessing, augmentation and patch-based sampling of medical images in deep learning},
-    author={Fernando Pérez-García and Rachel Sparks and Sebastien Ourselin},
-    year={2020},
-    eprint={2003.04696},
-    archivePrefix={arXiv},
-    primaryClass={eess.IV}
+@article{perez-garcia_torchio_2020,
+    title = {{TorchIO}: a {Python} library for efficient loading, preprocessing, augmentation and patch-based sampling of medical images in deep learning},
+    shorttitle = {{TorchIO}},
+    url = {http://arxiv.org/abs/2003.04696},
+    urldate = {2020-03-11},
+    journal = {arXiv:2003.04696 [cs, eess, stat]},
+    author = {P{\'e}rez-Garc{\'i}a, Fernando and Sparks, Rachel and Ourselin, Sebastien},
+    month = mar,
+    year = {2020},
+    note = {arXiv: 2003.04696},
+    keywords = {Computer Science - Computer Vision and Pattern Recognition, Electrical Engineering and Systems Science - Image and Video Processing, Computer Science - Machine Learning, Computer Science - Artificial Intelligence, Statistics - Machine Learning},
 }
 ```
 
@@ -270,7 +274,7 @@ Thanks goes to all these people ([emoji key](https://allcontributors.org/docs/en
   <tr>
     <td align="center"><a href="https://github.com/fepegar"><img src="https://avatars1.githubusercontent.com/u/12688084?v=4" width="100px;" alt=""/><br /><sub><b>Fernando Pérez-García</b></sub></a><br /><a href="https://github.com/fepegar/torchio/commits?author=fepegar" title="Code">💻</a> <a href="https://github.com/fepegar/torchio/commits?author=fepegar" title="Documentation">📖</a></td>
     <td align="center"><a href="https://github.com/romainVala"><img src="https://avatars1.githubusercontent.com/u/5611962?v=4" width="100px;" alt=""/><br /><sub><b>valabregue</b></sub></a><br /><a href="#ideas-romainVala" title="Ideas, Planning, & Feedback">🤔</a> <a href="https://github.com/fepegar/torchio/pulls?q=is%3Apr+reviewed-by%3AromainVala" title="Reviewed Pull Requests">👀</a> <a href="https://github.com/fepegar/torchio/commits?author=romainVala" title="Code">💻</a></td>
-    <td align="center"><a href="https://github.com/GFabien"><img src="https://avatars1.githubusercontent.com/u/39873986?v=4" width="100px;" alt=""/><br /><sub><b>GFabien</b></sub></a><br /><a href="https://github.com/fepegar/torchio/commits?author=GFabien" title="Code">💻</a></td>
+    <td align="center"><a href="https://github.com/GFabien"><img src="https://avatars1.githubusercontent.com/u/39873986?v=4" width="100px;" alt=""/><br /><sub><b>GFabien</b></sub></a><br /><a href="https://github.com/fepegar/torchio/commits?author=GFabien" title="Code">💻</a> <a href="https://github.com/fepegar/torchio/pulls?q=is%3Apr+reviewed-by%3AGFabien" title="Reviewed Pull Requests">👀</a> <a href="#ideas-GFabien" title="Ideas, Planning, & Feedback">🤔</a></td>
     <td align="center"><a href="https://github.com/GReguig"><img src="https://avatars1.githubusercontent.com/u/11228281?v=4" width="100px;" alt=""/><br /><sub><b>G.Reguig</b></sub></a><br /><a href="https://github.com/fepegar/torchio/commits?author=GReguig" title="Code">💻</a></td>
     <td align="center"><a href="https://github.com/nwschurink"><img src="https://avatars3.githubusercontent.com/u/12720130?v=4" width="100px;" alt=""/><br /><sub><b>Niels Schurink</b></sub></a><br /><a href="https://github.com/fepegar/torchio/commits?author=nwschurink" title="Code">💻</a></td>
     <td align="center"><a href="https://www.linkedin.com/in/ibrhad/ "><img src="https://avatars3.githubusercontent.com/u/18015788?v=4" width="100px;" alt=""/><br /><sub><b>Ibrahim Hadzic</b></sub></a><br /><a href="https://github.com/fepegar/torchio/issues?q=author%3Aibro45" title="Bug reports">🐛</a></td>
@@ -282,6 +286,7 @@ Thanks goes to all these people ([emoji key](https://allcontributors.org/docs/en
     <td align="center"><a href="https://www.linkedin.com/in/jfillionr/"><img src="https://avatars0.githubusercontent.com/u/219043?v=4" width="100px;" alt=""/><br /><sub><b>Jean-Christophe Fillion-Robin</b></sub></a><br /><a href="https://github.com/fepegar/torchio/commits?author=jcfr" title="Documentation">📖</a></td>
     <td align="center"><a href="http://surajpai.tech"><img src="https://avatars1.githubusercontent.com/u/10467804?v=4" width="100px;" alt=""/><br /><sub><b>Suraj Pai</b></sub></a><br /><a href="#ideas-surajpaib" title="Ideas, Planning, & Feedback">🤔</a></td>
     <td align="center"><a href="https://github.com/bcdarwin"><img src="https://avatars2.githubusercontent.com/u/164148?v=4" width="100px;" alt=""/><br /><sub><b>Ben Darwin</b></sub></a><br /><a href="#ideas-bcdarwin" title="Ideas, Planning, & Feedback">🤔</a></td>
+    <td align="center"><a href="https://github.com/OeslleLucena"><img src="https://avatars0.githubusercontent.com/u/19919194?v=4" width="100px;" alt=""/><br /><sub><b>Oeslle Lucena</b></sub></a><br /><a href="https://github.com/fepegar/torchio/issues?q=author%3AOeslleLucena" title="Bug reports">🐛</a></td>
   </tr>
 </table>
 

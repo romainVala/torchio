@@ -1,14 +1,14 @@
-from typing import Union
+from typing import Union, List, Optional
 import torch
 from ....data.subject import Subject
 from ....torchio import DATA, TypeCallable
-from ... import Transform
+from ... import IntensityTransform
 
 
 TypeMaskingMethod = Union[str, TypeCallable, None]
 
 
-class NormalizationTransform(Transform):
+class NormalizationTransform(IntensityTransform):
     """Base class for intensity preprocessing transforms.
 
     Args:
@@ -19,6 +19,7 @@ class NormalizationTransform(Transform):
             - A string: the mask image is retrieved from the sample, which is expected the string as a key
 
             - A function: the mask image is computed as a function of the intensity image. The function must receive and return a :py:class:`torch.Tensor`
+        keys: See :py:class:`~torchio.transforms.Transform`.
 
     Example:
         >>> import torchio
@@ -38,7 +39,7 @@ class NormalizationTransform(Transform):
             self,
             masking_method: TypeMaskingMethod = None,
             p: float = 1,
-            **kwargs
+            keys: Optional[List[str]] = None,
             ):
         """
         masking_method is used to choose the values used for normalization.
@@ -47,7 +48,7 @@ class NormalizationTransform(Transform):
          - A function: the mask will be computed using the function
          - None: all values are used
         """
-        super().__init__(p=p, **kwargs)
+        super().__init__(p=p, keys=keys)
         self.mask_name = None
         if masking_method is None:
             self.masking_method = self.ones
@@ -63,7 +64,7 @@ class NormalizationTransform(Transform):
             return sample[self.mask_name][DATA].bool()
 
     def apply_transform(self, sample: Subject) -> dict:
-        for image_name, image_dict in sample.get_images_dict().items():
+        for image_name, image_dict in self.get_images_dict(sample).items():
             mask = self.get_mask(sample, image_dict[DATA])
             self.apply_normalization(sample, image_name, mask)
         return sample

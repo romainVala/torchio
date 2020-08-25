@@ -1,4 +1,6 @@
 from .transform import Transform
+from .spatial_transform import SpatialTransform
+from .intensity_transform import IntensityTransform
 from .interpolation import Interpolation, get_sitk_interpolator
 
 # Generic
@@ -24,6 +26,7 @@ from .augmentation.intensity import RandomMotionFromTimeCourse
 from .augmentation.intensity import TorchRandomMotionFromTimeCourse
 from .augmentation.intensity import RandomGhosting
 from .augmentation.intensity import RandomBiasField
+from .augmentation.intensity import RandomLabelsToImage
 
 # Preprocessing
 from .preprocessing import Pad

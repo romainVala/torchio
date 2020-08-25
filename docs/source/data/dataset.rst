@@ -7,24 +7,9 @@ Dataset
 
 .. currentmodule:: torchio.data
 
-:class:`ImagesDataset`
-----------------------
+:class:`SubjectsDataset`
+------------------------
 
-.. autoclass:: ImagesDataset
+.. autoclass:: SubjectsDataset
     :members:
-    :show-inheritance:
-
-
-:class:`Subject`
-----------------
-
-.. autoclass:: Subject
-    :members:
-    :show-inheritance:
-
-
-:class:`Image`
---------------
-
-.. autoclass:: Image
     :show-inheritance:

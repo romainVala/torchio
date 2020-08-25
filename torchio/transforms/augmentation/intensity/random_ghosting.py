@@ -1,34 +1,51 @@
-from typing import Tuple, Optional, Union
+from typing import Tuple, Optional, Union, List
 import torch
 import numpy as np
-import SimpleITK as sitk
-from ....torchio import DATA, AFFINE
+from ....torchio import DATA
 from ....data.subject import Subject
+from ... import IntensityTransform
 from .. import RandomTransform
 
 
-class RandomGhosting(RandomTransform):
+class RandomGhosting(RandomTransform, IntensityTransform):
     r"""Add random MRI ghosting artifact.
+
+    Discrete "ghost" artifacts may occur along the phase-encode direction
+    whenever the position or signal intensity of imaged structures within the
+    field-of-view vary or move in a regular (periodic) fashion. Pulsatile flow
+    of blood or CSF, cardiac motion, and respiratory motion are the most
+    important patient-related causes of ghost artifacts in clinical MR imaging
+    (from `mriquestions.com <http://mriquestions.com/why-discrete-ghosts.html>`_).
 
     Args:
         num_ghosts: Number of 'ghosts' :math:`n` in the image.
             If :py:attr:`num_ghosts` is a tuple :math:`(a, b)`, then
             :math:`n \sim \mathcal{U}(a, b) \cap \mathbb{N}`.
+            If only one value :math:`d` is provided,
+            :math:`n \sim \mathcal{U}(0, d) \cap \mathbb{N}`.
         axes: Axis along which the ghosts will be created. If
             :py:attr:`axes` is a tuple, the axis will be randomly chosen
-            from the passed values.
+            from the passed values. Anatomical labels may also be used (see
+            :py:class:`~torchio.transforms.augmentation.RandomFlip`).
         intensity: Positive number representing the artifact strength
             :math:`s` with respect to the maximum of the :math:`k`-space.
             If ``0``, the ghosts will not be visible. If a tuple
             :math:`(a, b)` is provided then :math:`s \sim \mathcal{U}(a, b)`.
+            If only one value :math:`d` is provided,
+            :math:`s \sim \mathcal{U}(0, d)`.
         restore: Number between ``0`` and ``1`` indicating how much of the
             :math:`k`-space center should be restored after removing the planes
             that generate the artifact.
         p: Probability that this transform will be applied.
         seed: See :py:class:`~torchio.transforms.augmentation.RandomTransform`.
+        keys: See :py:class:`~torchio.transforms.Transform`.
 
     .. note:: The execution time of this transform does not depend on the
         number of ghosts.
+
+    .. warning:: Note that height and width of 2D images correspond to axes
+        ``1`` and ``2`` respectively, as TorchIO images are generally considered
+        to have 3 spatial dimensions.
     """
     def __init__(
             self,
@@ -38,77 +55,65 @@ class RandomGhosting(RandomTransform):
             restore: float = 0.02,
             p: float = 1,
             seed: Optional[int] = None,
-            **kwargs
+            keys: Optional[List[str]] = None,
             ):
-        super().__init__(p=p, seed=seed)
+        super().__init__(p=p, seed=seed, keys=keys)
         if not isinstance(axes, tuple):
             try:
                 axes = tuple(axes)
             except TypeError:
                 axes = (axes,)
         for axis in axes:
-            if axis not in (0, 1, 2):
+            if not isinstance(axis, str) and axis not in (0, 1, 2):
                 raise ValueError(f'Axes must be in (0, 1, 2), not "{axes}"')
         self.axes = axes
-        self.num_ghosts_range = self.parse_num_ghosts(num_ghosts)
-        self.intensity_range = self.parse_intensity(intensity)
-        if not 0 <= restore < 1:
+        self.num_ghosts_range = self.parse_range(
+            num_ghosts, 'num_ghosts', min_constraint=0, type_constraint=int)
+        self.intensity_range = self.parse_range(
+            intensity, 'intensity_range', min_constraint=0)
+        self.restore = self.parse_restore(restore)
+
+    @staticmethod
+    def parse_restore(restore):
+        if not isinstance(restore, float):
+            raise TypeError(f'Restore must be a float, not {restore}')
+        if not 0 <= restore <= 1:
             message = (
                 f'Restore must be a number between 0 and 1, not {restore}')
             raise ValueError(message)
-        self.restore = restore
-
-    @staticmethod
-    def parse_num_ghosts(num_ghosts):
-        try:
-            iter(num_ghosts)
-        except TypeError:
-            num_ghosts = num_ghosts, num_ghosts
-        for n in num_ghosts:
-            if not isinstance(n, int) or n < 0:
-                message = (
-                    f'Number of ghosts must be a natural number, not {n}')
-                raise ValueError(message)
-        return num_ghosts
-
-    @staticmethod
-    def parse_intensity(intensity):
-        try:
-            iter(intensity)
-        except TypeError:
-            intensity = intensity, intensity
-        for n in intensity:
-            if n < 0:
-                message = (
-                    f'Intensity must be a positive number, not {n}')
-                raise ValueError(message)
-        return intensity
+        return restore
 
     def apply_transform(self, sample: Subject) -> dict:
         random_parameters_images_dict = {}
-        for image_name, image_dict in sample.get_images_dict().items():
-            data = image_dict[DATA]
-            is_2d = data.shape[-3] == 1
-            axes = [a for a in self.axes if a != 0] if is_2d else self.axes
-            params = self.get_params(
-                self.num_ghosts_range,
-                axes,
-                self.intensity_range,
-            )
-            num_ghosts_param, axis_param, intensity_param = params
-            random_parameters_dict = {
-                'axis': axis_param,
-                'num_ghosts': num_ghosts_param,
-                'intensity': intensity_param,
-            }
-            random_parameters_images_dict[image_name] = random_parameters_dict
-            image_dict[DATA][0] = self.add_artifact(
-                data[0],
-                num_ghosts_param,
-                axis_param,
-                intensity_param,
-                self.restore,
-            )
+        if any(isinstance(n, str) for n in self.axes):
+            sample.check_consistent_orientation()
+        for image_name, image in self.get_images_dict(sample).items():
+            transformed_tensors = []
+            is_2d = image.is_2d()
+            axes = [a for a in self.axes if a != 2] if is_2d else self.axes
+            for channel_idx, tensor in enumerate(image[DATA]):
+                params = self.get_params(
+                    self.num_ghosts_range,
+                    axes,
+                    self.intensity_range,
+                )
+                num_ghosts_param, axis_param, intensity_param = params
+                random_parameters_dict = {
+                    'axis': axis_param,
+                    'num_ghosts': num_ghosts_param,
+                    'intensity': intensity_param,
+                }
+                key = f'{image_name}_channel_{channel_idx}'
+                random_parameters_images_dict[key] = random_parameters_dict
+                transformed_tensor = self.add_artifact(
+                    tensor,
+                    num_ghosts_param,
+                    axis_param,
+                    intensity_param,
+                    self.restore,
+                )
+                transformed_tensors.append(transformed_tensor)
+            image[DATA] = torch.stack(transformed_tensors)
         sample.add_transform(self, random_parameters_images_dict)
         return sample
 
@@ -132,13 +137,17 @@ class RandomGhosting(RandomTransform):
             intensity: float,
             restore_center: float,
             ):
+        if not num_ghosts or not intensity:
+            return tensor
+
         array = tensor.numpy()
         spectrum = self.fourier_transform(array)
 
-        ri, rj, rk = np.round(restore_center * np.array(array.shape)).astype(np.uint16)
+        shape = np.array(array.shape)
+        ri, rj, rk = np.round(restore_center * shape).astype(np.uint16)
         mi, mj, mk = np.array(array.shape) // 2
 
-        # Variable "planes" is the part the spectrum that will be modified
+        # Variable "planes" is the part of the spectrum that will be modified
         if axis == 0:
             planes = spectrum[::num_ghosts, :, :]
             restore = spectrum[mi, :, :].copy()

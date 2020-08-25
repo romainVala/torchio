@@ -17,6 +17,9 @@ TypeLandmarks = Union[TypePath, Dict[str, Union[TypePath, np.ndarray]]]
 class HistogramStandardization(NormalizationTransform):
     """Perform histogram standardization of intensity values.
 
+    Implementation of `New variants of a method of MRI scale
+    standardization <https://ieeexplore.ieee.org/document/836373>`_.
+
     See example in :py:func:`torchio.transforms.HistogramStandardization.train`.
 
     Args:
@@ -57,7 +60,7 @@ class HistogramStandardization(NormalizationTransform):
     def parse_landmarks(landmarks: TypeLandmarks) -> Dict[str, np.ndarray]:
         if isinstance(landmarks, (str, Path)):
             path = Path(landmarks)
-            if not path.suffix in ('.pt', '.pth'):
+            if path.suffix not in ('.pt', '.pth'):
                 message = (
                     'The landmarks file must have extension .pt or .pth,'
                     f' not "{path.suffix}"'
@@ -161,8 +164,8 @@ class HistogramStandardization(NormalizationTransform):
                 mask = masking_function(data)
             else:
                 if mask_path is not None:
-                    mask = nib.load(str(mask_path)).get_fdata()
-                    mask = mask > 0
+                    mask, _ = read_image(mask_path)
+                    mask = mask.numpy() > 0
                 else:
                     mask = np.ones_like(data, dtype=np.bool)
             percentile_values = np.percentile(data[mask], percentiles)

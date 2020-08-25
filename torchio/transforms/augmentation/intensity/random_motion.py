@@ -11,18 +11,21 @@ from typing import Tuple, Optional, List
 import torch
 import numpy as np
 import SimpleITK as sitk
+from ....utils import nib_to_sitk
 from ....torchio import DATA, AFFINE
 from ....data.subject import Subject
 from .. import Interpolation, get_sitk_interpolator
+from ... import IntensityTransform
 from .. import RandomTransform
 
 
-class RandomMotion(RandomTransform):
+class RandomMotion(RandomTransform, IntensityTransform):
     r"""Add random MRI motion artifact.
 
-    Custom implementation of `Shaw et al. 2019, MRI k-Space Motion Artefact
-    Augmentation: Model Robustness and Task-Specific
-    Uncertainty <http://proceedings.mlr.press/v102/shaw19a.html>`_.
+    Magnetic resonance images suffer from motion artifacts when the subject
+    moves during image acquisition. This transform follows
+    `Shaw et al., 2019 <http://proceedings.mlr.press/v102/shaw19a.html>`_ to
+    simulate motion artifacts for data augmentation.
 
     Args:
         degrees: Tuple :math:`(a, b)` defining the rotation range in degrees of
@@ -44,6 +47,7 @@ class RandomMotion(RandomTransform):
         image_interpolation: See :ref:`Interpolation`.
         p: Probability that this transform will be applied.
         seed: See :py:class:`~torchio.transforms.augmentation.RandomTransform`.
+        keys: See :py:class:`~torchio.transforms.Transform`.
 
     .. warning:: Large numbers of movements lead to longer execution times for
         3D images.
@@ -56,15 +60,15 @@ class RandomMotion(RandomTransform):
             image_interpolation: str = 'linear',
             p: float = 1,
             seed: Optional[int] = None,
-            **kwargs
+            keys: Optional[List[str]] = None,
             ):
-        super().__init__(p=p, seed=seed, **kwargs)
+        super().__init__(p=p, seed=seed, keys=keys)
         self.degrees_range = self.parse_degrees(degrees)
         self.translation_range = self.parse_translation(translation)
         if not 0 < num_transforms or not isinstance(num_transforms, int):
             message = (
-                'Number of transforms must be a natural number,'
-                f' not {num_transforms}'
+                'Number of transforms must be a strictly positive natural'
+                f'number, not {num_transforms}'
             )
             raise ValueError(message)
         self.num_transforms = num_transforms
@@ -72,40 +76,42 @@ class RandomMotion(RandomTransform):
 
     def apply_transform(self, sample: Subject) -> dict:
         random_parameters_images_dict = {}
-        for image_name, image_dict in sample.get_images_dict().items():
-            data = image_dict[DATA]
-            is_2d = data.shape[-3] == 1
-            params = self.get_params(
-                self.degrees_range,
-                self.translation_range,
-                self.num_transforms,
-                is_2d=is_2d,
-            )
-            times_params, degrees_params, translation_params = params
-            random_parameters_dict = {
-                'times': times_params,
-                'degrees': degrees_params,
-                'translation': translation_params,
-            }
-            random_parameters_images_dict[image_name] = random_parameters_dict
-            image = self.nib_to_sitk(
-                data[0],
-                image_dict[AFFINE],
-            )
-            transforms = self.get_rigid_transforms(
-                degrees_params,
-                translation_params,
-                image,
-            )
-            data = self.add_artifact(
-                image,
-                transforms,
-                times_params,
-                self.image_interpolation,
-            )
-            # Add channels dimension
-            data = data[np.newaxis, ...]
-            image_dict[DATA] = torch.from_numpy(data)
+        for image_name, image in self.get_images_dict(sample).items():
+            result_arrays = []
+            for channel_idx, data in enumerate(image[DATA]):
+                params = self.get_params(
+                    self.degrees_range,
+                    self.translation_range,
+                    self.num_transforms,
+                    is_2d=image.is_2d(),
+                )
+                times_params, degrees_params, translation_params = params
+                random_parameters_dict = {
+                    'times': times_params,
+                    'degrees': degrees_params,
+                    'translation': translation_params,
+                }
+                key = f'{image_name}_channel_{channel_idx}'
+                random_parameters_images_dict[key] = random_parameters_dict
+                sitk_image = nib_to_sitk(
+                    data[np.newaxis],
+                    image[AFFINE],
+                    force_3d=True,
+                )
+                transforms = self.get_rigid_transforms(
+                    degrees_params,
+                    translation_params,
+                    sitk_image,
+                )
+                data = self.add_artifact(
+                    sitk_image,
+                    transforms,
+                    times_params,
+                    self.image_interpolation,
+                )
+                result_arrays.append(data)
+            result = np.stack(result_arrays)
+            image[DATA] = torch.from_numpy(result)
         sample.add_transform(self, random_parameters_images_dict)
         return sample
 
@@ -123,8 +129,8 @@ class RandomMotion(RandomTransform):
         translation_params = get_params_array(
             translation_range, num_transforms)
         if is_2d:  # imagine sagittal (1, A, S)
-            degrees_params[:, -2:] = 0  # rotate around R axis only
-            translation_params[:, 0] = 0  # translate in AS plane only
+            degrees_params[:, :-1] = 0  # rotate around Z axis only
+            translation_params[:, 2] = 0  # translate in XY plane only
         step = 1 / (num_transforms + 1)
         times = torch.arange(0, 1, step)[1:]
         noise = torch.FloatTensor(num_transforms)

@@ -1,3 +1,4 @@
+import warnings
 from pathlib import Path
 from typing import Tuple
 import torch
@@ -11,28 +12,25 @@ from ..utils import nib_to_sitk, sitk_to_nib
 FLIPXY = np.diag([-1, -1, 1, 1])
 
 
-def read_image(
-        path: TypePath,
-        itk_first: bool = False,
-        ) -> Tuple[torch.Tensor, np.ndarray]:
-    if itk_first:
-        try:
-            result = _read_sitk(path)
-        except RuntimeError:  # try with NiBabel
-            result = _read_nibabel(path)
-    else:
+def read_image(path: TypePath) -> Tuple[torch.Tensor, np.ndarray]:
+    try:
+        result = _read_sitk(path)
+    except RuntimeError:  # try with NiBabel
         try:
             result = _read_nibabel(path)
-        except nib.loadsave.ImageFileError:  # try with ITK
-            result = _read_sitk(path)
+        except nib.loadsave.ImageFileError:
+            raise RuntimeError(f'File "{path}" not understood')
     return result
 
 
 def _read_nibabel(path: TypePath) -> Tuple[torch.Tensor, np.ndarray]:
-    nii = nib.load(str(path), mmap=False)
-    data = nii.get_fdata(dtype=np.float32)
+    img = nib.load(str(path), mmap=False)
+    data = img.get_fdata(dtype=np.float32)
+    if data.ndim == 5:
+        data = data[..., 0, :]
+        data = data.transpose(3, 0, 1, 2)
     tensor = torch.from_numpy(data)
-    affine = nii.affine
+    affine = img.affine
     return tensor, affine
 
 
@@ -41,7 +39,7 @@ def _read_sitk(path: TypePath) -> Tuple[torch.Tensor, np.ndarray]:
         image = _read_dicom(path)
     else:
         image = sitk.ReadImage(str(path))
-    data, affine = sitk_to_nib(image)
+    data, affine = sitk_to_nib(image, keepdim=True)
     if data.dtype != np.float32:
         data = data.astype(np.float32)
     tensor = torch.from_numpy(data)
@@ -69,42 +67,62 @@ def write_image(
         tensor: torch.Tensor,
         affine: TypeData,
         path: TypePath,
-        itk_first: bool = False,
+        squeeze: bool = True,
         ) -> None:
-    if itk_first:
-        try:
-            _write_sitk(tensor, affine, path)
-        except RuntimeError:  # try with NiBabel
-            _write_nibabel(tensor, affine, path)
-    else:
-        try:
-            _write_nibabel(tensor, affine, path)
-        except nib.loadsave.ImageFileError:  # try with ITK
-            _write_sitk(tensor, affine, path)
+    args = tensor, affine, path
+    try:
+        _write_sitk(*args, squeeze=squeeze)
+    except RuntimeError:  # try with NiBabel
+        _write_nibabel(*args, squeeze=squeeze)
 
 
 def _write_nibabel(
-        tensor: torch.Tensor,
+        tensor: TypeData,
         affine: TypeData,
         path: TypePath,
+        squeeze: bool = False,
         ) -> None:
     """
     Expects a path with an extension that can be used by nibabel.save
     to write a NIfTI-1 image, such as '.nii.gz' or '.img'
     """
-    nii = nib.Nifti1Image(tensor.numpy(), affine)
-    nii.header['qform_code'] = 1
-    nii.header['sform_code'] = 1
-    nii.to_filename(str(path))
+    assert tensor.ndim == 4
+    num_components = tensor.shape[0]
+
+    # NIfTI components must be at the end, in a 5D array
+    if num_components == 1:
+        tensor = tensor[0]
+    else:
+        tensor = tensor[np.newaxis].permute(2, 3, 4, 0, 1)
+    tensor = tensor.squeeze() if squeeze else tensor
+    suffix = Path(str(path).replace('.gz', '')).suffix
+    if '.nii' in suffix:
+        img = nib.Nifti1Image(np.asarray(tensor), affine)
+    elif '.hdr' in suffix or '.img' in suffix:
+        img = nib.Nifti1Pair(np.asarray(tensor), affine)
+    else:
+        raise nib.loadsave.ImageFileError
+    if num_components > 1:
+        img.header.set_intent('vector')
+    img.header['qform_code'] = 1
+    img.header['sform_code'] = 1
+    nib.save(img, str(path))
 
 
 def _write_sitk(
         tensor: torch.Tensor,
         affine: TypeData,
         path: TypePath,
+        squeeze: bool = True,
+        use_compression: bool = True,
         ) -> None:
-    image = nib_to_sitk(tensor, affine)
-    sitk.WriteImage(image, str(path))
+    assert tensor.ndim == 4
+    path = Path(path)
+    if path.suffix in ('.png', '.jpg', '.jpeg'):
+        warnings.warn(f'Casting to uint 8 before saving to {path}')
+        tensor = tensor.numpy().astype(np.uint8)
+    image = nib_to_sitk(tensor, affine, squeeze=squeeze)
+    sitk.WriteImage(image, str(path), use_compression)
 
 
 def read_matrix(path: TypePath):

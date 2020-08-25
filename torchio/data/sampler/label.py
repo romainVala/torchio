@@ -32,7 +32,7 @@ class LabelSampler(WeightedSampler):
         >>> subject = torchio.datasets.Colin27()
         >>> subject
         Colin27(Keys: ('t1', 'head', 'brain'); images: 3)
-        >>> sample = torchio.ImagesDataset([subject])[0]
+        >>> sample = torchio.SubjectsDataset([subject])[0]
         >>> sampler = torchio.data.LabelSampler(64, 'brain')
         >>> generator = sampler(sample)
         >>> for patch in generator:
@@ -89,7 +89,8 @@ class LabelSampler(WeightedSampler):
         for label, label_probability in iterable:
             mask = label_map == label
             label_size = mask.sum()
-            if not label_size: continue
+            if not label_size:
+                continue
             prob_voxels = label_probability / label_size
             probability_map[mask] = prob_voxels
         return probability_map

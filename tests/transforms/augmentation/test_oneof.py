@@ -20,3 +20,10 @@ class TestOneOf(TorchioTestCase):
     def test_not_transform(self):
         with self.assertRaises(ValueError):
             OneOf({RandomAffine: 1, RandomElasticDeformation: 2})
+
+    def test_one_of(self):
+        transform = OneOf({
+            RandomAffine(): 0.2,
+            RandomElasticDeformation(max_displacement=0.5): 0.8,
+        })
+        transform(self.sample)
