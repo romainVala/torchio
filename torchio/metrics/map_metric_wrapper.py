@@ -5,13 +5,19 @@ from ..torchio import DATA
 
 class MapMetricWrapper(MapMetric):
 
-    def __init__(self, metric_name: str, metric_func, **kwargs):
+    def __init__(self, metric_name: str, metric_func, select_key=None, **kwargs):
         super(MapMetricWrapper, self).__init__(**kwargs)
         self.metric_name = metric_name
         self.metric_func = metric_func
+        if isinstance(select_key, str):
+            select_key = [select_key]
+        self.select_key = select_key
 
     def apply_metric(self, sample1: Subject, sample2: Subject):
-        common_keys = sample1.keys() & sample2.keys()
+        if self.select_key is not None:
+            common_keys = self.select_key
+        else:
+            common_keys = sample1.keys() & sample2.keys()
         for sample_key in common_keys:
             if sample_key in self.mask_keys:
                 continue

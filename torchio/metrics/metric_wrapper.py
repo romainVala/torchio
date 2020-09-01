@@ -5,14 +5,20 @@ import torch
 
 class MetricWrapper(Metric):
 
-    def __init__(self, metric_name, metric_func, use_mask=False, mask_key=None):
+    def __init__(self, metric_name, metric_func, use_mask=False, mask_key=None, select_key=None):
         self.metric_name = metric_name
         self.metric_func = metric_func
         self.use_mask = use_mask
         self.mask_key = mask_key
+        if isinstance(select_key, str):
+            select_key = [select_key]
+        self.select_key = select_key
 
     def apply_metric(self, sample1, sample2):
-        common_keys = sample1.keys() & sample2.keys()
+        if self.select_key is not None:
+            common_keys = self.select_key
+        else:
+            common_keys = sample1.keys() & sample2.keys()
         for sample_key in common_keys:
             if sample_key is self.mask_key:
                 continue
