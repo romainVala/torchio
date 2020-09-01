@@ -50,7 +50,7 @@ class RandomMotionFromTimeCourse(RandomTransform):
         Note currently on freq_encoding_dim=0 give the same ringing direction for rotation and translation, dim 1 and 2 are not coherent
         Note fot suddenFrequency and swallowFrequency min max must differ and the max is never achieved, so to have 0 put (0,1)
         """
-        super(RandomMotionFromTimeCourse, self).__init__(verbose=verbose, **kwargs)
+        super(RandomMotionFromTimeCourse, self).__init__( **kwargs)
         self.compare_to_original = compare_to_original
         self.tr = tr
         self.es = es
