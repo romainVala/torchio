@@ -5,7 +5,8 @@ import torch
 
 class MetricWrapper(Metric):
 
-    def __init__(self, metric_name, metric_func, use_mask=False, mask_key=None, select_key=None):
+    def __init__(self, metric_name, metric_func, use_mask=False, mask_key=None,
+                 select_key=None, scale_metric=1):
         self.metric_name = metric_name
         self.metric_func = metric_func
         self.use_mask = use_mask
@@ -13,6 +14,7 @@ class MetricWrapper(Metric):
         if isinstance(select_key, str):
             select_key = [select_key]
         self.select_key = select_key
+        self.scale_metric = scale_metric
 
     def apply_metric(self, sample1, sample2):
         if self.select_key is not None:
@@ -36,6 +38,6 @@ class MetricWrapper(Metric):
             result = self.metric_func(data1, data2)
             if isinstance(result, dict):
                 for key_metric, value_metric in result.items():
-                    sample2[sample_key]["metrics"][self.metric_name+"_"+key_metric] = value_metric
+                    sample2[sample_key]["metrics"][self.metric_name+"_"+key_metric] = value_metric * self.scale_metric
             else:
-                sample2[sample_key]["metrics"][self.metric_name] = result
+                sample2[sample_key]["metrics"][self.metric_name] = result * self.scale_metric
