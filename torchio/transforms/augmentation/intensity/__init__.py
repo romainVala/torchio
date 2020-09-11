@@ -9,3 +9,4 @@ from .random_walk_motion import MotionSimTransform
 from .random_motion_from_time_course import RandomMotionFromTimeCourse
 from .torch_random_motion import TorchRandomMotionFromTimeCourse
 from .random_labels_to_image import RandomLabelsToImage
+from .random_gamma import RandomGamma
