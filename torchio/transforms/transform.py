@@ -13,7 +13,7 @@ from .. import TypeData, DATA, AFFINE, TypeNumber
 from ..data.subject import Subject
 from ..data.image import Image, ScalarImage
 from ..data.dataset import SubjectsDataset
-from ..utils import nib_to_sitk, sitk_to_nib
+from ..utils import nib_to_sitk, sitk_to_nib, gen_seed, is_jsonable
 from .interpolation import Interpolation
 
 
@@ -46,8 +46,7 @@ class Transform(ABC):
         self.default_image_name = 'default_image_name'
         self.metrics = metrics
 
-
-    def __call__(self, data: Union[Subject, torch.Tensor, np.ndarray]):
+    def __call__(self, data: Union[Subject, torch.Tensor, np.ndarray], seed: Union[List[int], int] = None):
         """Transform a sample and return the result.
 
         Args:
@@ -58,7 +57,23 @@ class Transform(ABC):
                 a tensor, the affine matrix is an identity and a tensor will be
                 also returned.
         """
+        # Execution's seed
+        if not seed:
+            seed = gen_seed()
+
+        # Store the current rng_state to reset it after the execution
+        torch_rng_state, np_rng_state = torch.random.get_rng_state(), np.random.get_state()
+        if isinstance(seed, int):
+            torch.manual_seed(seed=seed)
+            np.random.seed(seed=seed)
+
+        self.transform_params = {}
+        self._store_params()
+        self.transform_params["seed"] = seed
+
         if torch.rand(1).item() > self.probability:
+            if isinstance(data, Subject) and isinstance(seed, int):  # if not a compose
+                data.add_transform(self, parameters_dict=self.transform_params)
             return data
 
         is_tensor = is_array = is_dict = is_image = is_sitk = is_nib = False
@@ -133,11 +148,22 @@ class Transform(ABC):
         if self.metrics:
             _ = [metric_func(orig, transformed) for metric_func in self.metrics.values()]
 
+        if isinstance(transformed, Subject) and isinstance(seed, int):  # if not a compose
+            transformed.add_transform(self, parameters_dict=self.transform_params)
+        torch.random.set_rng_state(torch_rng_state)
+        np.random.set_state(np_rng_state)
         return transformed
 
     @abstractmethod
     def apply_transform(self, sample: Subject):
         raise NotImplementedError
+
+    def _store_params(self):
+        self.transform_params.update(self.__dict__.copy())
+        del self.transform_params["transform_params"]
+        for key, value in self.transform_params.items():
+            if not is_jsonable(value):
+                self.transform_params[key] = value.__str__()
 
     @staticmethod
     def parse_range(

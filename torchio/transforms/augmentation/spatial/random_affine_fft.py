@@ -62,11 +62,10 @@ class RandomAffineFFT(RandomTransform):
             isotropic: bool = False,
             default_pad_value: Union[str, float] = 'otsu',
             p: float = 1,
-            seed: Optional[int] = None,
             oversampling_pct = 0.2,
             **kwargs
             ):
-        super().__init__(p=p, seed=seed, **kwargs)
+        super().__init__(p=p, **kwargs)
         self.scales = scales
         self.degrees = self.parse_degrees(degrees)
         self.isotropic = isotropic
@@ -84,7 +83,7 @@ class RandomAffineFFT(RandomTransform):
         raise ValueError(message)
 
     def apply_transform(self, sample: Subject) -> dict:
-        sample.check_consistent_shape()
+        sample.check_consistent_spatial_shape()
         scaling_params, rotation_params = self.get_params(
             self.scales, self.degrees, self.isotropic)
         random_parameters_dict = {
@@ -107,7 +106,7 @@ class RandomAffineFFT(RandomTransform):
                 rotation_params,
                 padding_values,
             )
-        sample.add_transform(self, random_parameters_dict)
+        #sample.add_transform(self, random_parameters_dict)
         return sample
 
     @staticmethod

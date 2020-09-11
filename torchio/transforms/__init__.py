@@ -9,7 +9,7 @@ from .lambda_transform import Lambda
 # Augmentation
 from .augmentation.composition import OneOf
 from .augmentation.composition import ListOf
-from .augmentation.composition import Compose
+from .augmentation.composition import Compose, compose_from_history
 
 from .augmentation.spatial import RandomFlip
 from .augmentation.spatial import RandomAffine

@@ -160,7 +160,7 @@ class RandomMotionFromTimeCourse(RandomTransform):
 
         parameters_motion = self._compute_motion_metrics(fitpars_interp=fitpars_interp, original_image=original_image)
 
-        sample.add_transform(self, parameters_motion)
+        #sample.add_transform(self, parameters_motion)
         return sample
         #output type is double, TODO where to cast in Float ?
 

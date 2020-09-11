@@ -14,10 +14,11 @@ average_func_dict = {"mean": torch.mean,
 
 class MapMetric(Metric, ABC):
 
-    def __init__(self, mask_keys: Sequence = [], average_method: str = None):
-        super(MapMetric, self).__init__()
+    def __init__(self, metric_name: str, mask_keys: Sequence = [], average_method: str = None, select_key: str = None):
+        super(MapMetric, self).__init__(metric_name=metric_name)
         self.mask_keys = mask_keys
         self.average_method = self._get_average_method(average_method)
+        self.select_key = select_key
 
     @staticmethod
     def _get_average_method(average_method: str):

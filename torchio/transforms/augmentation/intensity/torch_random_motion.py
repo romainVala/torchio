@@ -162,7 +162,7 @@ class TorchRandomMotionFromTimeCourse(RandomTransform):
 
         parameters_motion['metrics_motion'] = metrics
 
-        sample.add_transform(self, parameters_motion)
+        #sample.add_transform(self, parameters_motion)
         return sample
         #output type is double, TODO where to cast in Float ?
 

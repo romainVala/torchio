@@ -162,8 +162,12 @@ def spatial_filter_nd(x, kernel, mode='replicate'):
     pad[0::2] = kernel.shape[2:]
     pad[1::2] = kernel.shape[2:]
     pad = [k//2 for k in pad]
-
-    return conv(F.pad(x, pad=pad, mode=mode), kernel)
+    try:
+        res = conv(F.pad(x, pad=pad, mode=mode), kernel)
+    except RuntimeError as e:
+        res = conv(F.pad(x, pad=pad, mode=mode).cuda(), kernel.cuda()).cpu()
+        torch.cuda.empty_cache()
+    return res
 
 
 def _grad_param(ndim, method, axis):
