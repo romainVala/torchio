@@ -1,6 +1,6 @@
 import warnings
 from numbers import Number
-from typing import Tuple, Optional, Union, List
+from typing import Tuple, Optional, Union, List, Dict
 import torch
 import numpy as np
 import SimpleITK as sitk
@@ -116,10 +116,10 @@ class RandomElasticDeformation(RandomTransform, SpatialTransform):
             locked_borders: int = 2,
             image_interpolation: str = 'linear',
             p: float = 1,
-            seed: Optional[int] = None,
             keys: Optional[List[str]] = None,
+            metrics: Dict = None
             ):
-        super().__init__(p=p, seed=seed, keys=keys)
+        super().__init__(p=p, keys=keys, metrics=metrics)
         self._bspline_transformation = None
         self.num_control_points = to_tuple(num_control_points, length=3)
         self.parse_control_points(self.num_control_points)
@@ -235,7 +235,7 @@ class RandomElasticDeformation(RandomTransform, SpatialTransform):
                 interpolation,
             )
         random_parameters_dict = {'coarse_grid': bspline_params}
-        sample.add_transform(self, random_parameters_dict)
+        #sample.add_transform(self, random_parameters_dict)
         return sample
 
     def apply_given_transform(self, sample: Subject, bspline_params) -> dict:

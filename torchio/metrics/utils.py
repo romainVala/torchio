@@ -162,8 +162,8 @@ def spatial_filter_nd(x, kernel, mode='replicate'):
     pad[0::2] = kernel.shape[2:]
     pad[1::2] = kernel.shape[2:]
     pad = [k//2 for k in pad]
-
-    return conv(F.pad(x, pad=pad, mode=mode), kernel)
+    res = conv(F.pad(x, pad=pad, mode=mode), kernel)
+    return res
 
 
 def _grad_param(ndim, method, axis):

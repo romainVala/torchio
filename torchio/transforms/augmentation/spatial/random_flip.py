@@ -1,4 +1,4 @@
-from typing import Union, Tuple, Optional, List
+from typing import Union, Tuple, Optional, List, Dict
 import torch
 import numpy as np
 from ....torchio import DATA
@@ -41,10 +41,10 @@ class RandomFlip(RandomTransform, SpatialTransform):
             axes: Union[int, Tuple[int, ...]] = 0,
             flip_probability: float = 0.5,
             p: float = 1,
-            seed: Optional[int] = None,
             keys: Optional[List[str]] = None,
+            metrics: Dict = None
             ):
-        super().__init__(p=p, seed=seed, keys=keys)
+        super().__init__(p=p, keys=keys, metrics=metrics)
         self.axes = self.parse_axes(axes)
         self.flip_probability = self.parse_probability(
             flip_probability,
@@ -75,7 +75,7 @@ class RandomFlip(RandomTransform, SpatialTransform):
                 data = data.copy()  # remove negative strides
                 data = torch.from_numpy(data)
                 image[DATA] = data
-        sample.add_transform(self, random_parameters_dict)
+        #sample.add_transform(self, random_parameters_dict)
         return sample
 
     @staticmethod

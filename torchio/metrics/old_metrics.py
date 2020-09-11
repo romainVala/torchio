@@ -20,7 +20,7 @@ def create_window_3D(window_size, channel):
     return window
 
 
-def _ssim_3D(img1, img2, window, window_size, channel, size_average=True, mask=None):
+def _ssim_3D(img1, img2, window, window_size, channel, size_average=False, mask=None):
     mu1 = F.conv3d(img1, window, padding=window_size // 2, groups=channel)
     mu2 = F.conv3d(img2, window, padding=window_size // 2, groups=channel)
 
@@ -44,14 +44,14 @@ def _ssim_3D(img1, img2, window, window_size, channel, size_average=True, mask=N
                 res = [ ssim_map[mm >0].mean() for mm in mask]
                 res.append(  ssim_map[(img1>0) * (img2>0)].mean() )
             else:
-                #ssim_map = ssim_map[(img1>0) * (img2>0)]
+                ssim_map = ssim_map[(img1>0) * (img2>0)]
                 res = ssim_map #ssim_map.mean()
         else:
             print('WARNIGN RRR remove 0 in image')
             res = ssim_map.mean(axis=list(range(1, img1.ndim))) #one value per patch
         return res
     else:
-        return ssim_map.mean(1).mean(1).mean(1)
+        return ssim_map
 
 
 def _ssim_3D_dist(img1, img2, window, window_size, channel, aggregate="avg"):
@@ -94,8 +94,8 @@ def _ssim_3D_dist(img1, img2, window, window_size, channel, aggregate="avg"):
 
 
 class SSIM3D_old(torch.nn.Module):
-    def __init__(self, window_size=3, size_average=True, distance=1):
-        super(SSIM3D, self).__init__()
+    def __init__(self, window_size=3, size_average=True, distance=0):
+        super(SSIM3D_old, self).__init__()
         self.window_size = window_size
         self.size_average = size_average
         self.channel = 1
@@ -103,6 +103,10 @@ class SSIM3D_old(torch.nn.Module):
         self.distance = distance
 
     def forward(self, img1, img2):
+        if img1.ndim == 4:
+            img1 = img1.unsqueeze(0)
+        if img2.ndim == 4:
+            img2 = img2.unsqueeze(0)
         (_, channel, _, _, _) = img1.size()
 
         if channel == self.channel and self.window.data.type() == img1.data.type():
@@ -120,7 +124,7 @@ class SSIM3D_old(torch.nn.Module):
         if self.distance==1:
             res =  1 - _ssim_3D(img1, img2, window, self.window_size, channel, self.size_average)
         else :
-            res = _ssim_3D_dist(img1, img2, window, self.window_size, channel)
+            res = _ssim_3D(img1, img2, window, self.window_size, channel)
 
         return res
 
@@ -171,54 +175,58 @@ def th_pearsonr(x, y):
 ########################################################################################################################
 
 
-def nrmse(image_true, image_test, normalization="euclidean"):
-    '''
-    A Pytorch version of scikit-image's implementation of normalized_root_mse
-    https://scikit-image.org/docs/dev/api/skimage.metrics.html#skimage.metrics.normalized_root_mse
-    Compute the normalized root mean-squared error (NRMSE) between two
-    images.
-    Parameters
-    ----------
-    image_true : ndarray
-        Ground-truth image, same shape as im_test.
-    image_test : ndarray
-        Test image.
-    normalization : {'euclidean', 'min-max', 'mean'}, optional
-        Controls the normalization method to use in the denominator of the
-        NRMSE.  There is no standard method of normalization across the
-        literature [1]_.  The methods available here are as follows:
-        - 'euclidean' : normalize by the averaged Euclidean norm of
-          ``im_true``::
-              NRMSE = RMSE * sqrt(N) / || im_true ||
-          where || . || denotes the Frobenius norm and ``N = im_true.size``.
-          This result is equivalent to::
-              NRMSE = || im_true - im_test || / || im_true ||.
-        - 'min-max'   : normalize by the intensity range of ``im_true``.
-        - 'mean'      : normalize by the mean of ``im_true``
+class nrmse:
 
-    Returns
-    -------
-    nrmse : float
-        The NRMSE metric.
+    def __init__(self, normalization="euclidean"):
+        self.normalization = normalization.lower()
 
-    References
-    ----------
-    .. [1] https://en.wikipedia.org/wiki/Root-mean-square_deviation
+    def __call__(self, image_true, image_test):
+        '''
+        A Pytorch version of scikit-image's implementation of normalized_root_mse
+        https://scikit-image.org/docs/dev/api/skimage.metrics.html#skimage.metrics.normalized_root_mse
+        Compute the normalized root mean-squared error (NRMSE) between two
+        images.
+        Parameters
+        ----------
+        image_true : ndarray
+            Ground-truth image, same shape as im_test.
+        image_test : ndarray
+            Test image.
+        normalization : {'euclidean', 'min-max', 'mean'}, optional
+            Controls the normalization method to use in the denominator of the
+            NRMSE.  There is no standard method of normalization across the
+            literature [1]_.  The methods available here are as follows:
+            - 'euclidean' : normalize by the averaged Euclidean norm of
+              ``im_true``::
+                  NRMSE = RMSE * sqrt(N) / || im_true ||
+              where || . || denotes the Frobenius norm and ``N = im_true.size``.
+              This result is equivalent to::
+                  NRMSE = || im_true - im_test || / || im_true ||.
+            - 'min-max'   : normalize by the intensity range of ``im_true``.
+            - 'mean'      : normalize by the mean of ``im_true``
 
-    '''
+        Returns
+        -------
+        nrmse : float
+            The NRMSE metric.
 
-    normalization = normalization.lower()
+        References
+        ----------
+        .. [1] https://en.wikipedia.org/wiki/Root-mean-square_deviation
 
-    if normalization == "min-max":
-        denom = image_true.max() - image_true.min()
-    elif normalization == "mean":
-        denom = image_true.mean()
-    else:
-        if normalization != "euclidean":
-            raise Warning("Unsupported norm type. Found {}.\nUsing euclidean by default".format(normalization))
-        denom = torch.sqrt(torch.mean(image_true ** 2))
+        '''
 
-    return (F.mse_loss(image_true, image_test).sqrt())/denom
+
+        if self.normalization == "min-max":
+            denom = image_true.max() - image_true.min()
+        elif self.normalization == "mean":
+            denom = image_true.mean()
+        else:
+            if self.normalization != "euclidean":
+                raise Warning("Unsupported norm type. Found {}.\nUsing euclidean by default".format(self.normalization))
+            denom = torch.sqrt(torch.mean(image_true ** 2))
+
+        return (F.mse_loss(image_true, image_test).sqrt())/denom
 
 
 

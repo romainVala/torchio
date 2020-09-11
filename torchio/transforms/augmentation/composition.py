@@ -1,10 +1,12 @@
-from typing import Union, Sequence
+from typing import Union, Sequence, List, Dict
 
 import torch
+import torchio
 import numpy as np
 from torchvision.transforms import Compose as PyTorchCompose
 
 from ...data.subject import Subject
+from ...utils import gen_seed
 from .. import Transform
 from . import RandomTransform
 
@@ -20,13 +22,23 @@ class Compose(Transform):
     .. note::
         This is a thin wrapper of :py:class:`torchvision.transforms.Compose`.
     """
-    def __init__(self, transforms: Sequence[Transform], p: float = 1, **kwargs):
-        super().__init__(p=p, **kwargs)
+    def __init__(self, transforms: Sequence[Transform] = [], p: float = 1, metrics: Dict = None):
+        super().__init__(p=p, metrics=metrics)
         self.transform = PyTorchCompose(transforms)
 
-    def apply_transform(self, sample: Subject):
-        return self.transform(sample)
+    def __call__(self, data: Union[Subject, torch.Tensor, np.ndarray], seeds: List = None):
+        if not self.transform.transforms:
+            return data
 
+        if not seeds:
+            seeds = [gen_seed() for _ in range(len(self.transform.transforms))]
+        self.seeds = seeds
+        return super(Compose, self).__call__(data, seeds)
+
+    def apply_transform(self, sample: Subject):
+        for t, s in zip(self.transform.transforms, self.seeds):
+            sample = t(sample, s)
+        return sample
 
 class OneOf(RandomTransform):
     """Apply only one of the given transforms.
@@ -108,6 +120,7 @@ class OneOf(RandomTransform):
         for transform, probability in transforms_dict.items():
             transforms_dict[transform] = probability / probabilities.sum()
 
+
 class ListOf(RandomTransform):
     """Apply sequencly all of the given transforms.
 
@@ -144,3 +157,20 @@ class ListOf(RandomTransform):
 
         return transformed_list
 
+
+def compose_from_history(history: List):
+    """
+    Builds a composition of transformations from a given subject history
+    :param history: subject history given as a list of tuples containing (transformation_name, transformation_parameters)
+    :return: Tuple (Compose of transforms, list of seeds to reproduce the transforms from the history)
+    """
+    trsfm_list = []
+    seed_list = []
+    for trsfm_history in history:
+        trsfm_name, trsfm_params = trsfm_history[0], (trsfm_history[1])
+        seed_list.append(trsfm_params['seed'])
+        trsfm_no_seed = {key: value for key, value in trsfm_params.items() if key != "seed"}
+        trsfm_func = getattr(torchio, trsfm_name)()
+        trsfm_func.__dict__ = trsfm_no_seed
+        trsfm_list.append(trsfm_func)
+    return Compose(trsfm_list), seed_list

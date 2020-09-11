@@ -10,14 +10,14 @@ from ....utils import is_image_dict
 from ....torchio import INTENSITY, DATA, AFFINE
 from .. import Interpolation
 from .. import RandomTransform
-from typing import Optional, List
+from typing import Optional, List, Dict
 
 
 class RandomMotionTimeCourseAffines(RandomTransform):
 
     def __init__(self, fitpars, time_points=[0.0, 0.25, 0.5, 0.75], pct_oversampling=0.0, combine_axis=2,
-                 seed=None, verbose=False, **kwargs):
-        super().__init__(seed=seed, verbose=verbose, **kwargs)
+                 verbose=False, metrics: Dict = None):
+        super().__init__(verbose=verbose, metrics=metrics)
         self.fitpars = fitpars
         self.time_points = time_points
         self.pct_oversampling = pct_oversampling

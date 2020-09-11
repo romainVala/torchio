@@ -1,5 +1,5 @@
 from numbers import Number
-from typing import Tuple, Optional, List, Union
+from typing import Tuple, Optional, List, Union, Dict
 import torch
 import numpy as np
 import SimpleITK as sitk
@@ -86,10 +86,10 @@ class RandomAffine(RandomTransform, SpatialTransform):
             default_pad_value: Union[str, float] = 'otsu',
             image_interpolation: str = 'linear',
             p: float = 1,
-            seed: Optional[int] = None,
             keys: Optional[List[str]] = None,
+            metrics: Dict = None
             ):
-        super().__init__(p=p, seed=seed, keys=keys)
+        super().__init__(p=p, keys=keys, metrics=metrics)
         self.scales = self.parse_range(scales, 'scales', min_constraint=0)
         self.degrees = self.parse_degrees(degrees)
         self.translation = self.parse_range(translation, 'translation')
@@ -198,7 +198,7 @@ class RandomAffine(RandomTransform, SpatialTransform):
             'rotation': rotation_params,
             'translation': translation_params,
         }
-        sample.add_transform(self, random_parameters_dict)
+        #sample.add_transform(self, random_parameters_dict)
         return sample
 
     def apply_affine_transform(

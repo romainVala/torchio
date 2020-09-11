@@ -1,4 +1,4 @@
-from typing import Tuple, Optional, Union, List
+from typing import Tuple, Optional, Union, List, Dict
 import torch
 from ....torchio import DATA
 from ....data.subject import Subject
@@ -33,11 +33,11 @@ class RandomNoise(RandomTransform, IntensityTransform):
             mean: Union[float, Tuple[float, float]] = 0,
             std: Union[float, Tuple[float, float]] = (0, 0.25),
             p: float = 1,
-            seed: Optional[int] = None,
             abs_after_noise: bool = False,
             keys: Optional[List[str]] = None,
+            metrics: Dict = None
             ):
-        super().__init__(p=p, seed=seed, keys=keys)
+        super().__init__(p=p, keys=keys, metrics=metrics)
         self.mean_range = self.parse_range(mean, 'mean')
         self.std_range = self.parse_range(std, 'std', min_constraint=0)
         self.abs_after_noise = abs_after_noise
@@ -50,7 +50,7 @@ class RandomNoise(RandomTransform, IntensityTransform):
             random_parameters_dict = {'std': std}
             random_parameters_images_dict[image_name] = random_parameters_dict
             image_dict[DATA] = add_noise(image_dict[DATA], mean, std, self.abs_after_noise)
-        sample.add_transform(self, random_parameters_images_dict)
+        #sample.add_transform(self, random_parameters_images_dict)
         return sample
 
     @staticmethod
