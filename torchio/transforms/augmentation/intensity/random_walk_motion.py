@@ -1,6 +1,7 @@
 import math
 import torch
 import numpy as np
+from typing import Dict
 from scipy.interpolate import pchip_interpolate
 try:
     import finufftpy
@@ -43,7 +44,7 @@ class MotionSimTransform(RandomTransform):
     def __init__(self, std_rotation_angle=0, std_translation=10,
                  corrupt_pct=(15, 20), freq_encoding_dim=(0, 1, 2), preserve_center_pct=0.07,
                  apply_mask=True, nufft=True, proc_scale=-1, num_pieces=8,
-                 mvt_param=None, verbose=False, **kwargs):
+                 mvt_param=None, verbose=False, metrics: Dict = None):
         """
         :param image_name (str): key in data dictionary
         :param std_rotation_angle (float) : std of rotations
@@ -58,7 +59,7 @@ class MotionSimTransform(RandomTransform):
        raises ImportError if nufft is true but finufft cannot be imported
         """
 
-        super(MotionSimTransform, self).__init__(verbose=verbose, **kwargs)
+        super(MotionSimTransform, self).__init__(verbose=verbose, metrics=metrics)
         self.trajectory = None
         self.preserve_center_frequency_pct = preserve_center_pct
         self.freq_encoding_choice = freq_encoding_dim

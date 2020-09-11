@@ -1,5 +1,5 @@
 from numbers import Number
-from typing import Tuple, Optional, List, Union
+from typing import Tuple, Optional, List, Union, Dict
 import torch
 import numpy as np
 import SimpleITK as sitk
@@ -62,10 +62,10 @@ class RandomAffineFFT(RandomTransform):
             isotropic: bool = False,
             default_pad_value: Union[str, float] = 'otsu',
             p: float = 1,
-            oversampling_pct = 0.2,
-            **kwargs
+            oversampling_pct=0.2,
+            metrics: Dict = None
             ):
-        super().__init__(p=p, **kwargs)
+        super().__init__(p=p, metrics=metrics)
         self.scales = scales
         self.degrees = self.parse_degrees(degrees)
         self.isotropic = isotropic

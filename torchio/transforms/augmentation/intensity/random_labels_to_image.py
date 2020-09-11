@@ -1,5 +1,5 @@
 
-from typing import Tuple, Optional, Sequence, List
+from typing import Tuple, Optional, Sequence, List, Dict
 import torch
 from ....torchio import DATA, AFFINE, TypeData, TypeRangeFloat
 from ....utils import check_sequence
@@ -102,8 +102,9 @@ class RandomLabelsToImage(RandomTransform, IntensityTransform):
             discretize: bool = False,
             p: float = 1,
             keys: Optional[List[str]] = None,
+            metrics: Dict = None
             ):
-        super().__init__(p=p, keys=keys)
+        super().__init__(p=p, keys=keys, metrics=metrics)
         self.label_key = self.parse_label_key(label_key)
         self.used_labels = self.parse_used_labels(used_labels)
         self.mean, self.std = self.parse_mean_and_std(mean, std)

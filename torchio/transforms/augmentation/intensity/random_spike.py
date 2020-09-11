@@ -1,4 +1,4 @@
-from typing import Tuple, Optional, Union, List
+from typing import Tuple, Optional, Union, List, Dict
 import torch
 import numpy as np
 import SimpleITK as sitk
@@ -43,8 +43,9 @@ class RandomSpike(RandomTransform, IntensityTransform):
             intensity: Union[float, Tuple[float, float]] = (1, 3),
             p: float = 1,
             keys: Optional[List[str]] = None,
+            metrics: Dict = None
             ):
-        super().__init__(p=p, keys=keys)
+        super().__init__(p=p, keys=keys, metrics=metrics)
         self.intensity_range = self.parse_range(
             intensity, 'intensity_range')
         self.num_spikes_range = self.parse_range(

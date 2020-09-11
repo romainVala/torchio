@@ -1,4 +1,4 @@
-from typing import Optional, Tuple, Union, List
+from typing import Optional, Tuple, Union, List, Dict
 import torch
 import numpy as np
 from ....data.subject import Subject
@@ -29,8 +29,9 @@ class RandomSwap(RandomTransform, IntensityTransform):
             num_iterations: int = 100,
             p: float = 1,
             keys: Optional[List[str]] = None,
+            metrics: Dict = None
             ):
-        super().__init__(p=p, keys=keys)
+        super().__init__(p=p, keys=keys, metrics=metrics)
         self.patch_size = to_tuple(patch_size)
         self.num_iterations = self.parse_num_iterations(num_iterations)
 

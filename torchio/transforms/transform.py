@@ -2,7 +2,7 @@ import copy
 import numbers
 import warnings
 from abc import ABC, abstractmethod
-from typing import Optional, Union, Tuple, List
+from typing import Optional, Union, Tuple, List, Dict
 
 import torch
 import numpy as np
@@ -38,7 +38,7 @@ class Transform(ABC):
             p: float = 1,
             copy: bool = True,
             keys: Optional[List[str]] = None,
-            metrics: dict = None
+            metrics: Dict = None
             ):
         self.probability = self.parse_probability(p)
         self.copy = copy

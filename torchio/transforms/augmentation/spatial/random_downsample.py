@@ -1,4 +1,4 @@
-from typing import Union, Tuple, Optional, List
+from typing import Union, Tuple, Optional, List, Dict
 import torch
 from ....torchio import TypeRangeFloat
 from ....data.subject import Subject
@@ -39,8 +39,9 @@ class RandomDownsample(RandomTransform, SpatialTransform):
             downsampling: TypeRangeFloat = (1.5, 5),
             p: float = 1,
             keys: Optional[List[str]] = None,
+            metrics: Dict = None
             ):
-        super().__init__(p=p, keys=keys)
+        super().__init__(p=p, keys=keys, metrics=metrics)
         self.axes = self.parse_axes(axes)
         self.downsampling_range = self.parse_range(
             downsampling, 'downsampling', min_constraint=1)

@@ -1,4 +1,4 @@
-from typing import Union, Sequence, List
+from typing import Union, Sequence, List, Dict
 
 import torch
 import torchio
@@ -22,8 +22,8 @@ class Compose(Transform):
     .. note::
         This is a thin wrapper of :py:class:`torchvision.transforms.Compose`.
     """
-    def __init__(self, transforms: Sequence[Transform] = [], p: float = 1, **kwargs):
-        super().__init__(p=p, **kwargs)
+    def __init__(self, transforms: Sequence[Transform] = [], p: float = 1, metrics: Dict = None):
+        super().__init__(p=p, metrics=metrics)
         self.transform = PyTorchCompose(transforms)
 
     def __call__(self, data: Union[Subject, torch.Tensor, np.ndarray], seeds: List = None):

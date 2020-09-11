@@ -1,4 +1,4 @@
-from typing import Union, Tuple, Optional, List
+from typing import Union, Tuple, Optional, List, Dict
 import torch
 import numpy as np
 import SimpleITK as sitk
@@ -28,8 +28,9 @@ class RandomBlur(RandomTransform, IntensityTransform):
             std: Union[float, Tuple[float, float]] = (0, 4),
             p: float = 1,
             keys: Optional[List[str]] = None,
+            metrics: Dict = None
             ):
-        super().__init__(p=p, keys=keys)
+        super().__init__(p=p, keys=keys, metrics=metrics)
         self.std_range = self.parse_range(std, 'std', min_constraint=0)
 
     def apply_transform(self, sample: Subject) -> dict:

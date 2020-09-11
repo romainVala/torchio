@@ -1,4 +1,4 @@
-from typing import Tuple, Optional, Union, List
+from typing import Tuple, Optional, Union, List, Dict
 import torch
 import numpy as np
 from ....torchio import DATA
@@ -55,8 +55,9 @@ class RandomGhosting(RandomTransform, IntensityTransform):
             restore: float = 0.02,
             p: float = 1,
             keys: Optional[List[str]] = None,
+            metrics: Dict = None
             ):
-        super().__init__(p=p, keys=keys)
+        super().__init__(p=p, keys=keys, metrics=metrics)
         if not isinstance(axes, tuple):
             try:
                 axes = tuple(axes)

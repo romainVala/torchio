@@ -1,5 +1,5 @@
 
-from typing import Union, Tuple, Optional, List
+from typing import Union, Tuple, Optional, List, Dict
 import numpy as np
 import torch
 from ....torchio import DATA, TypeData
@@ -38,8 +38,9 @@ class RandomBiasField(RandomTransform, IntensityTransform):
             order: int = 3,
             p: float = 1,
             keys: Optional[List[str]] = None,
+            metrics: Dict = None
             ):
-        super().__init__(p=p, keys=keys)
+        super().__init__(p=p, keys=keys, metrics=metrics)
         self.coefficients_range = self.parse_range(
             coefficients, 'coefficients_range')
         self.order = self.parse_order(order)

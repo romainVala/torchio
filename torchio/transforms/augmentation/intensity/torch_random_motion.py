@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 from scipy.interpolate import pchip_interpolate
 import itertools
+from typing import Dict
 from torchkbnufft import AdjKbNufft
 from torchkbnufft.math import complex_mult, imag_exp, absolute
 from torchio.transforms.augmentation.random_transform import RandomTransform
@@ -19,7 +20,7 @@ class TorchRandomMotionFromTimeCourse(RandomTransform):
                  fitpars=None, read_func=lambda x: pd.read_csv(x, header=None).values,
                  displacement_shift=1, freq_encoding_dim=[0], tr=2.3, es=4E-3,
                  nufft=True,  oversampling_pct=0.3, proba_to_augment: float = 1,
-                 verbose=False, preserve_center_pct=0, correct_motion=False, res_dir=None, cuda=False, **kwargs):
+                 verbose=False, preserve_center_pct=0, correct_motion=False, res_dir=None, cuda=False, metrics: Dict = None):
         """
         parameters to simulate 3 types of displacement random noise swllow or sudden mouvement
         :param nT (int): number of points of the time course
@@ -45,7 +46,7 @@ class TorchRandomMotionFromTimeCourse(RandomTransform):
         Note currently on freq_encoding_dim=0 give the same ringing direction for rotation and translation, dim 1 and 2 are not coherent
         Note fot suddenFrequency and swallowFrequency min max must differ and the max is never achieved, so to have 0 put (0,1)
         """
-        super(TorchRandomMotionFromTimeCourse, self).__init__(verbose=verbose, **kwargs)
+        super(TorchRandomMotionFromTimeCourse, self).__init__(verbose=verbose, p=proba_to_augment, metrics=metrics)
         self.tr = tr
         self.es = es
         self.nT = nT

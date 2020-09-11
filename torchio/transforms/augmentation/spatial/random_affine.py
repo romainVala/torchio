@@ -1,5 +1,5 @@
 from numbers import Number
-from typing import Tuple, Optional, List, Union
+from typing import Tuple, Optional, List, Union, Dict
 import torch
 import numpy as np
 import SimpleITK as sitk
@@ -87,8 +87,9 @@ class RandomAffine(RandomTransform, SpatialTransform):
             image_interpolation: str = 'linear',
             p: float = 1,
             keys: Optional[List[str]] = None,
+            metrics: Dict = None
             ):
-        super().__init__(p=p, keys=keys)
+        super().__init__(p=p, keys=keys, metrics=metrics)
         self.scales = self.parse_range(scales, 'scales', min_constraint=0)
         self.degrees = self.parse_degrees(degrees)
         self.translation = self.parse_range(translation, 'translation')

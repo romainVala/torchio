@@ -7,7 +7,7 @@ Custom implementation of
 
 """
 
-from typing import Tuple, Optional, List
+from typing import Tuple, Optional, List, Dict
 import torch
 import numpy as np
 import SimpleITK as sitk
@@ -60,8 +60,9 @@ class RandomMotion(RandomTransform, IntensityTransform):
             image_interpolation: str = 'linear',
             p: float = 1,
             keys: Optional[List[str]] = None,
+            metrics: Dict = None
             ):
-        super().__init__(p=p, keys=keys)
+        super().__init__(p=p, keys=keys, metrics=metrics)
         self.degrees_range = self.parse_degrees(degrees)
         self.translation_range = self.parse_translation(translation)
         if not 0 < num_transforms or not isinstance(num_transforms, int):
