@@ -70,7 +70,7 @@ class RandomGamma(RandomTransform, IntensityTransform):
                 image_dict[DATA] = data.sign() * data.abs() ** gamma
             else:
                 image_dict[DATA] = image_dict[DATA] ** gamma
-        sample.add_transform(self, random_parameters_images_dict)
+        #sample.add_transform(self, random_parameters_images_dict)
         return sample
 
     @staticmethod
