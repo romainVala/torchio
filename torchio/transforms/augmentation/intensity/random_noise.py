@@ -48,7 +48,7 @@ class RandomNoise(RandomTransform, IntensityTransform):
         for image_name, image_dict in self.get_images_dict(sample).items():
             mean, std = self.get_params(self.mean_range, self.std_range)
             self.mean = mean
-            self.sdt = std
+            self.std = std
             random_parameters_dict = {'std': std}
             random_parameters_images_dict[image_name] = random_parameters_dict
             image_dict[DATA] = add_noise(image_dict[DATA], mean, std, self.abs_after_noise)
