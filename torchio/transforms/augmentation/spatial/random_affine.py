@@ -157,7 +157,7 @@ class RandomAffine(RandomTransform, SpatialTransform):
         return transform
 
     def apply_transform(self, sample: Subject) -> dict:
-        sample.check_consistent_spatial_shape()
+        #sample.check_consistent_spatial_shape()
         params = self.get_params(
             self.scales,
             self.degrees,
@@ -165,6 +165,10 @@ class RandomAffine(RandomTransform, SpatialTransform):
             self.isotropic,
         )
         scaling_params, rotation_params, translation_params = params
+        self.apply_scales =  scaling_params
+        self.apply_rot = rotation_params
+        self.apply_trans = translation_params
+
         for image in self.get_images(sample):
             if image[TYPE] != INTENSITY:
                 interpolation = Interpolation.NEAREST
