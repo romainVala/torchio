@@ -72,8 +72,6 @@ class Transform(ABC):
         self.transform_params["seed"] = seed
 
         if torch.rand(1).item() > self.probability:
-            if isinstance(data, Subject) and isinstance(seed, int):  # if not a compose
-                data.add_transform(self, parameters_dict=self.transform_params)
             return data
 
         is_tensor = is_array = is_dict = is_image = is_sitk = is_nib = False
@@ -112,7 +110,7 @@ class Transform(ABC):
         if self.copy:
             sample = copy.copy(sample)
 
-        with np.errstate(all='raise'):
+        with np.errstate(all='warn'):
             transformed = self.apply_transform(sample)
 
         for image in transformed.get_images(intensity_only=False):
@@ -152,6 +150,8 @@ class Transform(ABC):
             transformed.add_transform(self, parameters_dict=self.transform_params)
         torch.random.set_rng_state(torch_rng_state)
         np.random.set_state(np_rng_state)
+        self._store_params()
+
         return transformed
 
     @abstractmethod
