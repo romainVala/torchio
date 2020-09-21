@@ -54,7 +54,7 @@ class WeightedSampler(RandomSampler):
     def __init__(
             self,
             patch_size: TypePatchSize,
-            probability_map: Optional[str] = None,
+            probability_map: str,
             ):
         super().__init__(patch_size)
         self.probability_map_name = probability_map
@@ -246,7 +246,7 @@ class WeightedSampler(RandomSampler):
         if random_number > cdf.max():
             cdf_index = -1
         else:  # proceed as usual
-            cdf_index = np.argmax(random_number < cdf)
+            cdf_index = np.searchsorted(cdf, random_number)
 
         random_location_index = sort_indices[cdf_index]
         center = np.unravel_index(
