@@ -247,6 +247,7 @@ class RandomLabelsToImage(RandomTransform, IntensityTransform):
             final_image[DATA][bg_mask] = original_image[DATA][bg_mask]
 
         sample.add_image(final_image, self.image_key)
+        self.random_parameters_images_dict = random_parameters_images_dict
         #sample.add_transform(self, random_parameters_images_dict)
         return sample
 
