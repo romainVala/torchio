@@ -19,10 +19,10 @@ class RandomMotionFromTimeCourse(RandomTransform):
                  noiseBasePars: Tuple[float, float] = (5,15), swallowFrequency: Tuple[float, float] = (0,5),
                  swallowMagnitude: Tuple[float, float] = (2,6), suddenFrequency: Tuple[int, int] = (0,5),
                  suddenMagnitude: Tuple[float, float] = (2,6), fitpars: Union[List, np.ndarray] = None,
-                 displacement_shift: bool = True, freq_encoding_dim: List = [0], tr: float = 2.3, es: float = 4E-3,
+                 displacement_shift_strategy: str = None, freq_encoding_dim: List = [0], tr: float = 2.3, es: float = 4E-3,
                  nufft: bool = True,  oversampling_pct: float = 0.3, p: float = 1,
-                 preserve_center_pct: float = 0, correct_motion: bool = False,  metrics: Dict = None,
-                 keys: Optional[List[str]] = None,):
+                 preserve_center_frequency_pct: float = 0, correct_motion: bool = False,  metrics: Dict = None,
+                 keys: Optional[List[str]] = None, res_dir: str = None):
         """
         parameters to simulate 3 types of displacement random noise swllow or sudden mouvement
         :param nT (int): number of points of the time course
@@ -59,8 +59,8 @@ class RandomMotionFromTimeCourse(RandomTransform):
         self.swallowMagnitude = swallowMagnitude
         self.suddenFrequency = suddenFrequency
         self.suddenMagnitude = suddenMagnitude
-        self.displacement_shift = displacement_shift
-        self.preserve_center_frequency_pct = preserve_center_pct
+        self.displacement_shift_strategy = displacement_shift_strategy
+        self.preserve_center_frequency_pct = preserve_center_frequency_pct
         self.freq_encoding_choice = freq_encoding_dim
         self.frequency_encoding_dim = self._rand_choice(self.freq_encoding_choice)
         if fitpars is None:
@@ -73,8 +73,10 @@ class RandomMotionFromTimeCourse(RandomTransform):
         self.oversampling_pct = oversampling_pct
         if (not finufft) and nufft:
             raise ImportError('finufftpy cannot be imported')
-        self.preserve_center_pct = preserve_center_pct
         self.correct_motion = correct_motion
+        self.to_substract = None
+        self.res_dir = res_dir
+        self.nb_saved = 0
 
     def apply_transform(self, sample):
         for image_name, image_dict in sample.get_images_dict().items():
@@ -97,8 +99,12 @@ class RandomMotionFromTimeCourse(RandomTransform):
                     fitpars_interp = self._interpolate_space_timing(self.fitpars)
                     fitpars_interp = self._tile_params_to_volume_dims(fitpars_interp)
 
-            if self.displacement_shift:
-                fitpars_interp = self.demean_fitpar(fitpars_interp, original_image)[0]
+            if self.displacement_shift_strategy == "demean":
+                fitpars_interp, self.to_substract = self.demean_fitpar(fitpars_interp, original_image)
+
+            if self.displacement_shift_strategy == "center_zero":
+                self.to_substract = fitpars_interp[:, int(round(self.nT / 2))]
+                fitpars_interp = np.subtract(fitpars_interp, self.to_substract[..., np.newaxis])
 
             fitpars_vox = fitpars_interp.reshape((6, -1))
             translations, rotations = fitpars_vox[:3], np.radians(fitpars_vox[3:])
@@ -128,9 +134,26 @@ class RandomMotionFromTimeCourse(RandomTransform):
             image_dict["data"] = corrupted_im[np.newaxis, ...]
             image_dict['data'] = torch.from_numpy(image_dict['data']).float()
 
+        if self.res_dir is not None:
+            self.save_to_dir(image_dict)
+
         self._compute_motion_metrics(fitpars_interp=fitpars_interp, original_image=original_image)
 
         return sample
+
+    def save_to_dir(self, image_dict):
+
+        volume_path = image_dict['path']
+        dd = volume_path.split('/')
+        volume_name = dd[len(dd)-2] + '_' + image_dict['stem']
+        nb_saved = image_dict['index']
+        import os
+        resdir = self.res_dir + '/mvt_param/'
+        if not os.path.isdir(resdir): os.mkdir(resdir)
+
+        fname = resdir + 'ssim_{}_N{:05d}_suj_{}'.format(image_dict['metrics']['ssim'],
+                                                    nb_saved, volume_name)
+        np.savetxt(fname + '_mvt.csv', self.fitpars, delimiter=',')
 
     def do_correct_motion(self, image):
         im_freq_domain = self._fft_im(image)
@@ -169,10 +192,6 @@ class RandomMotionFromTimeCourse(RandomTransform):
         elif len(fpars.shape) != 2:
             warnings.warn("Expected motion parameters to be of shape (6, N), found {}. Setting motion to None".format(fpars.shape))
             fpars = None
-
-        if self.displacement_shift > 0:
-            to_substract = fpars[:, int(round(self.nT / 2))]
-            fpars = np.subtract(fpars, to_substract[..., np.newaxis])
 
         if np.any(np.isnan(fpars)) :
             #assume it is the last column, as can happen if the the csv line ends with ,
@@ -284,7 +303,7 @@ class RandomMotionFromTimeCourse(RandomTransform):
 
             fitpars += suddenTrace
 
-        if self.displacement_shift > 0:
+        if self.displacement_shift_strategy == "center_zero":
             to_substract = fitpars[:, int(round(self.nT / 2))]
             fitpars = np.subtract(fitpars, to_substract[..., np.newaxis])
 
@@ -297,8 +316,6 @@ class RandomMotionFromTimeCourse(RandomTransform):
         #Interpolation of the motion
         fitpars_interp = self._interpolate_space_timing(fitpars)
         fitpars_interp = self._tile_params_to_volume_dims(fitpars_interp)
-
-        #Compute movement metrics
 
         return fitpars_interp
 
@@ -459,9 +476,8 @@ class RandomMotionFromTimeCourse(RandomTransform):
         self.mean_DispP_iterp = calculate_mean_Disp_P(fitpars_interp)
         self.rmse_Disp_iterp = calculate_mean_RMSE_displacment(fitpars_interp)
 
-        ff_interp, to_substract = self.demean_fitpar(fitpars_interp, original_image)
-        self.TFsubstract = to_substract
-        self.rmse_DispTF = calculate_mean_RMSE_displacment(ff_interp, original_image)
+        #ff_interp, to_substract = self.demean_fitpar(fitpars_interp, original_image)
+        #self.rmse_DispTF = calculate_mean_RMSE_displacment(ff_interp, original_image)
 
     def demean_fitpar(self, fitpars_interp, original_image):
 
