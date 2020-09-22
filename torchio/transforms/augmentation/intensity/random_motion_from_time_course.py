@@ -303,10 +303,6 @@ class RandomMotionFromTimeCourse(RandomTransform):
 
             fitpars += suddenTrace
 
-        if self.displacement_shift_strategy == "center_zero":
-            to_substract = fitpars[:, int(round(self.nT / 2))]
-            fitpars = np.subtract(fitpars, to_substract[..., np.newaxis])
-
         if self.preserve_center_frequency_pct:
             center = np.int(np.floor(fitpars.shape[1]/2))
             nbpts = np.int(np.floor(fitpars.shape[1] * self.preserve_center_frequency_pct/2))
