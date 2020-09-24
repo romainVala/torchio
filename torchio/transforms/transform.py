@@ -146,9 +146,8 @@ class Transform(ABC):
         if self.metrics:
             _ = [metric_func(orig, transformed) for metric_func in self.metrics.values()]
         elif isinstance(transformed, Subject):
-            for image_key in transformed.keys():
-                if isinstance(transformed[image_key], dict):
-                    transformed[image_key]["metrics"] = dict()
+            for image_name, image_dict in transformed.get_images_dict(intensity_only=True).items():
+                transformed[image_name]["metrics"] = dict()
 
         if isinstance(transformed, Subject) and isinstance(seed, int):  # if not a compose
             transformed.add_transform(self, parameters_dict=self.transform_params)
