@@ -145,6 +145,10 @@ class Transform(ABC):
         # Compute the metrics after the transformation
         if self.metrics:
             _ = [metric_func(orig, transformed) for metric_func in self.metrics.values()]
+        elif isinstance(transformed, Subject):
+            for image_key in transformed.keys():
+                if isinstance(transformed[image_key], dict):
+                    transformed[image_key]["metrics"] = dict()
 
         if isinstance(transformed, Subject) and isinstance(seed, int):  # if not a compose
             transformed.add_transform(self, parameters_dict=self.transform_params)
@@ -160,7 +164,8 @@ class Transform(ABC):
 
     def _store_params(self):
         self.transform_params.update(self.__dict__.copy())
-        del self.transform_params["transform_params"]
+        if "transform_params" in self.transform_params:  # I do not know why si happen with parallelQueue
+            del self.transform_params["transform_params"]
         for key, value in self.transform_params.items():
             if not is_jsonable(value):
                 self.transform_params[key] = value.__str__()
