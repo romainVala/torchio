@@ -68,7 +68,7 @@ class Transform(ABC):
             np.random.seed(seed=seed)
 
         self.transform_params = {}
-        self._store_params()
+        #self._store_params() not sure if one should keep it
         self.transform_params["seed"] = seed
 
         if torch.rand(1).item() > self.probability:
@@ -147,13 +147,26 @@ class Transform(ABC):
             _ = [metric_func(orig, transformed) for metric_func in self.metrics.values()]
         elif isinstance(transformed, Subject):
             for image_name, image_dict in transformed.get_images_dict(intensity_only=True).items():
-                transformed[image_name]["metrics"] = dict()
+                if 'metrics' not in transformed[image_name]:
+                    transformed[image_name]["metrics"] = dict()
+
+        self._store_params()
 
         if isinstance(transformed, Subject) and isinstance(seed, int):  # if not a compose
-            transformed.add_transform(self, parameters_dict=self.transform_params)
+            dict_to_add = self.transform_params.copy()
+            del dict_to_add['metrics']
+            del dict_to_add['default_image_name']
+            for image_name, image_dict in transformed.get_images_dict(intensity_only=True).items():
+                if transformed[image_name]["metrics"] and self.metrics:
+                    # with composition transform the metric dic stay in subject sample, so add if exist
+                    # AND if self.metrics is define for this transform
+                    # not that if several metric are asked in a several transform, same sample['metric'] will be delete
+                    # but not the metric save in history
+                    dict_to_add['metric_' + image_name] = transformed[image_name]["metrics"]
+            transformed.add_transform(self, parameters_dict=dict_to_add)
+
         torch.random.set_rng_state(torch_rng_state)
         np.random.set_state(np_rng_state)
-        self._store_params()
 
         return transformed
 
