@@ -366,7 +366,6 @@ from scipy import ndimage
 from scipy.linalg import det
 from numpy import pi
 
-from sklearn.neighbors import NearestNeighbors
 
 __all__=['entropy', 'mutual_information', 'entropy_gaussian']
 
@@ -374,6 +373,8 @@ EPS = np.finfo(float).eps
 
 
 def nearest_distances(X, k=1):
+    from sklearn.neighbors import NearestNeighbors
+
     '''
     X = array(N,M)
     N = number of points
