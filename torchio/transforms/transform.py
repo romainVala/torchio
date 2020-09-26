@@ -163,8 +163,9 @@ class Transform(ABC):
                     # not that if several metric are asked in a several transform, same sample['metric'] will be delete
                     # but not the metric save in history
                     dict_to_add['metric_' + image_name] = transformed[image_name]["metrics"]
+                    # if proba not 1 dataloader collate complains of missing metrics field ... arg remove
+                    transformed[image_name]["metrics"] = dict()
             transformed.add_transform(self, parameters_dict=dict_to_add)
-
         torch.random.set_rng_state(torch_rng_state)
         np.random.set_state(np_rng_state)
 
