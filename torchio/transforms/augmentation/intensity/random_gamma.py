@@ -1,5 +1,5 @@
 import warnings
-from typing import Tuple, Optional, List
+from typing import Tuple, Optional, List, Dict
 import torch
 from ....torchio import DATA, TypeRangeFloat
 from ....data.subject import Subject
@@ -48,8 +48,10 @@ class RandomGamma(RandomTransform, IntensityTransform):
             p: float = 1,
             seed: Optional[int] = None,
             keys: Optional[List[str]] = None,
-            ):
-        super().__init__(p=p, seed=seed, keys=keys)
+            metrics: Dict = None,
+    ):
+        super().__init__(p=p, keys=keys, metrics=metrics)
+
         self.log_gamma_range = self.parse_range(log_gamma, 'log_gamma')
 
     def apply_transform(self, sample: Subject) -> dict:
@@ -57,6 +59,7 @@ class RandomGamma(RandomTransform, IntensityTransform):
         for image_name, image_dict in self.get_images_dict(sample).items():
             gamma = self.get_params(self.log_gamma_range)
             random_parameters_dict = {'gamma': gamma}
+            self.gamma = gamma
             random_parameters_images_dict[image_name] = random_parameters_dict
             if torch.any(image_dict[DATA] < 0):
                 message = (
