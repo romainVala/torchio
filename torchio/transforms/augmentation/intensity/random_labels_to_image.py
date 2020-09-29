@@ -15,7 +15,7 @@ class RandomLabelsToImage(RandomTransform, IntensityTransform):
     Based on the works by Billot et al.: `A Learning Strategy for
     Contrast-agnostic MRI Segmentation <https://arxiv.org/abs/2003.01995>`_
     and `Partial Volume Segmentation of Brain MRI Scans of any Resolution and
-    Contrast <https://arxiv.org/abs/2004.10221>`.
+    Contrast <https://arxiv.org/abs/2004.10221>`_.
 
     Args:
         label_key: String designating the label map in the sample
@@ -36,16 +36,16 @@ class RandomLabelsToImage(RandomTransform, IntensityTransform):
         mean: Sequence of means for each label.
             For each value :math:`v`, if a tuple :math:`(a, b)` is
             provided then :math:`v \sim \mathcal{U}(a, b)`.
-            If None, py:attr:`default_mean` range will be used for every label.
-            If not None and py:attr:`label_channels` is not None,
-            py:attr:`mean` and py:attr:`label_channels` must have the
+            If None, :py:attr:`default_mean` range will be used for every label.
+            If not None and :py:attr:`label_channels` is not None,
+            :py:attr:`mean` and :py:attr:`label_channels` must have the
             same length.
         std: Sequence of standard deviations for each label.
             For each value :math:`v`, if a tuple :math:`(a, b)` is
             provided then :math:`v \sim \mathcal{U}(a, b)`.
-            If None, py:attr:`default_std` range will be used for every label.
-            If not None and py:attr:`label_channels` is not None,
-            py:attr:`std` and py:attr:`label_channels` must have the
+            If None, :py:attr:`default_std` range will be used for every label.
+            If not None and :py:attr:`label_channels` is not None,
+            :py:attr:`std` and :py:attr:`label_channels` must have the
             same length.
         default_mean: Default mean range.
         default_std: Default standard deviation range.
