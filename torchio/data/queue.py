@@ -103,7 +103,7 @@ class Queue(Dataset):
     def __getitem__(self, _):
         # There are probably more elegant ways of doing this
         if not self.patches_list:
-            self.print('Patches list is empty.')
+            self._print('Patches list is empty.')
             self.fill()
             one_element = self.patches_list[0]
             first_key = next(iter(one_element))
@@ -126,9 +126,9 @@ class Queue(Dataset):
         attributes_string = ', '.join(attributes)
         return f'Queue({attributes_string})'
 
-    def print(self, *args):
+    def _print(self, *args):
         if self.verbose:
-            print(*args)
+            print(*args)  # noqa: T001
 
     @property
     def num_subjects(self) -> int:
@@ -159,7 +159,7 @@ class Queue(Dataset):
         num_subjects_for_queue = min(
             self.num_subjects, max_num_subjects_for_queue)
 
-        self.print(f'Filling queue from {num_subjects_for_queue} subjects...')
+        self._print(f'Filling queue from {num_subjects_for_queue} subjects...')
         if self.verbose:
             iterable = trange(num_subjects_for_queue, leave=False)
         else:
@@ -177,7 +177,7 @@ class Queue(Dataset):
         try:
             subject_sample = next(self.subjects_iterable)
         except StopIteration as exception:
-            self.print('Queue is empty:', exception)
+            self._print('Queue is empty:', exception)
             self.subjects_iterable = self.get_subjects_iterable()
             subject_sample = next(self.subjects_iterable)
         return subject_sample
@@ -185,7 +185,7 @@ class Queue(Dataset):
     def get_subjects_iterable(self) -> Iterator:
         # I need a DataLoader to handle parallelism
         # But this loader is always expected to yield single subject samples
-        self.print(
+        self._print(
             '\nCreating subjects loader with', self.num_workers, 'workers')
         subjects_loader = DataLoader(
             self.subjects_dataset,

@@ -89,7 +89,7 @@ def create_dummy_dataset(
         images_dir.mkdir(exist_ok=True, parents=True)
         labels_dir.mkdir(exist_ok=True, parents=True)
         if verbose:
-            print('Creating dummy dataset...')
+            print('Creating dummy dataset...')  # noqa: T001
             iterable = trange(num_images)
         else:
             iterable = range(num_images)
@@ -120,9 +120,9 @@ def create_dummy_dataset(
 
 def apply_transform_to_file(
         input_path: TypePath,
-        transform,  # : Transform seems to create a circular import (TODO)
+        transform,  # : Transform seems to create a circular import
         output_path: TypePath,
-        type: str = INTENSITY,
+        type: str = INTENSITY,  # noqa: A002
         verbose: bool = False,
         ):
     from . import Image, SubjectsDataset, Subject
@@ -130,7 +130,7 @@ def apply_transform_to_file(
     transformed = transform(subject)
     transformed.image.save(output_path)
     if verbose and transformed.history:
-        print(transformed.history[0])
+        print(transformed.history[0])  # noqa: T001
 
 
 def guess_type(string: str) -> Any:
@@ -173,12 +173,7 @@ def nib_to_sitk(
         force_3d: bool = False,
         force_4d: bool = False,
         ) -> sitk.Image:
-    """Create a SimpleITK image from a tensor and a 4x4 affine matrix.
-
-    Args:
-        data: PyTorch tensor or NumPy array
-        affine: # TODO
-    """
+    """Create a SimpleITK image from a tensor and a 4x4 affine matrix."""
     if data.ndim != 4:
         raise ValueError(f'Input must be 4D, but has shape {tuple(data.shape)}')
     # Possibilities
@@ -337,3 +332,11 @@ def is_jsonable(x):
         return True
     except (TypeError, OverflowError):
         return False
+
+def get_major_sitk_version() -> int:
+    import SimpleITK as sitk
+    # This attribute was added in version 2
+    # https://github.com/SimpleITK/SimpleITK/pull/1171
+    version = getattr(sitk, '__version__', None)
+    major_version = 1 if version is None else 2
+    return major_version
