@@ -14,11 +14,12 @@ average_func_dict = {"mean": torch.mean,
 
 class MapMetric(Metric, ABC):
 
-    def __init__(self, metric_name: str, mask_keys: Sequence = [], average_method: str = None, select_key: str = None):
-        super(MapMetric, self).__init__(metric_name=metric_name)
+    def __init__(self, metric_name: str, mask_keys: Sequence = [], average_method: str = None, select_key: str = None,
+                 scale_metric: float = 1.0, save_in_subject_keys: bool = False):
+        super(MapMetric, self).__init__(metric_name=metric_name, select_key=select_key, scale_metric=scale_metric,
+                                        save_in_subject_keys=save_in_subject_keys)
         self.mask_keys = mask_keys
         self.average_method = self._get_average_method(average_method)
-        self.select_key = select_key
 
     @staticmethod
     def _get_average_method(average_method: str):
@@ -41,7 +42,7 @@ class MapMetric(Metric, ABC):
         orig_map = metric_map
         if self.average_method is not None:
             orig_map = self.average_method(orig_map)
-        masked_maps["no_mask"] = orig_map
+        masked_maps[self.metric_name] = orig_map
         #Check if masks
         if self.mask_keys:
             mask_keys_in_sample = sample.keys() & set(self.mask_keys)
@@ -54,5 +55,5 @@ class MapMetric(Metric, ABC):
                     masked_map = metric_map[mask_data > 0]
                     if self.average_method is not None:
                         masked_map = self.average_method(masked_map)
-                    masked_maps[mask_key] = masked_map
+                    masked_maps[self.metric_name + "_" + mask_key] = masked_map
         return masked_maps

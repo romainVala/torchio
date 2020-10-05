@@ -20,23 +20,18 @@ from .interpolation import Interpolation
 class Transform(ABC):
     """Abstract class for all TorchIO transforms.
 
+    All classes used to transform a sample from an
+    :py:class:`~torchio.SubjectsDataset` should subclass it.
     All subclasses should overwrite
     :py:meth:`torchio.tranforms.Transform.apply_transform`,
-    which takes data, applies some transformation and returns the result.
-
-    The input can be an instance of
-    :py:class:`torchio.Subject`,
-    :py:class:`torchio.Image`,
-    :py:class:`numpy.ndarray`,
-    :py:class:`torch.Tensor`,
-    :py:class:`SimpleITK.image`,
-    or a Python dictionary.
+    which takes a sample, applies some transformation and returns the result.
 
     Args:
         p: Probability that this transform will be applied.
         copy: Make a shallow copy of the input before applying the transform.
-        keys: Mandatory if the input is a Python dictionary. The transform will
-            be applied only to the data in each key.
+        keys: If the input is a dictionary, the corresponding values will be
+            converted to :py:class:`torchio.ScalarImage` so that the transform
+            is applied to them only.
     """
     def __init__(
             self,
@@ -149,15 +144,18 @@ class Transform(ABC):
 
         # Compute the metrics after the transformation
         if self.metrics:
-            _ = [metric_func(orig, transformed) for metric_func in self.metrics.values()]
+            self._metrics = [metric_func(orig, transformed) for metric_func in self.metrics.values()]
+        """
         elif isinstance(transformed, Subject):
             for image_name, image_dict in transformed.get_images_dict(intensity_only=True).items():
                 if 'metrics' not in transformed[image_name]:
                     transformed[image_name]["metrics"] = dict()
+        """
 
         self._store_params()
 
         if isinstance(transformed, Subject) and isinstance(seed, int):  # if not a compose
+            """
             dict_to_add = self.transform_params.copy()
             del dict_to_add['metrics']
             del dict_to_add['default_image_name']
@@ -170,7 +168,8 @@ class Transform(ABC):
                     dict_to_add['metric_' + image_name] = transformed[image_name]["metrics"]
                     # if proba not 1 dataloader collate complains of missing metrics field ... arg remove
                     transformed[image_name]["metrics"] = dict()
-            transformed.add_transform(self, parameters_dict=dict_to_add)
+            """
+            transformed.add_transform(self, parameters_dict=self.transform_params)
         torch.random.set_rng_state(torch_rng_state)
         np.random.set_state(np_rng_state)
 
@@ -184,6 +183,10 @@ class Transform(ABC):
         self.transform_params.update(self.__dict__.copy())
         if "transform_params" in self.transform_params:  # I do not know why si happen with parallelQueue
             del self.transform_params["transform_params"]
+
+        if "metrics" in self.transform_params:
+            del self.transform_params["metrics"]
+
         for key, value in self.transform_params.items():
             if not is_jsonable(value):
                 self.transform_params[key] = value.__str__()

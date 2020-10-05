@@ -26,9 +26,11 @@ class SSIM3D(MapMetric):
 
     def apply_metric(self, sample1: Subject, sample2: Subject):
         common_keys = self.get_common_intensity_keys(sample1=sample1, sample2=sample2)
+        computed_metrics_res = dict()
         for sample_key in common_keys:
             if sample_key in self.mask_keys:
                 continue
+            computed_metrics_res[sample_key] = dict()
             data1 = sample1[sample_key][DATA]
             data2 = sample2[sample_key][DATA]
 
@@ -43,10 +45,10 @@ class SSIM3D(MapMetric):
                 metric_dict = self._apply_masks_and_averaging(sample=sample2, metric_map=m_map)
                 for mask_name, masked_metric in metric_dict.items():
                     if mask_name is "no_mask":
-                        sample2[sample_key]["metrics"]["{}_{}".format(self.metric_name, m_name)] = masked_metric
+                        computed_metrics_res[sample_key]["{}_{}".format(self.metric_name, m_name)] = masked_metric
                     else:
-                        sample2[sample_key]["metrics"]["{}_{}_{}".format(self.metric_name, m_name, mask_name)] = masked_metric
-
+                        computed_metrics_res[sample_key]["{}_{}_{}".format(self.metric_name, m_name, mask_name)] = masked_metric
+        return computed_metrics_res
 
 
 def functional_ssim(x, y, k1=.001, k2=.001, k3=.001, L=None, alpha=1, beta=1, gamma=1, kernel="uniform", sigma=3.0,

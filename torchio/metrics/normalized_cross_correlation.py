@@ -12,17 +12,18 @@ class NCC(MapMetric):
 
     def apply_metric(self, sample1: Subject, sample2: Subject):
         common_keys = self.get_common_intensity_keys(sample1=sample1, sample2=sample2)
-
+        computed_metrics = dict()
         for sample_key in common_keys:
             if sample_key in self.mask_keys:
                 continue
             data1 = sample1[sample_key][DATA]
             data2 = sample2[sample_key][DATA]
-
+            computed_metrics[sample_key] = dict()
             if "metrics" not in sample2[sample_key].keys():
                 sample2[sample_key]["metrics"] = dict()
             psnr_map = th_pearsonr(data1, data2)
-            sample2[sample_key]["metrics"]["{}".format(self.metric_name)] = psnr_map
+            computed_metrics[sample_key]["metrics"]["{}".format(self.metric_name)] = psnr_map
+        return computed_metrics
 
 
 def _ncc(x, y):
@@ -41,6 +42,7 @@ def _ncc(x, y):
     x_sub, y_sub = x_reshape - x_reshape.mean(), y_reshape - y_reshape.mean()
     x_normed, y_normed = x_sub/torch.norm(x), y_sub/torch.norm(y)
     return x_normed.dot(y_normed)
+
 
 def inner_prod_ncc(x, y):
     x_normed, y_normed = (x - x.mean())/torch.norm(x), (y - y.mean())/torch.norm(y)
