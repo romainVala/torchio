@@ -27,7 +27,7 @@ class MetricWrapper(Metric):
                 mask_data1, mask_data2 = sample1[self.mask_key][DATA], sample2[self.mask_key][DATA]
                 data1 = torch.mul(data1, mask_data1)
                 data2 = torch.mul(data2, mask_data2)
-
+            computed_metrics[sample_key] = dict()
             #Compute metric
             """
             if "metrics" not in sample2[sample_key].keys():

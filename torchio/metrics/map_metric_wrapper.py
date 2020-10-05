@@ -20,6 +20,7 @@ class MapMetricWrapper(MapMetric):
                 continue
             data1 = sample1[sample_key][DATA]
             data2 = sample2[sample_key][DATA]
+            computed_metrics[sample_key] = dict()
             """
             if "metrics" not in sample2[sample_key].keys():
                 sample2[sample_key]["metrics"] = dict()
@@ -27,7 +28,7 @@ class MapMetricWrapper(MapMetric):
             metric_map = self.metric_func(data1, data2)
 
             metric_map = self._apply_masks_and_averaging(sample2, metric_map=metric_map)
-            computed_metrics[sample_key] = metric_map
+            computed_metrics[sample_key][self.metric_name] = metric_map
             """
             for mask_name, masked_metric in metric_map.items():
                 if mask_name is "no_mask":
