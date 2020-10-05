@@ -39,7 +39,7 @@ class MetricWrapper(Metric):
                     computed_metrics[sample_key][self.metric_name + "_" + key_metric] = value_metric
                     #sample2[sample_key]["metrics"][self.metric_name+"_"+key_metric] = value_metric
             else:
-                computed_metrics[sample_key][self.metric_name] = value_metric
+                computed_metrics[sample_key][self.metric_name] = result
 
                 #sample2[sample_key]["metrics"][self.metric_name] = result
         return computed_metrics

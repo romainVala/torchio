@@ -33,9 +33,10 @@ class SSIM3D(MapMetric):
             computed_metrics_res[sample_key] = dict()
             data1 = sample1[sample_key][DATA]
             data2 = sample2[sample_key][DATA]
-
+            """
             if "metrics" not in sample2[sample_key].keys():
                 sample2[sample_key]["metrics"] = dict()
+            """
             computed_metrics = functional_ssim(data1, data2, k1=self.k1, k2=self.k2, k3=self.k3,
                                                     L=self.L, alpha=self.alpha, beta=self.beta, gamma=self.gamma,
                                                     kernel=self.kernel, sigma=self.sigma, truncate=self.truncate,

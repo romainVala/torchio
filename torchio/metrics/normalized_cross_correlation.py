@@ -19,10 +19,13 @@ class NCC(MapMetric):
             data1 = sample1[sample_key][DATA]
             data2 = sample2[sample_key][DATA]
             computed_metrics[sample_key] = dict()
+            """
             if "metrics" not in sample2[sample_key].keys():
                 sample2[sample_key]["metrics"] = dict()
-            psnr_map = th_pearsonr(data1, data2)
-            computed_metrics[sample_key]["metrics"]["{}".format(self.metric_name)] = psnr_map
+            """
+            ncc = th_pearsonr(data1, data2)
+            computed_metrics[sample_key][self.metric_name] = ncc
+            #computed_metrics[sample_key]["metrics"]["{}".format(self.metric_name)] = psnr_map
         return computed_metrics
 
 
