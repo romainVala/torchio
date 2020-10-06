@@ -15,12 +15,11 @@ class Metric(ABC):
 
     def __call__(self, sample1: Subject, sample2: Subject):
         computed_metrics = self.apply_metric(sample1=sample1, sample2=sample2)
-        if self.scale_metric != 1.0:
-            for sample_key in computed_metrics.keys():
-                computed_metrics[sample_key] = {k: v*self.scale_metric for k, v in computed_metrics[sample_key].items()}
+        for sample_key in computed_metrics.keys():
+            print("Torchio_romain")
+            computed_metrics[sample_key] = {k: (v*self.scale_metric).tolist() for k, v in computed_metrics[sample_key].items()}
 
         if self.save_in_subject_keys:
-
             for sample_key, metrics_sample in computed_metrics.items():
                     sample2[sample_key]["metrics"] = metrics_sample
 

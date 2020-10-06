@@ -29,17 +29,10 @@ class MetricWrapper(Metric):
                 data2 = torch.mul(data2, mask_data2)
             computed_metrics[sample_key] = dict()
             #Compute metric
-            """
-            if "metrics" not in sample2[sample_key].keys():
-                sample2[sample_key]["metrics"] = dict()
-            """
             result = self.metric_func(data1, data2)
             if isinstance(result, dict):
                 for key_metric, value_metric in result.items():
                     computed_metrics[sample_key][self.metric_name + "_" + key_metric] = value_metric
-                    #sample2[sample_key]["metrics"][self.metric_name+"_"+key_metric] = value_metric
             else:
-                computed_metrics[sample_key] = result
-
-                #sample2[sample_key]["metrics"][self.metric_name] = result
+                computed_metrics[sample_key][self.metric_name] = result
         return computed_metrics

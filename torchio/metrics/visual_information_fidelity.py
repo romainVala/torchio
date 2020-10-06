@@ -27,7 +27,6 @@ class VIF(MapMetric):
 
             if "metrics" not in sample2[sample_key].keys():
                 sample2[sample_key]["metrics"] = dict()
-            #computed_metric = _vif(data1, data2)
             sample2[sample_key]["metrics"]["{}".format(self.metric_name)] = _vif(data1, data2, kernel=self.kernel,
                                                                                  sigma=self.sigma, truncate=self.truncate)
 

@@ -18,13 +18,8 @@ class PSNR(MapMetric):
             computed_metrics[sample_key] = dict()
             data1 = sample1[sample_key][DATA]
             data2 = sample2[sample_key][DATA]
-            """
-            if "metrics" not in sample2[sample_key].keys():
-                sample2[sample_key]["metrics"] = dict()
-            """
             psnr = _psnr(data1, data2)
             computed_metrics[sample_key][self.metric_name] = psnr
-            #sample2[sample_key]["metrics"]["{}".format(self.metric_name)] = psnr
         return computed_metrics
 
 
