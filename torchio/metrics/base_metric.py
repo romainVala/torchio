@@ -20,6 +20,7 @@ class Metric(ABC):
                 computed_metrics[sample_key] = {k: v*self.scale_metric for k, v in computed_metrics[sample_key].items()}
 
         if self.save_in_subject_keys:
+
             for sample_key, metrics_sample in computed_metrics.items():
                     sample2[sample_key]["metrics"] = metrics_sample
 
