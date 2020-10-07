@@ -6,9 +6,10 @@ from ..torchio import DATA
 class MapMetricWrapper(MapMetric):
 
     def __init__(self, metric_name: str, metric_func, select_key=None, scale_metric=1, average_method=None,
-                 save_in_subject_keys: bool = False):
+                 save_in_subject_keys: bool = False, **kwargs):
         super(MapMetricWrapper, self).__init__(metric_name=metric_name, select_key=select_key,
-                                               average_method=average_method, save_in_subject_keys=save_in_subject_keys)
+                                               average_method=average_method, save_in_subject_keys=save_in_subject_keys,
+                                               **kwargs)
         self.metric_func = metric_func
         self.scale_metric = scale_metric
 
