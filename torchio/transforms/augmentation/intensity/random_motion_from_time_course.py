@@ -90,14 +90,13 @@ class RandomMotionFromTimeCourse(RandomTransform):
             self._calc_dimensions(original_image.shape)
 
             if self.simulate_displacement:
-                fitpars_interp = self._simulate_random_trajectory()
+                self._simulate_random_trajectory()
 
+            if self.fitpars.ndim == 4: #we assume the interpolation has been done on the input
+                fitpars_interp = self.fitpars
             else:
-                if self.fitpars.ndim == 4:
-                    fitpars_interp = self.fitpars
-                else:
-                    fitpars_interp = self._interpolate_space_timing(self.fitpars)
-                    fitpars_interp = self._tile_params_to_volume_dims(fitpars_interp)
+                fitpars_interp = self._interpolate_space_timing(self.fitpars)
+                fitpars_interp = self._tile_params_to_volume_dims(fitpars_interp)
 
             fitpars_interp = self.demean_fitpar(fitpars_interp, original_image)
 
@@ -304,11 +303,6 @@ class RandomMotionFromTimeCourse(RandomTransform):
             fitpars[:, center-nbpts:center+nbpts] = 0
         self.fitpars = fitpars
 
-        #Interpolation of the motion
-        fitpars_interp = self._interpolate_space_timing(fitpars)
-        fitpars_interp = self._tile_params_to_volume_dims(fitpars_interp)
-
-        return fitpars_interp
 
     def _interpolate_space_timing_1D(self, fitpars):
         n_phase = self.phase_encoding_shape[0]
