@@ -6,6 +6,7 @@ from typing import Optional, Union, Tuple, List, Dict
 
 import torch
 import numpy as np
+import pandas as pd
 import nibabel as nib
 import SimpleITK as sitk
 
@@ -144,6 +145,7 @@ class Transform(ABC):
         # Compute the metrics after the transformation
         if self.metrics:
             self._metrics = [metric_func(orig, transformed) for metric_func in self.metrics.values()]
+            self._metrics = pd.DataFrame.from_dict(self._metrics).to_dict(orient="list")
 
         self._store_params()
         if isinstance(transformed, Subject) and isinstance(seed, int):  # if not a compose
