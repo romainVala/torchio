@@ -1,12 +1,13 @@
 from ..torchio import DATA
 from .base_metric import Metric
 import torch
+from typing import Callable, Union, List
 
 
 class MetricWrapper(Metric):
 
-    def __init__(self, metric_name: str, metric_func, use_mask: bool = False, mask_key: str = None,
-                 select_key: str = None, scale_metric: float = 1.0, save_in_subject_keys: bool = False):
+    def __init__(self, metric_name: str, metric_func: Callable, use_mask: bool = False, mask_key: str = None,
+                 select_key: Union[List, str] = None, scale_metric: float = 1.0, save_in_subject_keys: bool = False):
         super(MetricWrapper, self).__init__(metric_name=metric_name, select_key=select_key, scale_metric=scale_metric,
                                             save_in_subject_keys=save_in_subject_keys)
         self.metric_func = metric_func

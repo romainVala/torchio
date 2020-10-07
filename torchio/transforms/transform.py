@@ -144,8 +144,16 @@ class Transform(ABC):
 
         # Compute the metrics after the transformation
         if self.metrics:
-            self._metrics = [metric_func(orig, transformed) for metric_func in self.metrics.values()]
-            self._metrics = pd.DataFrame.from_dict(self._metrics).to_dict(orient="list")
+            _metrics = [metric_func(orig, transformed) for metric_func in self.metrics.values()]
+            self._metrics = dict()
+
+            for dict_metrics in _metrics:
+                for sample_key, metric_vals in dict_metrics.items():
+                    if not sample_key in self._metrics.keys():
+                        self._metrics[sample_key] = dict()
+                    for metric_name, metric_val in metric_vals.items():
+                        self._metrics[sample_key][metric_name] = metric_val
+            #self._metrics = pd.DataFrame.from_dict(self._metrics).to_dict(orient="list")
 
         self._store_params()
         if isinstance(transformed, Subject) and isinstance(seed, int):  # if not a compose

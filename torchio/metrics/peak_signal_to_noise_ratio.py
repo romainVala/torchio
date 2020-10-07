@@ -1,26 +1,6 @@
 import torch
-from .map_metric import MapMetric
-from ..data import Subject
-from ..torchio import DATA
-
-
-class PSNR(MapMetric):
-
-    def __init__(self, metric_name="PSNR", **kwargs):
-        super(PSNR, self).__init__(metric_name=metric_name, **kwargs)
-
-    def apply_metric(self, sample1: Subject, sample2: Subject):
-        common_keys = self.get_common_intensity_keys(sample1=sample1, sample2=sample2)
-        computed_metrics = dict()
-        for sample_key in common_keys:
-            if sample_key in self.mask_keys:
-                continue
-            computed_metrics[sample_key] = dict()
-            data1 = sample1[sample_key][DATA]
-            data2 = sample2[sample_key][DATA]
-            psnr = _psnr(data1, data2)
-            computed_metrics[sample_key][self.metric_name] = psnr
-        return computed_metrics
+from typing import Union, List, Callable
+from .map_metric_wrapper import MapMetricWrapper
 
 
 def _psnr(input, target):
@@ -43,3 +23,12 @@ def _psnr(input, target):
     mean_square_error = torch.mean((input_view - target_view) ** 2)
     psnrs = 20.0 * torch.log10(maximum_value) - 10.0 * torch.log10(mean_square_error)
     return psnrs
+
+
+class PSNR(MapMetricWrapper):
+
+    def __init__(self, metric_name: str = "PSNR", metric_func: Callable = _psnr, select_key: Union[List, str] = None, scale_metric: float = 1,
+                 average_method: str="mean", save_in_subject_keys: bool = False, metric_kwargs: dict = None, **kwargs):
+        super(PSNR, self).__init__(metric_name=metric_name, metric_func=metric_func, select_key=select_key,
+                                   scale_metric=scale_metric, average_method=average_method,
+                                   save_in_subject_keys=save_in_subject_keys, metric_kwargs=metric_kwargs, **kwargs)
