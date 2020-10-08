@@ -90,21 +90,15 @@ class RandomMotionFromTimeCourse(RandomTransform):
             self._calc_dimensions(original_image.shape)
 
             if self.simulate_displacement:
-                fitpars_interp = self._simulate_random_trajectory()
+                self._simulate_random_trajectory()
 
+            if self.fitpars.ndim == 4: #we assume the interpolation has been done on the input
+                fitpars_interp = self.fitpars
             else:
-                if self.fitpars.ndim == 4:
-                    fitpars_interp = self.fitpars
-                else:
-                    fitpars_interp = self._interpolate_space_timing(self.fitpars)
-                    fitpars_interp = self._tile_params_to_volume_dims(fitpars_interp)
+                fitpars_interp = self._interpolate_space_timing(self.fitpars)
+                fitpars_interp = self._tile_params_to_volume_dims(fitpars_interp)
 
-            if self.displacement_shift_strategy == "demean":
-                fitpars_interp, self.to_substract = self.demean_fitpar(fitpars_interp, original_image)
-
-            if self.displacement_shift_strategy == "center_zero":
-                self.to_substract = fitpars_interp[:, int(round(self.nT / 2))]
-                fitpars_interp = np.subtract(fitpars_interp, self.to_substract[..., np.newaxis])
+            fitpars_interp = self.demean_fitpar(fitpars_interp, original_image)
 
             fitpars_vox = fitpars_interp.reshape((6, -1))
             translations, rotations = fitpars_vox[:3], np.radians(fitpars_vox[3:])
@@ -309,11 +303,6 @@ class RandomMotionFromTimeCourse(RandomTransform):
             fitpars[:, center-nbpts:center+nbpts] = 0
         self.fitpars = fitpars
 
-        #Interpolation of the motion
-        fitpars_interp = self._interpolate_space_timing(fitpars)
-        fitpars_interp = self._tile_params_to_volume_dims(fitpars_interp)
-
-        return fitpars_interp
 
     def _interpolate_space_timing_1D(self, fitpars):
         n_phase = self.phase_encoding_shape[0]
@@ -476,23 +465,35 @@ class RandomMotionFromTimeCourse(RandomTransform):
         #self.rmse_DispTF = calculate_mean_RMSE_displacment(ff_interp, original_image)
 
     def demean_fitpar(self, fitpars_interp, original_image):
+        if self.displacement_shift_strategy == "demean":
+            o_shape = original_image.shape
+            tfi = np.abs(np.fft.fftshift(np.fft.fftn(np.fft.ifftshift(original_image))).astype(np.complex128))
+            ss = tfi
 
-        o_shape = original_image.shape
-        tfi = np.abs(np.fft.fftshift(np.fft.fftn(np.fft.ifftshift(original_image))).astype(np.complex128))
-        ss = tfi
+            ff = fitpars_interp
 
-        ff = fitpars_interp
+            to_substract = np.zeros(6)
+            for i in range(0, 6):
+                ffi = ff[i].reshape(-1)
+                ssi = ss.reshape(-1)
+                to_substract[i] = np.sum(ffi * ssi) / np.sum(ssi)
 
-        to_substract = np.zeros(6)
-        for i in range(0, 6):
-            ffi = ff[i].reshape(-1)
-            ssi = ss.reshape(-1)
-            to_substract[i] = np.sum(ffi * ssi) / np.sum(ssi)
+            to_substract_tile = np.tile(to_substract[..., np.newaxis, np.newaxis, np.newaxis],
+                                        (1, o_shape[0], o_shape[1], o_shape[2]))
+            fitpars_interp = np.subtract(fitpars_interp, to_substract_tile)
 
-        to_substract_tile = np.tile(to_substract[..., np.newaxis, np.newaxis, np.newaxis],
-                               (1, o_shape[0], o_shape[1], o_shape[2]))
-        fitpars_interp = np.subtract(fitpars_interp, to_substract_tile)
-        return fitpars_interp, to_substract
+        elif self.displacement_shift_strategy == "center_zero":
+            dim = fitpars_interp.shape
+            center = [int(round(dd / 2)) for dd in dim]
+            to_substract = fitpars_interp[:, center[1], center[2], center[3]]
+            to_substract_tile = np.tile(to_substract[..., np.newaxis, np.newaxis, np.newaxis], (1, dim[1], dim[2], dim[3]))
+            fitpars_interp = fitpars_interp - to_substract_tile
+
+        else:
+            to_substract = np.array([0, 0, 0, 0, 0, 0])
+
+        self.to_substract = to_substract
+        return fitpars_interp
 
 
 
