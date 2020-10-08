@@ -28,7 +28,7 @@ def _psnr(input, target):
 class PSNR(MapMetricWrapper):
 
     def __init__(self, metric_name: str = "PSNR", metric_func: Callable = _psnr, select_key: Union[List, str] = None, scale_metric: float = 1,
-                 average_method: str="mean", save_in_subject_keys: bool = False, metric_kwargs: dict = None, **kwargs):
+                 average_method: str = None, save_in_subject_keys: bool = False, metric_kwargs: dict = None, **kwargs):
         super(PSNR, self).__init__(metric_name=metric_name, metric_func=metric_func, select_key=select_key,
                                    scale_metric=scale_metric, average_method=average_method,
                                    save_in_subject_keys=save_in_subject_keys, metric_kwargs=metric_kwargs, **kwargs)
