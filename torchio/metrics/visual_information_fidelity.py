@@ -1,6 +1,6 @@
 import torch
 from typing import Callable, List, Union
-from .map_metric import MapMetric
+from .map_metric_wrapper import MapMetricWrapper
 from .utils import spatial_filter_nd, gauss_kernel_3d
 
 
@@ -45,7 +45,7 @@ def _vif(x, y, kernel="gaussian", sigma=3.0, truncate=4.0):
     return vifp
 
 
-class VIF(MapMetric):
+class VIF(MapMetricWrapper):
 
     def __init__(self, metric_name: str = "VIF", metric_func: Callable = _vif, select_key: Union[List, str] = None, scale_metric: float = 1,
                  average_method: str = None, save_in_subject_keys: bool = False, metric_kwargs: dict =
