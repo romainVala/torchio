@@ -1,35 +1,7 @@
 import torch
-from .map_metric import MapMetric
+from typing import Callable, List, Union
+from .map_metric_wrapper import MapMetricWrapper
 from .utils import spatial_filter_nd, gauss_kernel_3d
-from ..data import Subject
-from ..torchio import DATA
-
-
-class VIF(MapMetric):
-
-    def __init__(self, metric_name="VIF", kernel="gaussian", sigma=3.0, truncate=4.0, **kwargs):
-        super(VIF, self).__init__(metric_name=metric_name, **kwargs)
-        self.kernel = kernel.lower()
-        if self.kernel == "gaussian":
-            self.sigma = sigma
-            self.truncate = truncate
-        else:
-            self.sigma, self.truncate = None, None
-
-    def apply_metric(self, sample1: Subject, sample2: Subject):
-        common_keys = self.get_common_intensity_keys(sample1=sample1, sample2=sample2)
-
-        for sample_key in common_keys:
-            if sample_key in self.mask_keys:
-                continue
-            data1 = sample1[sample_key][DATA]
-            data2 = sample2[sample_key][DATA]
-
-            if "metrics" not in sample2[sample_key].keys():
-                sample2[sample_key]["metrics"] = dict()
-            #computed_metric = _vif(data1, data2)
-            sample2[sample_key]["metrics"]["{}".format(self.metric_name)] = _vif(data1, data2, kernel=self.kernel,
-                                                                                 sigma=self.sigma, truncate=self.truncate)
 
 
 def _vif(x, y, kernel="gaussian", sigma=3.0, truncate=4.0):
@@ -71,3 +43,14 @@ def _vif(x, y, kernel="gaussian", sigma=3.0, truncate=4.0):
     vifp = num/den
 
     return vifp
+
+
+class VIF(MapMetricWrapper):
+
+    def __init__(self, metric_name: str = "VIF", metric_func: Callable = _vif, select_key: Union[List, str] = None, scale_metric: float = 1,
+                 average_method: str = None, save_in_subject_keys: bool = False, metric_kwargs: dict =
+                 {"kernel": "gaussian", "truncate": 4.0, "sigma": 3.0}, **kwargs):
+        super(VIF, self).__init__(metric_name=metric_name, metric_func=metric_func, select_key=select_key,
+                                   scale_metric=scale_metric, average_method=average_method,
+                                   save_in_subject_keys=save_in_subject_keys, metric_kwargs=metric_kwargs, **kwargs)
+

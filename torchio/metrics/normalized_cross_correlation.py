@@ -1,28 +1,6 @@
 import torch
-from .map_metric import MapMetric
-from .utils import spatial_filter_nd, gauss_kernel_3d
-from ..data import Subject
-from ..torchio import DATA
-
-
-class NCC(MapMetric):
-
-    def __init__(self, metric_name="NCC", **kwargs):
-        super(NCC, self).__init__(metric_name=metric_name, **kwargs)
-
-    def apply_metric(self, sample1: Subject, sample2: Subject):
-        common_keys = self.get_common_intensity_keys(sample1=sample1, sample2=sample2)
-
-        for sample_key in common_keys:
-            if sample_key in self.mask_keys:
-                continue
-            data1 = sample1[sample_key][DATA]
-            data2 = sample2[sample_key][DATA]
-
-            if "metrics" not in sample2[sample_key].keys():
-                sample2[sample_key]["metrics"] = dict()
-            psnr_map = th_pearsonr(data1, data2)
-            sample2[sample_key]["metrics"]["{}".format(self.metric_name)] = psnr_map
+from typing import Union, List, Callable
+from .map_metric_wrapper import MapMetricWrapper
 
 
 def _ncc(x, y):
@@ -41,6 +19,7 @@ def _ncc(x, y):
     x_sub, y_sub = x_reshape - x_reshape.mean(), y_reshape - y_reshape.mean()
     x_normed, y_normed = x_sub/torch.norm(x), y_sub/torch.norm(y)
     return x_normed.dot(y_normed)
+
 
 def inner_prod_ncc(x, y):
     x_normed, y_normed = (x - x.mean())/torch.norm(x), (y - y.mean())/torch.norm(y)
@@ -63,3 +42,14 @@ def th_pearsonr(x, y):
     r_den = torch.norm(xm, 2) * torch.norm(ym, 2)
     r_val = r_num / r_den
     return r_val
+
+
+class NCC(MapMetricWrapper):
+
+    def __init__(self, metric_name: str = "NCC", metric_func: Callable = th_pearsonr,  select_key: Union[List, str] = None, scale_metric: float = 1,
+                 average_method: str = None, save_in_subject_keys: bool = False, metric_kwargs: dict = None,
+                 **kwargs):
+        super(NCC, self).__init__(metric_name=metric_name, metric_func=metric_func, select_key=select_key,
+                                  scale_metric=scale_metric, average_method=average_method,
+                                  save_in_subject_keys=save_in_subject_keys, metric_kwargs=metric_kwargs, **kwargs)
+
