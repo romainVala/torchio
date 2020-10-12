@@ -27,8 +27,16 @@ class MapMetricWrapper(MapMetric):
             computed_metrics[sample_key] = dict()
             metric_map = self.metric_func(data1, data2, **self.metric_kwargs) if self.metric_kwargs \
                 else self.metric_func(data1, data2)
-
-            metric_map = self._apply_masks_and_averaging(sample2, metric_map=metric_map)
+            if metric_map.ndim != 4:
+                self.average_method = None
+                masked_data1 = self._apply_masks_and_averaging(sample1, metric_map=data1)
+                masked_data2 = self._apply_masks_and_averaging(sample2, metric_map=data2)
+                metric_map = {metric_key: self.metric_func(masked_data1[metric_key], masked_data2[metric_key], **self.metric_kwargs)
+                              if self.metric_kwargs else
+                              self.metric_func(masked_data1[metric_key], masked_data2[metric_key])
+                              for metric_key in masked_data2}
+            else:
+                metric_map = self._apply_masks_and_averaging(sample2, metric_map=metric_map)
             computed_metrics[sample_key] = metric_map
 
         return computed_metrics
