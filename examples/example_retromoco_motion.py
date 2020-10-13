@@ -1,14 +1,25 @@
 from pprint import pprint
-from torchio import Image, ImagesDataset, transforms, INTENSITY, LABEL, Subject
+from torchio import Image, transforms, INTENSITY, LABEL, Subject, SubjectsDataset
+import torchio
 from torchvision.transforms import Compose
 import matplotlib.pyplot as plt
 import numpy as np
 import os
-
+import pandas as pd
 from torchio.transforms import RandomMotionFromTimeCourse, RandomAffine, CenterCropOrPad
 from copy import deepcopy
 from nibabel.viewers import OrthoSlicer3D as ov
 from torchvision.transforms import Compose
+import sys
+from torchio.data.image import read_image
+import torch
+import seaborn as sns
+sns.set(style="whitegrid")
+pd.set_option('display.max_rows', None, 'display.max_columns', None, 'display.max_colwidth', -1, 'display.width', 400)
+
+#from torchQC import do_training
+#dt = do_training('/tmp')
+l1_loss = torch.nn.L1Loss()
 
 """
 Comparing result with retromocoToolbox
@@ -48,66 +59,105 @@ def corrupt_data_both( x0, sigma= 5, amplitude=20, method='gauss'):
     return fp
 
 
-dt = do_training('/tmp', 'toto')
-res, extra_info = pd.DataFrame(), dict()
-
-suj_type='brain'#'suj'
+suj_type='brain'#'synth'#'suj'
 if suj_type=='suj':
     suj = [ Subject(image=Image('/data/romain/data_exemple/suj_150423/mT1w_1mm.nii', INTENSITY)), ]
-    suj = [ Subject(image=Image('/data/romain/data_exemple/s_S02_t1_mpr_sag_1iso_p2.nii.gz', INTENSITY)), ]
-else:
+    #suj = [ Subject(image=Image('/data/romain/data_exemple/s_S02_t1_mpr_sag_1iso_p2.nii.gz', INTENSITY)), ]
+elif suj_type=='brain':
     suj = [ Subject(image=Image('/data/romain/data_exemple/suj_150423/mask_brain.nii', INTENSITY)), ]
+elif suj_type=='synth':
+    dr = '/data/romain/data_exemple/suj_274542/ROI_PVE_1mm/'
+    label_list = [ "GM", "WM", "CSF", "both_R_Accu", "both_R_Amyg", "both_R_Caud", "both_R_Hipp", "both_R_Pall", "both_R_Puta", "both_R_Thal",
+                   "cereb_GM", "cereb_WM", "skin", "skull", "background" ]
 
-dico_params = {    "fitpars": None,  "verbose": True, "displacement_shift":1 , "oversampling_pct":0,
-                    'keep_original':True, 'compare_to_original':True, "correct_motion":False,
-                   'freq_encoding_dim':[2]}
+    suj = [Subject (label=Image(type=LABEL, path=[dr + ll + '.nii.gz' for ll in label_list]))]
+    tlab = torchio.transforms.RandomLabelsToImage(label_key='label', image_key='image', mean=[0.6, 1, 0.2, 0.6,0.6,0.6,0.6,0.6,0.6,0.6,0.6,1, 1, 0.1, 0],
+                                               default_std = 0.001 )
 
-disp_str =  'no_shift' # 'center_zero'  'no_shift' #'center_TF'
-disp_str_list = ['center_zero'] # ['no_shift'] #['center_zero', 'no_shift', 'center_TF']
 
-x0=np.hstack((np.arange(90,102,2),np.arange(101,105,1))) #x0=[100]
-x0=np.hstack((np.arange(90,102,2))) #x0=[100]
-x0 = np.hstack((np.array([20, 50, 80, 90, 100])))
-x0 = np.array([218*2, 218*(2+1/3), 218*4])
-x0 = np.array([ 197, 218, 218*2, 218*(2+11/7), 218*4])
-x0 = np.array([ 145, 152, 152*2, 152*(2+11/7), 152*4])
-x0s = [ np.array([ 10, 20, 30, 40, 50, 60, 70, 80, 90, 95, 96, 97, 98, 99, 100]) ,
-        np.array([ 10, 20, 30, 40, 50, 60, 70, 80, 88, 90, 92, 94, 96, 98, 100]) ]
+
+dico_params = { "fitpars": None, "oversampling_pct":0,
+                "correct_motion":False, 'freq_encoding_dim': [2] }
+
+disp_str_list = ['no_shift', 'center_zero', 'demean', 'demean_half' ] # [None 'center_zero', 'demean']
 mvt_types=['step', 'gauss']
-mvt_type, x0 =mvt_types[1], x0s[0]
-x0 = [20, 50, 90, 95, 99];
+mvt_type =mvt_types[1]
+x0 = [100] #[20, 50, 90, 95, 100] #[ 90, 95, 99];
+shifts, dimy = range(-15, 15, 1), 218
 
 mvt_axe_str_list = ['transX', 'transY','transZ', 'rotX', 'rotY', 'rotZ']
 mvt_axes = [1]
 mvt_axe_str = mvt_axe_str_list[mvt_axes[0]]
-out_path = '/data/romain/data_exemple/motion_gaussX_sigma2_phaseX'
+out_path = '/data/romain/data_exemple/test2/'
 if not os.path.exists(out_path): os.mkdir(out_path)
 #plt.ioff()
-#for mvt_type, x0 in zip(mvt_types, x0s):
-for disp_str in disp_str_list:
-    for s in [2, 5, 10, 20]: #[1, 2, 3,  5, 7, 10, 12 , 15, 20 ] : # [2,4,6] : #[1, 3 , 5 , 8, 10 , 12, 15, 20 , 25 ]:
-        for xx in x0:
-            if disp_str == 'center_TF': dico_params['displacement_shift'] = 2
-            if disp_str == 'center_zero': dico_params['displacement_shift'] = 1
-            if disp_str == 'no_shift': dico_params['displacement_shift'] = 0
+data_ref, aff =  read_image('/data/romain/data_exemple/suj_150423/mT1w_1mm.nii')
+res, res_fitpar, extra_info = pd.DataFrame(), pd.DataFrame(), dict()
 
-            fp = corrupt_data(xx, sigma=s, method=mvt_type, amplitude=20, mvt_axes=mvt_axes)
+disp_str = disp_str_list[0]; s = 2; xx = 100
+for disp_str in disp_str_list:
+    for s in [2, 20]: #[1, 2, 3,  5, 7, 10, 12 , 15, 20 ] : # [2,4,6] : #[1, 3 , 5 , 8, 10 , 12, 15, 20 , 25 ]:
+        for xx in x0:
+            dico_params['displacement_shift_strategy'] = disp_str
+
+            fp = corrupt_data(xx, sigma=s, method=mvt_type, amplitude=10, mvt_axes=mvt_axes)
             dico_params['fitpars'] = fp
             dico_params['nT'] = fp.shape[1]
             t =  RandomMotionFromTimeCourse(**dico_params)
-            #dataset = ImagesDataset(suj, transform=Compose((CenterCropOrPad(target_shape=(182, 218, 152)), t)))
-            dataset = ImagesDataset(suj, transform=t)
+            if 'synth' in suj_type:
+                dataset = SubjectsDataset(suj, transform= torchio.Compose([tlab, t ]))
+            else:
+                dataset = SubjectsDataset(suj, transform= t )
+
             sample = dataset[0]
             fout = out_path + '/{}_{}_{}_s{}_freq{}_{}'.format(suj_type, mvt_axe_str, mvt_type, s, xx, disp_str)
-            fit_pars = t.fitpars
-            fig = plt.figure()
-            plt.plot(fit_pars.T)
-            plt.savefig(fout+'.png')
-            plt.close(fig)
-            dataset.save_sample(sample, dict(image=fout+'.nii'))
+            fit_pars = t.fitpars - np.tile(t.to_substract[..., np.newaxis],(1,200))
+            # fig = plt.figure();plt.plot(fit_pars.T);plt.savefig(fout+'.png');plt.close(fig)
+            #sample['image'].save(fout+'.nii')
+
             extra_info['x0'], extra_info['mvt_type'], extra_info['mvt_axe']= xx, mvt_type, mvt_axe_str
-            extra_info['shift'] = disp_str
-            res = dt.add_motion_info(sample, res, extra_info=extra_info)
+            extra_info['shift_type'], extra_info['sigma'], extra_info['amp'] = disp_str, s, 10
+            extra_info['disp'] = np.sum(t.to_substract)
+
+            dff = pd.DataFrame(fit_pars.T); dff.columns = ['x', 'trans_y', 'z', 'r1', 'r2', 'r3']; dff['nbt'] = range(0,200)
+            for k,v in extra_info.items():
+                dff[k] = v
+            res_fitpar = res_fitpar.append(dff, sort=False)
+
+            data = sample['image']['data']
+            for shift in shifts:
+                if shift < 0:
+                    d1 = data[:, :, dimy + shift:, :]
+                    d2 = torch.cat([d1, data[:, :, :dimy + shift, :]], dim=2)
+                else:
+                    d1 = data[:, :, 0:shift, :]
+                    d2 = torch.cat([data[:, :, shift:, :], d1], dim=2)
+                extra_info['L1'] , extra_info['vox_disp'] = float(l1_loss(data_ref, d2).numpy()), shift
+                res = res.append(extra_info, ignore_index=True, sort=False)
+
+ppf = sns.relplot(data=res_fitpar, x="nbt", y='trans_y', hue='shift_type', col='sigma', kind='line')
+ss = str(res.groupby(['sigma','shift_type']).describe()['disp']['mean'])
+plt.text(-100, 1, ss, alpha=0.9, backgroundcolor='w')
+pp = sns.relplot(data=res, x="vox_disp", y="L1", hue='shift_type', col='sigma', kind='line')
+
+res.groupby(['shift_type', 'sigma']).describe()['disp']['mean']
+
+ppf = sns.relplot(data=res_fitpar, x="nbt", y='trans_y', hue='shift_type', row='sigma', col='x0', kind='line')
+pp = sns.relplot(data=res, x="vox_disp", y="L1", hue='shift_type', col='x0', row='sigma', kind='line')
+
+np.unique(res['disp'])
+def str_cat(PSer, col1, col2):
+     return '{}_{}_{}_{}'.format(col1, PSer[col1], col2, PSer[col2])
+# res['vox_disp'] = res['vox_disp'].apply(lambda s: float(s))
+# res['ss'] = res[['sigma', 'shift_type', 'disp']].apply(lambda s: str_cat(s), axis=1)
+# res['L1'] = res['L1'].apply(lambda s: float(s))
+
+res_fitpar["P"] = res_fitpar[['sigma', 'x0']].apply(lambda s: str_cat(s,'sigma','x0'), axis=1)
+
+
+
+sys.exit(0)
+
 fres = out_path+'/res_metrics_{}_{}.csv'.format(mvt_axe_str, disp_str)
 res.to_csv(fres)
 
