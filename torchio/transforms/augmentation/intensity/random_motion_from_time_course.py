@@ -5,7 +5,7 @@ import numpy as np
 from typing import Dict, Tuple, List, Union, Optional
 from scipy.interpolate import pchip_interpolate
 try:
-    import finufftpy
+    import finufft as finufftpy
     finufft = True
 except ImportError:
     finufft = False
@@ -433,13 +433,12 @@ class RandomMotionFromTimeCourse(RandomTransform):
 
         new_grid_coords = self._rotate_coordinates(inv_transfo=inv_transfo, rotations=rotations)[0]
         # initialize array for nufft output
-        f = np.zeros([len(new_grid_coords[0])], dtype=np.complex128, order='F')
+        f = np.zeros(self.im_shape, dtype=np.complex128, order='F')
 
         freq_domain_data_flat = np.asfortranarray(freq_domain_data.flatten(order='F'))
 
         finufftpy.nufft3d1(new_grid_coords[0], new_grid_coords[1], new_grid_coords[2], freq_domain_data_flat,
-                           iflag, eps, self.im_shape[0], self.im_shape[1],
-                           self.im_shape[2], f, debug=0, spread_debug=0, spread_sort=2, fftw=0, modeord=0,
+                           eps=eps, out=f, debug=0, spread_debug=0, spread_sort=2, fftw=0, modeord=0,
                            chkbnds=0, upsampfac=1.25)  # upsampling at 1.25 saves time at low precisions
         im_out = f.reshape(self.im_shape, order='F')
 
