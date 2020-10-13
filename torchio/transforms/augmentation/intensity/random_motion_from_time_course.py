@@ -469,6 +469,38 @@ class RandomMotionFromTimeCourse(RandomTransform):
             o_shape = original_image.shape
             tfi = np.abs(np.fft.fftshift(np.fft.fftn(np.fft.ifftshift(original_image))).astype(np.complex128))
             ss = tfi
+            # Almost identical   ss = np.sqrt(tfi * np.conjugate(tfi))
+            ff = fitpars_interp
+            to_substract = np.zeros(6)
+            for i in range(0, 6):
+                ffi = ff[i].reshape(-1)
+                ssi = ss.reshape(-1)
+                to_substract[i] = np.sum(ffi * ssi) / np.sum(ssi)
+
+            to_substract_tile = np.tile(to_substract[..., np.newaxis, np.newaxis, np.newaxis],
+                                        (1, o_shape[0], o_shape[1], o_shape[2]))
+            fitpars_interp = np.subtract(fitpars_interp, to_substract_tile)
+
+        elif self.displacement_shift_strategy == "demean_half":
+            nb_pts_around = 31
+            print('RR demean_center around {}'.format(nb_pts_around))
+            # let's take the weight from the tf, but only in the center (+- 11 pts)
+            o_shape = original_image.shape
+            tfi = np.abs(np.fft.fftshift(np.fft.fftn(np.fft.ifftshift(original_image))).astype(np.complex128))
+            ss = tfi
+            center = [int(round(dd / 2)) for dd in o_shape]
+            center_half = [int(round(dd / 2)) for dd in center]
+            #fov_inf = center_half
+            #fov_sup = center + center_half
+            fov_inf = [dd - nb_pts_around for dd in center];
+            fov_sup = [dd + nb_pts_around for dd in center];
+
+            ss[0:fov_inf[0], :, :] = 0
+            ss[:, 0:fov_inf[1], :] = 0
+            ss[:, :, 0:fov_inf[2]] = 0
+            ss[fov_sup[0]:, :, :] = 0
+            ss[:, fov_sup[1]:, :] = 0
+            ss[:, :, fov_sup[2]:] = 0
 
             ff = fitpars_interp
 
