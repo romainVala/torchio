@@ -5,10 +5,10 @@ import numpy as np
 from typing import Dict, Tuple, List, Union, Optional
 from scipy.interpolate import pchip_interpolate
 try:
-    import finufft as finufftpy
-    finufft = True
+    import finufft
+    _finufft = True
 except ImportError:
-    finufft = False
+    _finufft = False
 
 from .. import RandomTransform
 
@@ -71,8 +71,8 @@ class RandomMotionFromTimeCourse(RandomTransform):
             self.simulate_displacement = False
         self.nufft = nufft
         self.oversampling_pct = oversampling_pct
-        if (not finufft) and nufft:
-            raise ImportError('finufftpy cannot be imported')
+        if (not _finufft) and nufft:
+            raise ImportError('finufft cannot be imported')
         self.correct_motion = correct_motion
         self.to_substract = None
         self.res_dir = res_dir
@@ -420,16 +420,16 @@ class RandomMotionFromTimeCourse(RandomTransform):
         #self.new_grid_coords = new_grid_coords
         return new_grid_coordinates_scaled, [grid_coordinates, new_grid_coords]
 
-    def _nufft(self, freq_domain_data, rotations, iflag=1, eps=1E-7,  inv_transfo=False):
+    def _nufft(self, freq_domain_data, rotations, eps=1E-7,  inv_transfo=False):
         """
         rotate coordinates and perform nufft
         :param freq_domain_data:
-        :param iflag/eps: see finufftpy doc
+        :param eps: see finufft doc
         :param eps: precision of nufft
         :return: nufft of freq_domain_data after applying self.rotations
         """
-        if not finufft:
-            raise ImportError('finufftpy not available')
+        if not _finufft:
+            raise ImportError('finufft not available')
 
         new_grid_coords = self._rotate_coordinates(inv_transfo=inv_transfo, rotations=rotations)[0]
         # initialize array for nufft output
@@ -437,7 +437,7 @@ class RandomMotionFromTimeCourse(RandomTransform):
 
         freq_domain_data_flat = np.asfortranarray(freq_domain_data.flatten(order='F'))
 
-        finufftpy.nufft3d1(new_grid_coords[0], new_grid_coords[1], new_grid_coords[2], freq_domain_data_flat,
+        finufft.nufft3d1(new_grid_coords[0], new_grid_coords[1], new_grid_coords[2], freq_domain_data_flat,
                            eps=eps, out=f, debug=0, spread_debug=0, spread_sort=2, fftw=0, modeord=0,
                            chkbnds=0, upsampfac=1.25)  # upsampling at 1.25 saves time at low precisions
         im_out = f.reshape(self.im_shape, order='F')
