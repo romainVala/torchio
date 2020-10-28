@@ -6,6 +6,7 @@ from typing import List, Iterator
 from tqdm import trange
 from torch.utils.data import Dataset, DataLoader
 
+from .subject import Subject
 from .sampler import PatchSampler
 from .dataset import SubjectsDataset
 
@@ -49,27 +50,29 @@ class Queue(Dataset):
 
     Example:
 
+    >>> import torch
+    >>> import torchio as tio
     >>> from torch.utils.data import DataLoader
-    >>> import torchio
     >>> patch_size = 96
     >>> queue_length = 300
     >>> samples_per_volume = 10
-    >>> sampler = torchio.data.UniformSampler(patch_size)
-    >>> patches_queue = torchio.Queue(
-    ...     subjects_dataset,  # instance of torchio.SubjectsDataset
+    >>> sampler = tio.data.UniformSampler(patch_size)
+    >>> subject = tio.datasets.Colin27()
+    >>> subjects_dataset = tio.SubjectsDataset(10 * [subject])
+    >>> patches_queue = tio.Queue(
+    ...     subjects_dataset,
     ...     queue_length,
     ...     samples_per_volume,
     ...     sampler,
     ...     num_workers=4,
-    ...     shuffle_subjects=True,
-    ...     shuffle_patches=True,
     ... )
     >>> patches_loader = DataLoader(patches_queue, batch_size=16)
-    >>> num_epochs = 20
+    >>> num_epochs = 2
+    >>> model = torch.nn.Identity()
     >>> for epoch_index in range(num_epochs):
     ...     for patches_batch in patches_loader:
-    ...         inputs = patches_batch['image_name'][torchio.DATA]
-    ...         targets = patches_batch['targets_name'][torchio.DATA]
+    ...         inputs = patches_batch['t1'][tio.DATA]  # key 't1' is in subject
+    ...         targets = patches_batch['brain'][tio.DATA]  # key 'brain' is in subject
     ...         logits = model(inputs)  # model being an instance of torch.nn.Module
 
     """
@@ -158,22 +161,22 @@ class Queue(Dataset):
         else:
             iterable = range(num_subjects_for_queue)
         for _ in iterable:
-            subject_sample = self.get_next_subject_sample()
-            iterable = self.sampler(subject_sample)
+            subject = self.get_next_subject()
+            iterable = self.sampler(subject)
             patches = list(islice(iterable, self.samples_per_volume))
             self.patches_list.extend(patches)
         if self.shuffle_patches:
             random.shuffle(self.patches_list)
 
-    def get_next_subject_sample(self) -> dict:
+    def get_next_subject(self) -> Subject:
         # A StopIteration exception is expected when the queue is empty
         try:
-            subject_sample = next(self.subjects_iterable)
+            subject = next(self.subjects_iterable)
         except StopIteration as exception:
             self._print('Queue is empty:', exception)
             self.subjects_iterable = self.get_subjects_iterable()
-            subject_sample = next(self.subjects_iterable)
-        return subject_sample
+            subject = next(self.subjects_iterable)
+        return subject
 
     def get_subjects_iterable(self) -> Iterator:
         # I need a DataLoader to handle parallelism

@@ -59,28 +59,28 @@ class TorchioTestCase(unittest.TestCase):
             subject_d,
         ]
         self.dataset = SubjectsDataset(self.subjects_list)
-        self.sample = self.dataset[-1]  # subject_d
+        self.sample_subject = self.dataset[-1]  # subject_d
 
-    def make_2d(self, sample):
-        sample = copy.deepcopy(sample)
-        for image in sample.get_images(intensity_only=False):
+    def make_2d(self, subject):
+        subject = copy.deepcopy(subject)
+        for image in subject.get_images(intensity_only=False):
             image[DATA] = image[DATA][..., :1]
-        return sample
+        return subject
 
-    def make_multichannel(self, sample):
-        sample = copy.deepcopy(sample)
-        for image in sample.get_images(intensity_only=False):
+    def make_multichannel(self, subject):
+        subject = copy.deepcopy(subject)
+        for image in subject.get_images(intensity_only=False):
             image[DATA] = torch.cat(4 * (image[DATA],))
-        return sample
+        return subject
 
-    def flip_affine_x(self, sample):
-        sample = copy.deepcopy(sample)
-        for image in sample.get_images(intensity_only=False):
+    def flip_affine_x(self, subject):
+        subject = copy.deepcopy(subject)
+        for image in subject.get_images(intensity_only=False):
             image[AFFINE] = np.diag((-1, 1, 1, 1)) @ image[AFFINE]
-        return sample
+        return subject
 
-    def get_inconsistent_sample(self):
-        """Return a sample containing images of different shape."""
+    def get_inconsistent_shape_subject(self):
+        """Return a subject containing images of different shape."""
         subject = Subject(
             t1=ScalarImage(self.get_image_path('t1_inc')),
             t2=ScalarImage(
@@ -108,8 +108,8 @@ class TorchioTestCase(unittest.TestCase):
         image = ScalarImage(path)
         return image, path
 
-    def get_sample_with_partial_volume_label_map(self, components=1):
-        """Return a sample with a partial-volume label map."""
+    def get_subject_with_partial_volume_label_map(self, components=1):
+        """Return a subject with a partial-volume label map."""
         return Subject(
             t1=ScalarImage(
                 self.get_image_path('t1_d'),
@@ -157,6 +157,9 @@ class TorchioTestCase(unittest.TestCase):
         image = ScalarImage(tensor=data, affine=affine, check_nans=not add_nans)
         image.save(path)
         return path
+
+    def get_tests_data_dir(self):
+        return Path(__file__).parent / 'image_data'
 
     def assertTensorNotEqual(self, *args, **kwargs):  # noqa: N802
         message_kwarg = dict(msg=args[2]) if len(args) == 3 else {}

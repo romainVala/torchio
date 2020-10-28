@@ -46,6 +46,9 @@ setup(
             'torchio-transform=torchio.cli:apply_transform',
         ],
     },
+    extras_require={
+        'plot': ['matplotlib', 'seaborn'],
+    },
     install_requires=requirements,
     license='MIT license',
     long_description=readme + '\n\n' + history,
@@ -58,6 +61,6 @@ setup(
     test_suite='tests',
     tests_require=[],
     url='https://github.com/fepegar/torchio',
-    version='0.17.46',
+    version='0.17.50',
     zip_safe=False,
 )

@@ -61,9 +61,9 @@ class RandomAffine(RandomTransform, SpatialTransform):
         keys: See :py:class:`~torchio.transforms.Transform`.
 
     Example:
-        >>> import torchio
-        >>> subject = torchio.datasets.Colin27()
-        >>> transform = torchio.RandomAffine(
+        >>> import torchio as tio
+        >>> subject = tio.datasets.Colin27()
+        >>> transform = tio.RandomAffine(
         ...     scales=(0.9, 1.2),
         ...     degrees=(10),
         ...     isotropic=False,
@@ -157,8 +157,8 @@ class RandomAffine(RandomTransform, SpatialTransform):
             transform.SetCenter(center_lps)
         return transform
 
-    def apply_transform(self, sample: Subject) -> dict:
-        #sample.check_consistent_spatial_shape()
+    def apply_transform(self, subject: Subject) -> Subject:
+        #subject.check_consistent_spatial_shape()
         params = self.get_params(
             self.scales,
             self.degrees,
@@ -170,7 +170,7 @@ class RandomAffine(RandomTransform, SpatialTransform):
         self.apply_rot = rotation_params
         self.apply_trans = translation_params
 
-        for image in self.get_images(sample):
+        for image in self.get_images(subject):
             if image[TYPE] != INTENSITY:
                 interpolation = Interpolation.NEAREST
             else:
@@ -203,8 +203,8 @@ class RandomAffine(RandomTransform, SpatialTransform):
             'rotation': rotation_params,
             'translation': translation_params,
         }
-        #sample.add_transform(self, random_parameters_dict)
-        return sample
+        #subject.add_transform(self, random_parameters_dict)
+        return subject
 
     def apply_affine_transform(
             self,

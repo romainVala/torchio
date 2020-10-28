@@ -6,7 +6,6 @@ import tempfile
 from pathlib import Path
 from typing import Union, Iterable, Tuple, Any, Optional, List, Sequence
 
-import torch
 import numpy as np
 import nibabel as nib
 import SimpleITK as sitk
@@ -125,7 +124,7 @@ def apply_transform_to_file(
         type: str = INTENSITY,  # noqa: A002
         verbose: bool = False,
         ):
-    from . import Image, SubjectsDataset, Subject
+    from . import Image, Subject
     subject = Subject(image=Image(input_path, type=type))
     transformed = transform(subject)
     transformed.image.save(output_path)
@@ -283,7 +282,7 @@ def get_torchio_cache_dir():
     return Path('~/.cache/torchio').expanduser()
 
 
-def round_up(value: float) -> float:
+def round_up(value: float) -> int:
     """Round half towards infinity.
 
     Args:
@@ -301,7 +300,7 @@ def round_up(value: float) -> float:
         4
 
     """
-    return np.floor(value + 0.5)
+    return int(np.floor(value + 0.5))
 
 
 def compress(input_path, output_path):

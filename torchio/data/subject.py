@@ -14,7 +14,6 @@ class Subject(dict):
 
     Example:
 
-        >>> import torchio
         >>> from torchio import ScalarImage, LabelMap, Subject
         >>> # One way:
         >>> subject = Subject(
@@ -68,6 +67,9 @@ class Subject(dict):
         new = Subject(result_dict)
         new.history = self.history[:]
         return new
+
+    def __len__(self):
+        return len(self.get_images(intensity_only=False))
 
     @staticmethod
     def _parse_images(images: List[Tuple[str, Image]]) -> None:
@@ -148,29 +150,24 @@ class Subject(dict):
         self.history.append((transform.name, parameters_dict))
 
     def load(self):
+        """Load images in subject."""
         for image in self.get_images(intensity_only=False):
             image.load()
-
-    def crop(self, index_ini, index_fin):
-        result_dict = {}
-        for key, value in self.items():
-            if isinstance(value, Image):
-                # patch.clone() is much faster than copy.deepcopy(patch)
-                value = value.crop(index_ini, index_fin)
-            else:
-                value = copy.deepcopy(value)
-            result_dict[key] = value
-        new = Subject(result_dict)
-        new.history = self.history
-        return new
 
     def update_attributes(self):
         # This allows to get images using attribute notation, e.g. subject.t1
         self.__dict__.update(self)
 
     def add_image(self, image: Image, image_name: str) -> None:
+        """Add an image."""
         self[image_name] = image
         self.update_attributes()
 
     def remove_image(self, image_name: str) -> None:
+        """Remove an image."""
         del self[image_name]
+
+    def plot(self, **kwargs) -> None:
+        """Plot images."""
+        from ..visualization import plot_subject  # avoid circular import
+        plot_subject(self, **kwargs)

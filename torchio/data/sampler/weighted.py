@@ -27,14 +27,14 @@ class WeightedSampler(RandomSampler):
         RuntimeError: If the probability map is empty.
 
     Example:
-        >>> import torchio
-        >>> subject = torchio.Subject(
-        ...     t1=torchio.ScalarImage('t1_mri.nii.gz'),
-        ...     sampling_map=torchio.Image('sampling.nii.gz', type=torchio.SAMPLING_MAP),
+        >>> import torchio as tio
+        >>> subject = tio.Subject(
+        ...     t1=tio.ScalarImage('t1_mri.nii.gz'),
+        ...     sampling_map=tio.Image('sampling.nii.gz', type=tio.SAMPLING_MAP),
         ... )
         >>> patch_size = 64
-        >>> sampler = torchio.data.WeightedSampler(patch_size, 'sampling_map')
-        >>> for patch in sampler(sample):
+        >>> sampler = tio.data.WeightedSampler(patch_size, 'sampling_map')
+        >>> for patch in sampler(subject):
         ...     print(patch['index_ini'])
 
     .. note:: The index of the center of a patch with even size :math:`s` is
@@ -57,33 +57,33 @@ class WeightedSampler(RandomSampler):
 
     def __call__(
             self,
-            sample: Subject,
+            subject: Subject,
             num_patches: Optional[int] = None,
             ) -> Generator[Subject, None, None]:
-        sample.check_consistent_spatial_shape()
-        if np.any(self.patch_size > sample.spatial_shape):
+        subject.check_consistent_spatial_shape()
+        if np.any(self.patch_size > subject.spatial_shape):
             message = (
                 f'Patch size {tuple(self.patch_size)} cannot be'
-                f' larger than image size {tuple(sample.spatial_shape)}'
+                f' larger than image size {tuple(subject.spatial_shape)}'
             )
             raise RuntimeError(message)
-        probability_map = self.get_probability_map(sample)
+        probability_map = self.get_probability_map(subject)
         probability_map = self.process_probability_map(probability_map)
         cdf = self.get_cumulative_distribution_function(probability_map)
 
         patches_left = num_patches if num_patches is not None else True
         while patches_left:
-            yield self.extract_patch(sample, probability_map, cdf)
+            yield self.extract_patch(subject, probability_map, cdf)
             if num_patches is not None:
                 patches_left -= 1
 
-    def get_probability_map(self, sample: Subject) -> torch.Tensor:
-        if self.probability_map_name in sample:
-            data = sample[self.probability_map_name].data
+    def get_probability_map(self, subject: Subject) -> torch.Tensor:
+        if self.probability_map_name in subject:
+            data = subject[self.probability_map_name].data
         else:
             message = (
                 f'Image "{self.probability_map_name}"'
-                f' not found in subject sample: {sample}'
+                f' not found in subject subject: {subject}'
             )
             raise KeyError(message)
         if torch.any(data < 0):
@@ -168,15 +168,14 @@ class WeightedSampler(RandomSampler):
 
     def extract_patch(
             self,
-            sample: Subject,
+            subject: Subject,
             probability_map: np.ndarray,
             cdf: np.ndarray
             ) -> Subject:
         index_ini = self.get_random_index_ini(probability_map, cdf)
-        index_fin = index_ini + self.patch_size
-        cropped_sample = sample.crop(index_ini, index_fin)
-        cropped_sample['index_ini'] = index_ini.astype(int)
-        return cropped_sample
+        cropped_subject = self.crop(subject, index_ini, self.patch_size)
+        cropped_subject['index_ini'] = index_ini.astype(int)
+        return cropped_subject
 
     def get_random_index_ini(
             self,
@@ -190,8 +189,9 @@ class WeightedSampler(RandomSampler):
         assert np.all(index_ini >= 0)
         return index_ini
 
+    @classmethod
     def sample_probability_map(
-            self,
+            cls,
             probability_map: np.ndarray,
             cdf: np.ndarray
             ) -> np.ndarray:
@@ -206,9 +206,9 @@ class WeightedSampler(RandomSampler):
                    [2, 2, 2, 2, 2, 2, 2, 2, 2]])
             >>> histogram = np.zeros_like(probability_map)
             >>> for _ in range(100000):
-            ...     histogram[sample_probability_map(probability_map)] += 1
+            ...     histogram[WeightedSampler.sample_probability_map(probability_map, cdf)] += 1  # doctest:+SKIP
             ...
-            >>> histogram
+            >>> histogram  # doctest:+SKIP
             array([[    0,     0,  3479,  3478, 17121,  7023,  3355,  3378,     0],
                    [ 6808,  6804,  6942,  6809,  6946,  6988,  7002,  6826,  7041]])
 

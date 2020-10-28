@@ -35,10 +35,10 @@ class Compose(Transform):
         self.seeds = seeds
         return super(Compose, self).__call__(data, seeds)
 
-    def apply_transform(self, sample: Subject):
+    def apply_transform(self, subject: Subject):
         for t, s in zip(self.transform.transforms, self.seeds):
-            sample = t(sample, s)
-        return sample
+            subject = t(subject, s)
+        return subject
 
 class OneOf(RandomTransform):
     """Apply only one of the given transforms.
@@ -52,14 +52,14 @@ class OneOf(RandomTransform):
         p: Probability that this transform will be applied.
 
     Example:
-        >>> import torchio
-        >>> ixi = torchio.datasets.ixi.IXITiny('ixi', download=True)
-        >>> sample = ixi[0]
+        >>> import torchio as tio
+        >>> colin = tio.datasets.Colin27()
         >>> transforms_dict = {
-        ...     torchio.transforms.RandomAffine(): 0.75,
-        ...     torchio.transforms.RandomElasticDeformation(): 0.25,
+        ...     tio.RandomAffine(): 0.75,
+        ...     tio.RandomElasticDeformation(): 0.25,
         ... }  # Using 3 and 1 as probabilities would have the same effect
         >>> transform = torchio.transforms.OneOf(transforms_dict)
+        >>> transformed = transform(colin)
 
     """
     def __init__(
@@ -71,12 +71,12 @@ class OneOf(RandomTransform):
         super().__init__(p=p, **kwargs)
         self.transforms_dict = self._get_transforms_dict(transforms)
 
-    def apply_transform(self, sample: Subject):
+    def apply_transform(self, subject: Subject):
         weights = torch.Tensor(list(self.transforms_dict.values()))
         index = torch.multinomial(weights, 1)
         transforms = list(self.transforms_dict.keys())
         transform = transforms[index]
-        transformed = transform(sample)
+        transformed = transform(subject)
         return transformed
 
     def _get_transforms_dict(self, transforms: Union[dict, Sequence]):

@@ -17,6 +17,9 @@ from ..utils import nib_to_sitk, sitk_to_nib, gen_seed, is_jsonable
 from .interpolation import Interpolation
 
 
+TypeTransformInput = Union[Subject, torch.Tensor, np.ndarray, dict, sitk.Image]
+
+
 class Transform(ABC):
     """Abstract class for all TorchIO transforms.
 
@@ -46,8 +49,8 @@ class Transform(ABC):
         self.default_image_name = 'default_image_name'
         self.metrics = metrics
 
-    def __call__(self, data: Union[Subject, torch.Tensor, np.ndarray], seed: Union[List[int], int] = None):
-        """Transform a sample and return the result.
+    def __call__(self, data: TypeTransformInput) -> TypeTransformInput:
+        """Transform data and return a result of the same type.
 
         Args:
             data: Instance of :py:class:`~torchio.Subject`, 4D
@@ -78,21 +81,21 @@ class Transform(ABC):
         if isinstance(data, nib.Nifti1Image):
             tensor = data.get_fdata(dtype=np.float32)
             data = ScalarImage(tensor=tensor, affine=data.affine)
-            sample = self._get_subject_from_image(data)
+            subject = self._get_subject_from_image(data)
             is_nib = True
         elif isinstance(data, (np.ndarray, torch.Tensor)):
-            sample = self.parse_tensor(data)
+            subject = self.parse_tensor(data)
             is_array = isinstance(data, np.ndarray)
             is_tensor = True
         elif isinstance(data, list):
             return [self.__call__(ii) for ii in data]
         elif isinstance(data, Image):
-            sample = self._get_subject_from_image(data)
+            subject = self._get_subject_from_image(data)
             is_image = True
         elif isinstance(data, Subject):
-            sample = data
+            subject = data
         elif isinstance(data, sitk.Image):
-            sample = self._get_subject_from_sitk_image(data)
+            subject = self._get_subject_from_sitk_image(data)
             is_sitk = True
         elif isinstance(data, dict):  # e.g. Eisen or MONAI dicts
             if self.keys is None:
@@ -101,16 +104,18 @@ class Transform(ABC):
                     ' specified when instantiating the transform'
                 )
                 raise RuntimeError(message)
-            sample = self._get_subject_from_dict(data, self.keys)
+            subject = self._get_subject_from_dict(data, self.keys)
             is_dict = True
-        self.parse_sample(sample)
+        else:
+            raise ValueError(f'Input type not recognized: {type(data)}')
+        self.parse_subject(subject)
 
         orig = sample
         if self.copy:
-            sample = copy.copy(sample)
+            subject = copy.copy(subject)
 
         with np.errstate(all='warn'):
-            transformed = self.apply_transform(sample)
+            transformed = self.apply_transform(subject)
 
         for image in transformed.get_images(intensity_only=False):
             ndim = image[DATA].ndim
@@ -163,7 +168,7 @@ class Transform(ABC):
         return transformed
 
     @abstractmethod
-    def apply_transform(self, sample: Subject):
+    def apply_transform(self, subject: Subject):
         raise NotImplementedError
 
     def _store_params(self):
@@ -295,11 +300,11 @@ class Transform(ABC):
         return probability
 
     @staticmethod
-    def parse_sample(sample: Subject) -> None:
-        if not isinstance(sample, Subject):
+    def parse_subject(subject: Subject) -> None:
+        if not isinstance(subject, Subject):
             message = (
                 'Input to a transform must be a tensor or an instance'
-                f' of torchio.Subject, not "{type(sample)}"'
+                f' of torchio.Subject, not "{type(subject)}"'
             )
             raise RuntimeError(message)
 

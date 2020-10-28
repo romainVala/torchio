@@ -45,20 +45,20 @@ class IXI(SubjectsDataset):
 
     Example::
 
-        >>> import torchio
+        >>> import torchio as tio
         >>> transforms = [
-        ...     torchio.ToCanonical(),  # to RAS
-        ...     torchio.Resample((1, 1, 1)),  # to 1 mm iso
+        ...     tio.ToCanonical(),  # to RAS
+        ...     tio.Resample((1, 1, 1)),  # to 1 mm iso
         ... ]
-        >>> ixi_dataset = torchio.datasets.IXI(
+        >>> ixi_dataset = tio.datasets.IXI(
         ...     'path/to/ixi_root/',
         ...     modalities=('T1', 'T2'),
-        ...     transform=torchio.Compose(transforms),
+        ...     transform=tio.Compose(transforms),
         ...     download=True,
         ... )
         >>> print('Number of subjects in dataset:', len(ixi_dataset))  # 577
         >>> sample_subject = ixi_dataset[0]
-        >>> print('Keys in subject sample:', tuple(sample_subject.keys()))  # ('T1', 'T2')
+        >>> print('Keys in subject:', tuple(sample_subject.keys()))  # ('T1', 'T2')
         >>> print('Shape of T1 data:', sample_subject['T1'].shape)  # [1, 180, 268, 268]
         >>> print('Shape of T2 data:', sample_subject['T2'].shape)  # [1, 241, 257, 188]
     """
@@ -163,7 +163,7 @@ class IXI(SubjectsDataset):
 
 class IXITiny(SubjectsDataset):
     r"""
-    This is the dataset used in the `notebook`_.
+    This is the dataset used in the main `notebook`_.
     It is a tiny version of IXI, containing 566 :math:`T_1`-weighted brain MR
     images and their corresponding brain segmentations,
     all with size :math:`83 \times 44 \times 55`.
@@ -176,7 +176,7 @@ class IXITiny(SubjectsDataset):
             :class:`~torchio.transforms.transform.Transform`.
         download: If set to ``True``, will download the data into :attr:`root`.
 
-    .. _notebook: https://colab.research.google.com/drive/112NTL8uJXzcMw4PQbUvMQN-WHlVwQS3i
+    .. _notebook: https://github.com/fepegar/torchio/blob/master/examples/README.md
     """
     url = 'https://www.dropbox.com/s/ogxjwjxdv5mieah/ixi_tiny.zip?dl=1'
     md5 = 'bfb60f4074283d78622760230bfa1f98'

@@ -9,7 +9,7 @@ from .. import RandomTransform
 class RandomNoise(RandomTransform, IntensityTransform):
     r"""Add random Gaussian noise.
 
-    Adds noise sampled from a normal distribution.
+    Add noise sampled from a normal distribution.
 
     Args:
         mean: Mean :math:`\mu` of the Gaussian distribution
@@ -43,17 +43,17 @@ class RandomNoise(RandomTransform, IntensityTransform):
         self.abs_after_noise = abs_after_noise
 
 
-    def apply_transform(self, sample: Subject) -> dict:
+    def apply_transform(self, subject: Subject) -> Subject:
         random_parameters_images_dict = {}
-        for image_name, image_dict in self.get_images_dict(sample).items():
+        for image_name, image_dict in self.get_images_dict(subject).items():
             mean, std = self.get_params(self.mean_range, self.std_range)
             self.mean = mean
             self.std = std
             random_parameters_dict = {'std': std}
             random_parameters_images_dict[image_name] = random_parameters_dict
             image_dict[DATA] = add_noise(image_dict[DATA], mean, std, self.abs_after_noise)
-        #sample.add_transform(self, random_parameters_images_dict)
-        return sample
+        #subject.add_transform(self, random_parameters_images_dict)
+        return subject
 
     @staticmethod
     def get_params(

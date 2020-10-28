@@ -5,8 +5,7 @@ from typing import Dict, Sequence, Optional, Callable
 from deprecated import deprecated
 from torch.utils.data import Dataset
 
-from ..utils import get_stem
-from ..torchio import DATA, AFFINE, TYPE, PATH, STEM, TypePath, LABEL, INTENSITY
+from ..torchio import DATA, AFFINE, TypePath, LABEL, INTENSITY
 from .image import Image
 from .io import write_image
 from .subject import Subject
@@ -29,19 +28,18 @@ class SubjectsDataset(Dataset):
         subjects: Sequence of instances of
             :class:`~torchio.data.subject.Subject`.
         transform: An instance of :py:class:`torchio.transforms.Transform`
-            that will be applied to each sample.
+            that will be applied to each subject.
 
     Example:
-        >>> import torchio
         >>> from torchio import SubjectsDataset, ScalarImage, LabelMap, Subject
         >>> from torchio.transforms import RescaleIntensity, RandomAffine, Compose
-        >>> subject_a = Subject([
+        >>> subject_a = Subject(
         ...     t1=ScalarImage('t1.nrrd',),
         ...     t2=ScalarImage('t2.mha',),
         ...     label=LabelMap('t1_seg.nii.gz'),
         ...     age=31,
         ...     name='Fernando Perez',
-        >>> ])
+        ... )
         >>> subject_b = Subject(
         ...     t1=ScalarImage('colin27_t1_tal_lin.minc',),
         ...     t2=ScalarImage('colin27_t2_tal_lin_dicom',),
@@ -56,7 +54,7 @@ class SubjectsDataset(Dataset):
         ... ]
         >>> transform = Compose(transforms)
         >>> subjects_dataset = SubjectsDataset(subjects_list, transform=transform)
-        >>> subject_sample = subjects_dataset[0]
+        >>> subject = subjects_dataset[0]
 
     .. _NiBabel: https://nipy.org/nibabel/#nibabel
     .. _SimpleITK: https://itk.org/Wiki/ITK/FAQ#What_3D_file_formats_can_ITK_import_and_export.3F
@@ -86,24 +84,24 @@ class SubjectsDataset(Dataset):
     def __len__(self):
         return len(self.subjects)
 
-    def __getitem__(self, index: int) -> dict:
+    def __getitem__(self, index: int) -> Subject:
         if not isinstance(index, int):
             raise ValueError(f'Index "{index}" must be int, not {type(index)}')
 
         if self.load_from_dir:
-            sample = torch.load(self.subjects[index])
+            subject = torch.load(self.subjects[index])
             if self.add_to_load is not None:
-                #print('adding sample with {}'.format(self.add_to_load))
-                ii = sample.get_images()
+                #print('adding subject with {}'.format(self.add_to_load))
+                ii = subject.get_images()
                 image_path = ii[0]['path']
                 if 'original' in self.add_to_load:
-                    #print('adding original sample')
+                    #print('adding original subject')
                     ss = Subject(image = Image(image_path, INTENSITY))
                     # sss = self._get_sample_dict_from_subject(ss)
                     #sss = copy.deepcopy(ss)
                     sss = ss
 
-                    sample['original'] = sss['image']
+                    subject['original'] = sss['image']
 
                     if self.add_to_load=='original': #trick to use both orig and mask :hmmm....
                         add_to_load = None
@@ -119,7 +117,7 @@ class SubjectsDataset(Dataset):
                     #sss = self._get_sample_dict_from_subject(ss)
                     #sss = copy.deepcopy(ss)
                     sss = ss
-                    hh = sample.history
+                    hh = subject.history
                     for hhh in hh:
                         if 'RandomElasticDeformation' in hhh[0]:
                             from torchio.transforms import RandomElasticDeformation
@@ -127,25 +125,25 @@ class SubjectsDataset(Dataset):
                             rr = RandomElasticDeformation(num_control_points=num_cp)
                             sss = rr.apply_given_transform(sss, hhh[1]['coarse_grid'])
 
-                    sample[add_to_load] = sss['image']
-            #print('sample with keys {}'.format(sample.keys()))
+                    subject[add_to_load] = sss['image']
+            #print('subject with keys {}'.format(subject.keys()))
         else:
             subject = self.subjects[index]
-            sample = copy.deepcopy(subject) # cheap since images not loaded yet
-            # sample = self._get_sample_dict_from_subject(subject)
-            sample.load()
+            subject = copy.deepcopy(subject) # cheap since images not loaded yet
+            # subject = self._get_sample_dict_from_subject(subject)
+            subject.load()
 
         # Apply transform (this is usually the bottleneck)
         if self._transform is not None:
-            sample = self._transform(sample)
+            subject = self._transform(subject)
 
         if self.save_to_dir is not None:
             res_dir = self.save_to_dir
-            fname = res_dir + '/sample{:05d}'.format(index)
-            if 'image_orig' in sample: sample.pop('image_orig')
-            torch.save(sample, fname + '_sample.pt')
+            fname = res_dir + '/subject{:05d}'.format(index)
+            if 'image_orig' in subject: subject.pop('image_orig')
+            torch.save(subject, fname + '_subject.pt')
 
-        return sample
+        return subject
 
     def set_transform(self, transform: Optional[Callable]) -> None:
         """Set the :attr:`transform` attribute.
@@ -187,15 +185,16 @@ class SubjectsDataset(Dataset):
     )
     def save_sample(
             cls,
-            sample: Subject,
+            subject: Subject,
             output_paths_dict: Dict[str, TypePath],
             ) -> None:
         for key, output_path in output_paths_dict.items():
-            tensor = sample[key][DATA]
-            affine = sample[key][AFFINE]
+            tensor = subject[key][DATA]
+            affine = subject[key][AFFINE]
             write_image(tensor, affine, output_path)
 
 
-@deprecated('ImagesDataset is deprecated. Use SubjectsDataset instead.')
+@deprecated(
+    'ImagesDataset is deprecated in v0.18.0. Use SubjectsDataset instead.')
 class ImagesDataset(SubjectsDataset):
     pass

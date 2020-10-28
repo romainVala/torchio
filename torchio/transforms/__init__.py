@@ -37,7 +37,43 @@ from .preprocessing import Resample
 from .preprocessing import ToCanonical
 from .preprocessing import ZNormalization
 from .preprocessing import HistogramStandardization
-from .preprocessing import Rescale, RescaleIntensity
+from .preprocessing import RescaleIntensity, Rescale
 from .preprocessing import CropOrPad, CenterCropOrPad
 from .preprocessing.intensity.histogram_standardization import train as train_histogram
 from .preprocessing import ApplyMask
+
+__all__ = [
+    'Transform',
+    'SpatialTransform',
+    'IntensityTransform',
+    'Interpolation',
+    'get_sitk_interpolator',
+    'Lambda',
+    'OneOf',
+    'Compose',
+    'RandomFlip',
+    'RandomAffine',
+    'RandomDownsample',
+    'RandomElasticDeformation',
+    'RandomSwap',
+    'RandomBlur',
+    'RandomNoise',
+    'RandomSpike',
+    'RandomGamma',
+    'RandomMotion',
+    'RandomGhosting',
+    'RandomBiasField',
+    'RandomLabelsToImage',
+    'Pad',
+    'Crop',
+    'Resample',
+    'ToCanonical',
+    'ZNormalization',
+    'HistogramStandardization',
+    'Rescale',
+    'RescaleIntensity',
+    'CenterCropOrPad',
+    'CropOrPad',
+    'train_histogram',
+    'ApplyMask',
+]
