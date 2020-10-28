@@ -17,7 +17,7 @@ from .torchio import (
     TypePath,
     REPO_URL,
 )
-
+import torch
 
 FLIP_XY = np.diag((-1, -1, 1))  # used to switch between LPS and RAS
 

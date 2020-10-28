@@ -49,7 +49,7 @@ class Transform(ABC):
         self.default_image_name = 'default_image_name'
         self.metrics = metrics
 
-    def __call__(self, data: TypeTransformInput) -> TypeTransformInput:
+    def __call__(self, data: TypeTransformInput, seed: Union[List[int], int] = None) -> TypeTransformInput:
         """Transform data and return a result of the same type.
 
         Args:
@@ -110,7 +110,7 @@ class Transform(ABC):
             raise ValueError(f'Input type not recognized: {type(data)}')
         self.parse_subject(subject)
 
-        orig = sample
+        orig = subject
         if self.copy:
             subject = copy.copy(subject)
 
