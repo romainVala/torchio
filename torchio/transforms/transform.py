@@ -117,6 +117,9 @@ class Transform(ABC):
         with np.errstate(all='warn'):
             transformed = self.apply_transform(subject)
 
+        if isinstance(transformed, list):
+            return transformed
+
         for image in transformed.get_images(intensity_only=False):
             ndim = image[DATA].ndim
             assert ndim == 4, f'Output of {self.name} is {ndim}D'
