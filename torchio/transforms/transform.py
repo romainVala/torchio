@@ -182,8 +182,8 @@ class Transform(ABC):
         if "transform_params" in self.transform_params:  # I do not know why si happen with parallelQueue
             del self.transform_params["transform_params"]
 
-        if "metrics" in self.transform_params: #because it is handel separatly
-            del self.transform_params["metrics"]
+        if "metrics" in self.transform_params:
+            self.transform_params["metrics"] = None #to avoid having to recompute metrique when reproduce a transform
 
         for key, value in self.transform_params.items():
             if not is_jsonable(value):
