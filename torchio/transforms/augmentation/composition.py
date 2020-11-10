@@ -1,5 +1,6 @@
-from typing import Union, Sequence, List, Dict
+from typing import Union, Sequence, List
 
+import json
 import torch
 import torchio
 import numpy as np
@@ -8,7 +9,7 @@ from torchvision.transforms import Compose as PyTorchCompose
 from ...data.subject import Subject
 from ...utils import gen_seed
 from .. import Transform
-from . import RandomTransform
+from . import RandomTransform, Interpolation
 
 
 class Compose(Transform):
@@ -159,18 +160,43 @@ class ListOf(RandomTransform):
 
 
 def compose_from_history(history: List):
-    """
-    Builds a composition of transformations from a given subject history
-    :param history: subject history given as a list of tuples containing (transformation_name, transformation_parameters)
-    :return: Tuple (Compose of transforms, list of seeds to reproduce the transforms from the history)
+    """Builds a list of transformations and seeds to reproduce a given subject's transformations from its history
+
+    Args:
+        history: subject history given as a list of tuples containing (transformation_name, transformation_parameters)
+    Returns:
+        Tuple (List of transforms, list of seeds to reproduce the transforms from the history)
     """
     trsfm_list = []
     seed_list = []
-    for trsfm_history in history:
-        trsfm_name, trsfm_params = trsfm_history[0], (trsfm_history[1])
-        seed_list.append(trsfm_params['seed'])
-        trsfm_no_seed = {key: value for key, value in trsfm_params.items() if key != "seed"}
-        trsfm_func = getattr(torchio, trsfm_name)()
+    for trsfm_name, trsfm_params in history:
+        # No need to add the RandomDownsample since its Resampling operation is taken into account in the history
+        if trsfm_name == 'RandomDownsample':
+            continue
+        # Add the seed if there is one (if the transform is random)
+        if 'seed' in trsfm_params.keys():
+            seed_list.append(trsfm_params['seed'])
+        else:
+            seed_list.append(None)
+        # Gather all available attributes from the transformations' history
+        # Ugly fix for RandomSwap's patch_size...
+        trsfm_no_seed = {key: json.loads(value) if type(value) == str and value.startswith('[') else value
+                         for key, value in trsfm_params.items() if key != 'seed'}
+        # Special case for the interpolation as it is stored as a string in the history, a conversion is needed
+        if 'interpolation' in trsfm_no_seed.keys():
+            trsfm_no_seed['interpolation'] = getattr(Interpolation, trsfm_no_seed['interpolation'].split('.')[1])
+        # Special cases when an argument is needed in the __init__
+        if trsfm_name == 'RandomLabelsToImage':
+            trsfm_func = getattr(torchio, trsfm_name)(label_key=trsfm_no_seed['label_key'])
+
+        elif trsfm_name == 'Resample':
+            if 'target' in trsfm_no_seed.keys():
+                trsfm_func = getattr(torchio, trsfm_name)(target=trsfm_no_seed['target'])
+            elif 'target_spacing' in trsfm_no_seed.keys():
+                trsfm_func = getattr(torchio, trsfm_name)(target=trsfm_no_seed['target_spacing'])
+
+        else:
+            trsfm_func = getattr(torchio, trsfm_name)()
         trsfm_func.__dict__ = trsfm_no_seed
         trsfm_list.append(trsfm_func)
-    return Compose(trsfm_list), seed_list
+    return trsfm_list, seed_list

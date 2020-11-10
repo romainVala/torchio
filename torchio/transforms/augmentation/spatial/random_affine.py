@@ -232,7 +232,6 @@ class RandomAffine(RandomTransform, SpatialTransform):
             'rotation': rotation_params,
             'translation': translation_params,
         }
-        #subject.add_transform(self, random_parameters_dict)
         return subject
 
     def apply_affine_transform(

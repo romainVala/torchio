@@ -250,7 +250,6 @@ class RandomLabelsToImage(RandomTransform, IntensityTransform):
 
         subject.add_image(final_image, self.image_key)
         self.random_parameters_images_dict = random_parameters_images_dict
-        #subject.add_transform(self, random_parameters_images_dict)
         return subject
 
     def check_mean_and_std_length(self, labels: Sequence):

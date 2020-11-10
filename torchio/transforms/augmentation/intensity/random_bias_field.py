@@ -58,7 +58,6 @@ class RandomBiasField(RandomTransform, IntensityTransform):
             bias_field = self.generate_bias_field(
                 image_dict[DATA], self.order, coefficients)
             image_dict[DATA] = image_dict[DATA] * torch.from_numpy(bias_field)
-        #subject.add_transform(self, random_parameters_images_dict)
         return subject
 
     @staticmethod

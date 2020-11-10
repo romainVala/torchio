@@ -52,7 +52,6 @@ class RandomNoise(RandomTransform, IntensityTransform):
             random_parameters_dict = {'std': std}
             random_parameters_images_dict[image_name] = random_parameters_dict
             image_dict[DATA] = add_noise(image_dict[DATA], mean, std, self.abs_after_noise)
-        #subject.add_transform(self, random_parameters_images_dict)
         return subject
 
     @staticmethod

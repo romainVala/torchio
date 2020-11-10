@@ -12,30 +12,42 @@ import SimpleITK as sitk
 from .. import TypeData, DATA, AFFINE, TypeNumber
 from ..data.subject import Subject
 from ..data.image import Image, ScalarImage
-from ..utils import nib_to_sitk, sitk_to_nib, to_tuple, gen_seed, is_jsonable
-
+from ..utils import nib_to_sitk, sitk_to_nib, is_jsonable, to_tuple
 from .interpolation import Interpolation
 
 
-TypeTransformInput = Union[Subject, torch.Tensor, np.ndarray, dict, sitk.Image]
+TypeTransformInput = Union[
+    Subject,
+    Image,
+    torch.Tensor,
+    np.ndarray,
+    sitk.Image,
+    dict,
+]
 
 
 class Transform(ABC):
     """Abstract class for all TorchIO transforms.
 
-    All classes used to transform a sample from an
-    :py:class:`~torchio.SubjectsDataset` should subclass it.
     All subclasses should overwrite
     :py:meth:`torchio.tranforms.Transform.apply_transform`,
-    which takes a sample, applies some transformation and returns the result.
+    which takes data, applies some transformation and returns the result.
+
+    The input can be an instance of
+    :py:class:`torchio.Subject`,
+    :py:class:`torchio.Image`,
+    :py:class:`numpy.ndarray`,
+    :py:class:`torch.Tensor`,
+    :py:class:`SimpleITK.image`,
+    or a Python dictionary.
 
     Args:
         p: Probability that this transform will be applied.
         copy: Make a shallow copy of the input before applying the transform.
-        keys: If the input is a dictionary, the corresponding values will be
-            converted to :py:class:`torchio.ScalarImage` so that the transform
-            is applied to them only.
+        keys: Mandatory if the input is a Python dictionary. The transform will
+            be applied only to the data in each key.
     """
+
     def __init__(
             self,
             p: float = 1,
@@ -49,7 +61,10 @@ class Transform(ABC):
         self.default_image_name = 'default_image_name'
         self.metrics = metrics
 
-    def __call__(self, data: TypeTransformInput, seed: Union[List[int], int] = None) -> TypeTransformInput:
+    def __call__(
+            self,
+            data: TypeTransformInput,
+            ) -> TypeTransformInput:
         """Transform data and return a result of the same type.
 
         Args:
@@ -60,18 +75,8 @@ class Transform(ABC):
                 a tensor, the affine matrix is an identity and a tensor will be
                 also returned.
         """
-        # Execution's seed
-        if not seed:
-            seed = gen_seed()
-
-        # Store the current rng_state to reset it after the execution
-        torch_rng_state, np_rng_state = torch.random.get_rng_state(), np.random.get_state()
-        if isinstance(seed, int):
-            torch.manual_seed(seed=seed)
-            np.random.seed(seed=seed)
-
         self.transform_params = {}
-        self.transform_params["seed"] = seed
+        self._store_params()
 
         if torch.rand(1).item() > self.probability:
             return data
@@ -163,28 +168,30 @@ class Transform(ABC):
             #self._metrics = pd.DataFrame.from_dict(self._metrics).to_dict(orient="list")
 
         self._store_params()
-        if isinstance(transformed, Subject) and isinstance(seed, int):  # if not a compose
-            transformed.add_transform(self, parameters_dict=self.transform_params)
-        torch.random.set_rng_state(torch_rng_state)
-        np.random.set_state(np_rng_state)
+        # If not a Compose
+        if isinstance(transformed, Subject) and not (self.name in ['Compose', 'OneOf']):
+            transformed.add_transform(
+                self,
+                parameters_dict=self.transform_params,
+            )
 
         return transformed
-
-    @abstractmethod
-    def apply_transform(self, subject: Subject):
-        raise NotImplementedError
 
     def _store_params(self):
         self.transform_params.update(self.__dict__.copy())
         if "transform_params" in self.transform_params:  # I do not know why si happen with parallelQueue
             del self.transform_params["transform_params"]
 
-        if "metrics" in self.transform_params:
+        if "metrics" in self.transform_params: #because it is handel separatly
             del self.transform_params["metrics"]
 
         for key, value in self.transform_params.items():
             if not is_jsonable(value):
                 self.transform_params[key] = value.__str__()
+
+    @abstractmethod
+    def apply_transform(self, subject: Subject):
+        raise NotImplementedError
 
     @staticmethod
     def to_range(n, around):

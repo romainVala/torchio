@@ -235,7 +235,6 @@ class RandomElasticDeformation(RandomTransform, SpatialTransform):
                 interpolation,
             )
         random_parameters_dict = {'coarse_grid': bspline_params}
-        #subject.add_transform(self, random_parameters_dict)
         return subject
 
     def apply_given_transform(self, sample: Subject, bspline_params) -> dict:

@@ -74,7 +74,6 @@ class RandomFlip(RandomTransform, SpatialTransform):
                 data = data.copy()  # remove negative strides
                 data = torch.from_numpy(data)
                 image[DATA] = data
-        #subject.add_transform(self, random_parameters_dict)
         return subject
 
     @staticmethod

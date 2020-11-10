@@ -24,7 +24,6 @@ class RandomBlur(RandomTransform, IntensityTransform):
             If three values :math:`(x_1, x_2, x_3)` are provided,
             then :math:`\sigma_i \sim \mathcal{U}(0, x_i)`.
         p: Probability that this transform will be applied.
-        seed: See :py:class:`~torchio.transforms.augmentation.RandomTransform`.
         keys: See :py:class:`~torchio.transforms.Transform`.
     """
     def __init__(
@@ -53,7 +52,6 @@ class RandomBlur(RandomTransform, IntensityTransform):
                 )
                 transformed_tensors.append(transformed_tensor)
             image[DATA] = torch.stack(transformed_tensors)
-        #subject.add_transform(self, random_parameters_images_dict)
         return subject
 
     def get_params(self, std_ranges: TypeSextetFloat) -> TypeTripletFloat:

@@ -75,5 +75,4 @@ class RandomDownsample(RandomTransform, SpatialTransform):
             image_interpolation='nearest',
         )
         subject = transform(subject)
-        #subject.add_transform(self, random_parameters_dict)
         return subject

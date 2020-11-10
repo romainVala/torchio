@@ -73,7 +73,6 @@ class RandomSpike(RandomTransform, IntensityTransform):
                 )
                 transformed_tensors.append(transformed_tensor)
             image[DATA] = torch.stack(transformed_tensors)
-        #subject.add_transform(self, random_parameters_images_dict)
         return subject
 
     @staticmethod
