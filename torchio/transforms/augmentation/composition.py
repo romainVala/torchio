@@ -1,4 +1,4 @@
-from typing import Union, Sequence, List
+from typing import Union, Sequence, List, Dict
 
 import json
 import torch
@@ -27,19 +27,9 @@ class Compose(Transform):
         super().__init__(p=p, metrics=metrics)
         self.transform = PyTorchCompose(transforms)
 
-    def __call__(self, data: Union[Subject, torch.Tensor, np.ndarray], seeds: List = None):
-        if not self.transform.transforms:
-            return data
-
-        if not seeds:
-            seeds = [gen_seed() for _ in range(len(self.transform.transforms))]
-        self.seeds = seeds
-        return super(Compose, self).__call__(data, seeds)
-
     def apply_transform(self, subject: Subject):
-        for t, s in zip(self.transform.transforms, self.seeds):
-            subject = t(subject, s)
-        return subject
+        return self.transform(subject)
+
 
 class OneOf(RandomTransform):
     """Apply only one of the given transforms.
