@@ -194,9 +194,10 @@ class RandomAffine(RandomTransform, SpatialTransform):
             self.translation,
             self.isotropic,
         )
-        self.apply_scales =  scaling_params
+        self.apply_scales = scaling_params
         self.apply_rot = rotation_params
         self.apply_trans = translation_params
+        self.volume_change = np.prod(scaling_params.numpy())
 
         for image in self.get_images(subject):
             if image[TYPE] != INTENSITY:
