@@ -2,6 +2,7 @@
 
 """The setup script."""
 
+import os
 from setuptools import setup, find_packages
 
 with open('README.md', encoding='utf8') as readme_file:
@@ -17,11 +18,26 @@ requirements = [
     'numpy',
     'Python-Deprecated',
     'scipy',
-    'SimpleITK<2',
     'torch>=1.1',
     'torchvision',
     'tqdm',
 ]
+
+
+def is_slicer_python():
+    """
+    Returns True if the code is believed to be executed from within Slicer's
+    internal Python.
+    """
+    python_home = os.environ.get('PYTHONHOME')
+    return python_home is not None and 'Slicer' in python_home
+
+
+# New versions of Slicer need SimpleITK 2, but SimpleITK is preferred
+# because of https://github.com/SimpleITK/SimpleITK/issues/1239
+if not is_slicer_python():
+    requirements.append('SimpleITK<2')
+
 
 setup(
     author='Fernando Perez-Garcia',
@@ -61,6 +77,6 @@ setup(
     test_suite='tests',
     tests_require=[],
     url='https://github.com/fepegar/torchio',
-    version='0.17.56',
+    version='0.17.57',
     zip_safe=False,
 )
