@@ -126,7 +126,7 @@ class SSIM3D_old(torch.nn.Module):
         else :
             res = _ssim_3D(img1, img2, window, self.window_size, channel)
 
-        return res
+        return res.squeeze(0)
 
 def ssim3D(img1, img2, window_size=3, size_average=True, verbose=False, mask=None):
 
