@@ -6,9 +6,9 @@ import numpy as np
 from torchvision.transforms import Compose as PyTorchCompose
 
 from ...data.subject import Subject
-from ...utils import gen_seed
 from .. import Transform
 from . import RandomTransform
+from typing import List
 
 
 TypeTransformsDict = Union[Dict[Transform, float], Sequence[Transform]]

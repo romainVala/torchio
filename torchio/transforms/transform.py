@@ -13,6 +13,7 @@ from .. import TypeData, DATA, TypeNumber
 from ..utils import nib_to_sitk, sitk_to_nib, to_tuple
 from .interpolation import Interpolation, get_sitk_interpolator
 from .data_parser import DataParser, TypeTransformInput
+from typing import Dict
 
 
 class Transform(ABC):

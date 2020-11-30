@@ -2,10 +2,8 @@ from numbers import Number
 from typing import Tuple, Optional, List, Union, Dict
 import torch
 import numpy as np
-import SimpleITK as sitk
 from ....data.subject import Subject
 from ....torchio import LABEL, DATA, AFFINE, TYPE, TypeRangeFloat, STEM
-from .. import Interpolation, get_sitk_interpolator
 from .. import RandomTransform
 
 
