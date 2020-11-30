@@ -131,7 +131,7 @@ class RandomMotionFromTimeCourse(RandomTransform):
         if self.res_dir is not None:
             self.save_to_dir(image_dict)
 
-        self._compute_motion_metrics(fitpars_interp=fitpars_interp, original_image=original_image)
+        self._compute_motion_metrics(fitpars_interp=fitpars_interp, img_fft = im_freq_domain)
 
         return sample
 
@@ -454,11 +454,18 @@ class RandomMotionFromTimeCourse(RandomTransform):
         chosen_idx = torch.randint(0, len(array), (1, ))
         return array[chosen_idx]
 
-    def _compute_motion_metrics(self, fitpars_interp, original_image):
+    def _compute_motion_metrics(self, fitpars_interp, img_fft):
         self.mean_DispP = calculate_mean_Disp_P(self.fitpars)
         self.rmse_Disp = calculate_mean_RMSE_displacment(self.fitpars)
-        self.mean_DispP_iterp = calculate_mean_Disp_P(fitpars_interp)
-        self.rmse_Disp_iterp = calculate_mean_RMSE_displacment(fitpars_interp)
+
+        w_coef = np.abs(img_fft)
+
+        self.meanDispP_wTF2 = calculate_mean_Disp_P(fitpars_interp,  w_coef)
+        self.rmse_Disp_wTF2 = calculate_mean_RMSE_displacment(fitpars_interp,  w_coef)
+
+
+        #self.mean_DispP_iterp = calculate_mean_Disp_P(fitpars_interp) #not usefule, same as computed on fitpars
+        #self.rmse_Disp_iterp = calculate_mean_RMSE_displacment(fitpars_interp) #not usefule, same as computed on fitpars
 
         #ff_interp, to_substract = self.demean_fitpar(fitpars_interp, original_image)
         #self.rmse_DispTF = calculate_mean_RMSE_displacment(ff_interp, original_image)
@@ -567,15 +574,31 @@ def calculate_mean_FD_P(motion_params):
     return np.mean(fd)
 
 
-def calculate_mean_Disp_P(motion_params):
+def calculate_mean_Disp_P(motion_params, weights=None):
     """
     Same as previous, but without taking the diff between frame
     """
-    translations = np.transpose(np.abs(motion_params[0:3, :]))
-    rotations = np.transpose(np.abs(motion_params[3:6, :]))
-    fd = np.mean(translations, axis=1) + (50 * np.pi / 180) * np.mean(rotations, axis=1)
+    if weights is None:
+        #print('motion pa shape {}'.format(motion_params.shape))
+        translations = np.transpose(np.abs(motion_params[0:3, :]))
+        rotations = np.transpose(np.abs(motion_params[3:6, :]))
+        fd = np.mean(translations, axis=1) + (50 * np.pi / 180) * np.mean(rotations, axis=1)
+        #print('df shape {}'.format(fd.shape))
 
-    return np.mean(fd)
+        return np.mean(fd)
+    else:
+        #print('motion pa shape {}'.format(motion_params.shape))
+
+        motion_params = motion_params.reshape([6, np.prod(weights.shape)])
+        mp = np.stack( [mm*weights.flatten() for mm in motion_params] )
+
+        translations = np.transpose(np.abs(mp[0:3, :]))
+        rotations = np.transpose(np.abs(mp[3:6, :]))
+
+        fd = np.mean(translations, axis=1) + (50 * np.pi / 180) * np.mean(rotations, axis=1)
+        #print('df shape {}'.format(fd.shape))
+
+        return np.sum(fd) / np.sum(weights)
 
 
 def calculate_mean_FD_J(motion_params):
@@ -605,29 +628,25 @@ def calculate_mean_FD_J(motion_params):
     return np.mean(fd)
 
 
-def calculate_mean_RMSE_displacment(fit_pars, image=None):
+def calculate_mean_RMSE_displacment(fit_pars, coef=None):
     """
     very crude approximation where rotation in degree and translation are average ...
     """
-    if image is None:
+    if coef is None:
         r1 = np.sqrt(np.sum(fit_pars[0:3] * fit_pars[0:3], axis=0))
         rms1 = np.sqrt(np.mean(r1 * r1))
         r2 = np.sqrt(np.sum(fit_pars[3:6] * fit_pars[3:6], axis=0))
         rms2 = np.sqrt(np.mean(r2 * r2))
         res = (rms1 + rms2) / 2
     else:
-        tfi = np.abs(np.fft.fftshift(np.fft.fftn(np.fft.ifftshift(image))).astype(np.complex128))
-        ss = tfi
-        ff = fit_pars
+        r1 = np.sqrt(np.sum(fit_pars[0:3] * fit_pars[0:3], axis=0))
+        #rms1 = np.sqrt(np.mean(r1 * r1))
+        rms1  = np.sqrt(np.sum(coef*r1*r1)/np.sum(coef))
+        r2 = np.sqrt(np.sum(fit_pars[3:6] * fit_pars[3:6], axis=0))
+        #rms2 = np.sqrt(np.mean(r2 * r2))
+        rms2 = np.sqrt(np.sum(coef * r2 * r2) / np.sum(coef))
 
-        to_substract = np.zeros(6)
-        for i in range(0, 6):
-            ffi = ff[i].reshape(-1)
-            ssi = ss.reshape(-1)
-            # xx = np.argwhere(ssi > (np.max(ssi) * 0.001)).reshape(-1)
-            # to_substract[i] = np.sum(ffi[xx] * ssi[xx]) / np.sum(ssi[xx])
-            to_substract[i] = np.sqrt( np.sum(ffi * ffi * ssi) / np.sum(ssi) )
-        res = np.mean(to_substract)
+        res = (rms1 + rms2) / 2
 
     return res
 
