@@ -36,6 +36,7 @@ def gauss_kernel_3d(sigma, truncate=4.0):
     sd = float(sigma)
     lw = int(truncate * sd + 0.5)
     x = y = z = torch.arange(-lw, lw+1)
+    # x = y = z = torch.arange(-1, 2) #torch.range(0,2)  hack to get 3*3*3 kernel, TODO find a way to defin smaller kernel shape
     X, Y, Z = torch.meshgrid(x, y, z)
     kernel_3d = _gauss_1d(X, 0., sigma) \
               * _gauss_1d(Y, 0., sigma) \
