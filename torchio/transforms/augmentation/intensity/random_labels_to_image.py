@@ -101,6 +101,8 @@ class RandomLabelsToImage(RandomTransform, IntensityTransform):
             default_mean: TypeRangeFloat = (0.1, 0.9),
             default_std: TypeRangeFloat = (0.01, 0.1),
             discretize: bool = False,
+            create_mask_index = None,
+            create_mask_name = None,
             p: float = 1,
             keys: Optional[Sequence[str]] = None,
             ):
@@ -113,6 +115,8 @@ class RandomLabelsToImage(RandomTransform, IntensityTransform):
         self.default_std = self.parse_gaussian_parameter(default_std, 'default_std')
         self.image_key = image_key
         self.discretize = discretize
+        self.create_mask_index = create_mask_index
+        self.create_mask_name = create_mask_name
 
     def parse_mean_and_std(
             self,
@@ -185,6 +189,8 @@ class RandomLabelsToImage(RandomTransform, IntensityTransform):
             image_key=self.image_key,
             used_labels=self.used_labels,
             discretize=self.discretize,
+            create_mask_index=self.create_mask_index,
+            create_mask_name=self.create_mask_name
         )
 
         label_map = subject[self.label_key][DATA]
@@ -282,6 +288,8 @@ class LabelsToImage(IntensityTransform):
             image_key: str = 'image_from_labels',
             used_labels: Optional[Sequence[int]] = None,
             discretize: bool = False,
+            create_mask_index=None,
+            create_mask_name=None,
             keys: Optional[List[str]] = None,
             ):
         super().__init__(keys=keys)
@@ -290,6 +298,8 @@ class LabelsToImage(IntensityTransform):
         self.mean, self.std = mean, std
         self.image_key = image_key
         self.discretize = discretize
+        self.create_mask_index = create_mask_index
+        self.create_mask_name = create_mask_name
         self.args_names = (
             'label_key',
             'mean',
@@ -297,6 +307,8 @@ class LabelsToImage(IntensityTransform):
             'image_key',
             'used_labels',
             'discretize',
+            'create_mask_index',
+            'create_mask_name',
         )
 
     def apply_transform(self, subject: Subject) -> Subject:
@@ -355,6 +367,15 @@ class LabelsToImage(IntensityTransform):
             else:
                 bg_mask = label_map.sum(dim=0, keepdim=True) < 0.5
             final_image[DATA][bg_mask] = original_image[DATA][bg_mask]
+
+        if self.create_mask_index is not None:
+            #create a mask with the sum of the label
+            new_mask = torch.zeros_like(tissues).float()
+            for lab_idx, index in enumerate(self.create_mask_index):
+                if index:
+                    new_mask += label_map[lab_idx]
+            mask_image = LabelMap(affine=affine, tensor=new_mask)
+            subject.add_image(mask_image, self.create_mask_name)
 
         subject.add_image(final_image, self.image_key)
         return subject
