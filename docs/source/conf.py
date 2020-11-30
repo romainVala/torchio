@@ -15,7 +15,7 @@ import os
 import sys
 from typing import List
 sys.path.insert(0, os.path.abspath('../..'))
-
+sys.path.append(os.path.abspath('sphinxext'))
 
 # -- Project information -----------------------------------------------------
 
@@ -25,7 +25,7 @@ author = 'Fernando Pérez-García'
 
 # version is the short X.Y version
 # release is the full version, including alpha/beta/rc tags
-version = release = '0.17.57'
+version = release = '0.18.0'
 
 
 # -- General configuration ---------------------------------------------------
@@ -44,6 +44,7 @@ extensions = [
     'sphinx_rtd_theme',
     'sphinx.ext.napoleon',
     'sphinx.ext.intersphinx',
+    'matplotlib.sphinxext.plot_directive',
 ]
 
 # Add mappings

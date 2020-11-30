@@ -21,44 +21,42 @@ class HistogramStandardization(NormalizationTransform):
     Implementation of `New variants of a method of MRI scale
     standardization <https://ieeexplore.ieee.org/document/836373>`_.
 
-    See example in :py:func:`torchio.transforms.HistogramStandardization.train`.
+    See example in :func:`torchio.transforms.HistogramStandardization.train`.
 
     Args:
         landmarks: Dictionary (or path to a PyTorch file with ``.pt`` or ``.pth``
             extension in which a dictionary has been saved) whose keys are
             image names in the subject and values are NumPy arrays or paths to
             NumPy arrays defining the landmarks after training with
-            :py:meth:`torchio.transforms.HistogramStandardization.train`.
+            :meth:`torchio.transforms.HistogramStandardization.train`.
         masking_method: See
-            :py:class:`~torchio.transforms.preprocessing.normalization_transform.NormalizationTransform`.
+            :class:`~torchio.transforms.preprocessing.normalization_transform.NormalizationTransform`.
         p: Probability that this transform will be applied.
 
     Example:
         >>> import torch
-        >>> from pathlib import Path
-        >>> from torchio.transforms import HistogramStandardization
-        >>>
+        >>> import torchio as tio
         >>> landmarks = {
         ...     't1': 't1_landmarks.npy',
         ...     't2': 't2_landmarks.npy',
         ... }
-        >>> transform = HistogramStandardization(landmarks)
-        >>>
+        >>> transform = tio.HistogramStandardization(landmarks)
         >>> torch.save(landmarks, 'path_to_landmarks.pth')
-        >>> transform = HistogramStandardization('path_to_landmarks.pth')
+        >>> transform = tio.HistogramStandardization('path_to_landmarks.pth')
     """
     def __init__(
             self,
             landmarks: TypeLandmarks,
             masking_method: TypeMaskingMethod = None,
             p: float = 1,
-            **kwargs
             ):
-        super().__init__(masking_method=masking_method, p=p, **kwargs)
-        self.landmarks_dict = self.parse_landmarks(landmarks)
+        super().__init__(masking_method=masking_method, p=p)
+        self.landmarks = landmarks
+        self.landmarks_dict = self._parse_landmarks(landmarks)
+        self.args_names = 'landmarks', 'masking_method'
 
     @staticmethod
-    def parse_landmarks(landmarks: TypeLandmarks) -> Dict[str, np.ndarray]:
+    def _parse_landmarks(landmarks: TypeLandmarks) -> Dict[str, np.ndarray]:
         if isinstance(landmarks, (str, Path)):
             path = Path(landmarks)
             if path.suffix not in ('.pt', '.pth'):
@@ -246,8 +244,7 @@ def normalize(
         mask = np.ones_like(data, np.bool)
     mask = mask.reshape(-1)
 
-    #range_to_use = [0, 1, 2, 4, 5, 6, 7, 8, 10, 11, 12]
-    range_to_use = range(0,len(mapping))  # use all points
+    range_to_use = [0, 1, 2, 4, 5, 6, 7, 8, 10, 11, 12]
 
     quantiles_cutoff = _standardize_cutoff(cutoff_)
     percentiles_cutoff = 100 * np.array(quantiles_cutoff)

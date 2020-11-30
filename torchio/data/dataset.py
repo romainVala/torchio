@@ -1,13 +1,9 @@
 import copy
 import collections
-from typing import Dict, Sequence, Optional, Callable
+from typing import Sequence, Optional, Callable
 
-from deprecated import deprecated
 from torch.utils.data import Dataset
 
-from ..torchio import DATA, AFFINE, TypePath, LABEL, INTENSITY
-from .image import Image
-from .io import write_image
 from .subject import Subject
 import torch
 
@@ -16,44 +12,43 @@ from utils_file import gfile, get_parent_path
 class SubjectsDataset(Dataset):
     """Base TorchIO dataset.
 
-    :py:class:`~torchio.data.dataset.SubjectsDataset`
+    :class:`~torchio.data.dataset.SubjectsDataset`
     is a reader of 3D medical images that directly
     inherits from :class:`torch.utils.data.Dataset`.
     It can be used with a :class:`torch.utils.data.DataLoader`
     for efficient loading and augmentation.
     It receives a list of instances of
-    :py:class:`torchio.data.subject.Subject`.
+    :class:`torchio.data.subject.Subject`.
 
     Args:
-        subjects: Sequence of instances of
+        subjects: List of instances of
             :class:`~torchio.data.subject.Subject`.
-        transform: An instance of :py:class:`torchio.transforms.Transform`
+        transform: An instance of :class:`torchio.transforms.Transform`
             that will be applied to each subject.
 
     Example:
-        >>> from torchio import SubjectsDataset, ScalarImage, LabelMap, Subject
-        >>> from torchio.transforms import RescaleIntensity, RandomAffine, Compose
-        >>> subject_a = Subject(
-        ...     t1=ScalarImage('t1.nrrd',),
-        ...     t2=ScalarImage('t2.mha',),
-        ...     label=LabelMap('t1_seg.nii.gz'),
+        >>> import torchio as tio
+        >>> subject_a = tio.Subject(
+        ...     t1=tio.ScalarImage('t1.nrrd',),
+        ...     t2=tio.ScalarImage('t2.mha',),
+        ...     label=tio.LabelMap('t1_seg.nii.gz'),
         ...     age=31,
         ...     name='Fernando Perez',
         ... )
-        >>> subject_b = Subject(
-        ...     t1=ScalarImage('colin27_t1_tal_lin.minc',),
-        ...     t2=ScalarImage('colin27_t2_tal_lin_dicom',),
-        ...     label=LabelMap('colin27_seg1.nii.gz'),
+        >>> subject_b = tio.Subject(
+        ...     t1=tio.ScalarImage('colin27_t1_tal_lin.minc',),
+        ...     t2=tio.ScalarImage('colin27_t2_tal_lin_dicom',),
+        ...     label=tio.LabelMap('colin27_seg1.nii.gz'),
         ...     age=56,
         ...     name='Colin Holmes',
         ... )
         >>> subjects_list = [subject_a, subject_b]
         >>> transforms = [
-        ...     RescaleIntensity((0, 1)),
-        ...     RandomAffine(),
+        ...     tio.RescaleIntensity((0, 1)),
+        ...     tio.RandomAffine(),
         ... ]
-        >>> transform = Compose(transforms)
-        >>> subjects_dataset = SubjectsDataset(subjects_list, transform=transform)
+        >>> transform = tio.Compose(transforms)
+        >>> subjects_dataset = tio.SubjectsDataset(subjects_list, transform=transform)
         >>> subject = subjects_dataset[0]
 
     .. _NiBabel: https://nipy.org/nibabel/#nibabel
@@ -149,7 +144,7 @@ class SubjectsDataset(Dataset):
         """Set the :attr:`transform` attribute.
 
         Args:
-            transform: An instance of :py:class:`torchio.transforms.Transform`.
+            transform: An instance of :class:`torchio.transforms.Transform`.
         """
         if transform is not None and not callable(transform):
             raise ValueError(
@@ -178,23 +173,3 @@ class SubjectsDataset(Dataset):
                     f' not "{type(subject)}"'
                 )
                 raise TypeError(message)
-
-    @classmethod
-    @deprecated(
-        'SubjectsDataset.save_sample is deprecated. Use Image.save instead'
-    )
-    def save_sample(
-            cls,
-            subject: Subject,
-            output_paths_dict: Dict[str, TypePath],
-            ) -> None:
-        for key, output_path in output_paths_dict.items():
-            tensor = subject[key][DATA]
-            affine = subject[key][AFFINE]
-            write_image(tensor, affine, output_path)
-
-
-@deprecated(
-    'ImagesDataset is deprecated in v0.18.0. Use SubjectsDataset instead.')
-class ImagesDataset(SubjectsDataset):
-    pass

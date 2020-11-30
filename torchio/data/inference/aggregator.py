@@ -10,10 +10,10 @@ class GridAggregator:
     r"""Aggregate patches for dense inference.
 
     This class is typically used to build a volume made of patches after
-    inference of batches extracted by a :py:class:`~torchio.data.GridSampler`.
+    inference of batches extracted by a :class:`~torchio.data.GridSampler`.
 
     Args:
-        sampler: Instance of :py:class:`~torchio.data.GridSampler` used to
+        sampler: Instance of :class:`~torchio.data.GridSampler` used to
             extract the patches.
         overlap_mode: If ``'crop'``, the overlapping predictions will be
             cropped. If ``'average'``, the predictions in the overlapping areas
@@ -156,7 +156,7 @@ class GridAggregator:
                 'Medical image frameworks such as ITK do not support int64.'
                 ' Casting to int32...'
             )
-            warnings.warn(message)
+            warnings.warn(message, RuntimeWarning)
             self._output_tensor = self._output_tensor.type(torch.int32)
         if self.overlap_mode == 'average':
             output = self._output_tensor / self._avgmask_tensor

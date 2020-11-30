@@ -1,16 +1,17 @@
+import os
 import ast
 import gzip
-import json
 import shutil
 import tempfile
 from pathlib import Path
 from typing import Union, Iterable, Tuple, Any, Optional, List, Sequence
 
-import torch
+from torch.utils.data._utils.collate import default_collate
 import numpy as np
 import nibabel as nib
 import SimpleITK as sitk
 from tqdm import trange
+
 from .torchio import (
     INTENSITY,
     TypeData,
@@ -130,7 +131,7 @@ def apply_transform_to_file(
     transformed = transform(subject)
     transformed.image.save(output_path)
     if verbose and transformed.history:
-        print(transformed.history[0])  # noqa: T001
+        print('Applied transform:', transformed.history[0])  # noqa: T001
 
 
 def guess_type(string: str) -> Any:
@@ -250,9 +251,12 @@ def ensure_4d(tensor: TypeData, num_spatial_dims=None) -> TypeData:
     num_dimensions = tensor.ndim
     if num_dimensions == 4:
         pass
-    elif num_dimensions == 5:  # hope (X, X, X, 1, X)
-        if tensor.shape[-1] == 1:
+    elif num_dimensions == 5:  # hope (W, H, D, 1, C)
+        if tensor.shape[-2] == 1:
             tensor = tensor[..., 0, :]
+            tensor = tensor.permute(3, 0, 1, 2)
+        else:
+            raise ValueError('5D is not supported for shape[-2] > 1')
     elif num_dimensions == 2:  # assume 2D monochannel (W, H)
         tensor = tensor[np.newaxis, ..., np.newaxis]  # (1, W, H, 1)
     elif num_dimensions == 3:  # 2D multichannel or 3D monochannel?
@@ -318,34 +322,96 @@ def check_sequence(sequence: Sequence, name: str):
         raise TypeError(message)
 
 
-def gen_seed():
-    """Random seed generator to avoid overflow
-
-    Returns
-        A random seed as an int
-    """
-    return torch.randint(0, 2**31, (1,)).item()
-
-
-def is_jsonable(x):
-    """Tests whether an object is convertible to json
-
-    Args:
-        x: object to test
-
-    Returns:
-        Boolean stating whether the object x is convertible to json
-    """
-    try:
-        json.dumps(x)
-        return True
-    except (TypeError, OverflowError):
-        return False
-
-
 def get_major_sitk_version() -> int:
     # This attribute was added in version 2
     # https://github.com/SimpleITK/SimpleITK/pull/1171
     version = getattr(sitk, '__version__', None)
     major_version = 1 if version is None else 2
     return major_version
+
+
+def history_collate(batch: Sequence, collate_transforms=True):
+    attr = 'history' if collate_transforms else 'applied_transforms'
+    # Adapted from
+    # https://github.com/romainVala/torchQC/blob/master/segmentation/collate_functions.py
+    from .data import Subject
+    first_element = batch[0]
+    if isinstance(first_element, Subject):
+        dictionary = {
+            key: default_collate([d[key] for d in batch])
+            for key in first_element
+        }
+        if hasattr(first_element, attr):
+            dictionary.update({attr: [getattr(d, attr) for d in batch]})
+        return dictionary
+
+
+# Adapted from torchvision, removing print statements
+def download_and_extract_archive(
+        url: str,
+        download_root: TypePath,
+        extract_root: Optional[TypePath] = None,
+        filename: Optional[TypePath] = None,
+        md5: str = None,
+        remove_finished: bool = False,
+        ) -> None:
+    download_root = os.path.expanduser(download_root)
+    if extract_root is None:
+        extract_root = download_root
+    if not filename:
+        filename = os.path.basename(url)
+    download_url(url, download_root, filename, md5)
+    archive = os.path.join(download_root, filename)
+    from torchvision.datasets.utils import extract_archive
+    extract_archive(archive, extract_root, remove_finished)
+
+
+# Adapted from torchvision, removing print statements
+def download_url(
+        url: str,
+        root: TypePath,
+        filename: Optional[TypePath] = None,
+        md5: str = None,
+        ) -> None:
+    """Download a file from a url and place it in root.
+
+    Args:
+        url: URL to download file from
+        root: Directory to place downloaded file in
+        filename: Name to save the file under.
+            If ``None``, use the basename of the URL
+        md5: MD5 checksum of the download. If None, do not check
+    """
+    import urllib
+    from torchvision.datasets.utils import check_integrity, gen_bar_updater
+
+    root = os.path.expanduser(root)
+    if not filename:
+        filename = os.path.basename(url)
+    fpath = os.path.join(root, filename)
+    os.makedirs(root, exist_ok=True)
+    # check if file is already present locally
+    if not check_integrity(fpath, md5):
+        try:
+            print('Downloading ' + url + ' to ' + fpath)  # noqa: T001
+            urllib.request.urlretrieve(
+                url, fpath,
+                reporthook=gen_bar_updater()
+            )
+        except (urllib.error.URLError, OSError) as e:
+            if url[:5] == 'https':
+                url = url.replace('https:', 'http:')
+                message = (
+                    'Failed download. Trying https -> http instead.'
+                    ' Downloading ' + url + ' to ' + fpath
+                )
+                print(message)  # noqa: T001
+                urllib.request.urlretrieve(
+                    url, fpath,
+                    reporthook=gen_bar_updater()
+                )
+            else:
+                raise e
+        # check integrity of downloaded file
+        if not check_integrity(fpath, md5):
+            raise RuntimeError('File not found or corrupted.')

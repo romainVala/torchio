@@ -16,7 +16,6 @@ requirements = [
     'humanize',
     'nibabel',
     'numpy',
-    'Python-Deprecated',
     'scipy',
     'torch>=1.1',
     'torchvision',
@@ -63,7 +62,7 @@ setup(
         ],
     },
     extras_require={
-        'plot': ['matplotlib', 'seaborn'],
+        'plot': ['matplotlib'],
     },
     install_requires=requirements,
     license='MIT license',
@@ -77,6 +76,6 @@ setup(
     test_suite='tests',
     tests_require=[],
     url='https://github.com/fepegar/torchio',
-    version='0.17.57',
+    version='0.18.0',
     zip_safe=False,
 )

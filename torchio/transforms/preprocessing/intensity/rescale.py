@@ -1,9 +1,8 @@
 import warnings
-from typing import Optional, List
+from typing import Optional, Sequence
 
 import torch
 import numpy as np
-from deprecated import deprecated
 
 from ....data.subject import Subject
 from ....torchio import DATA, TypeRangeFloat
@@ -24,9 +23,9 @@ class RescaleIntensity(NormalizationTransform):
             If only one value :math:`d` is provided,
             :math:`(n_{min}, n_{max}) = (0, d)`.
         masking_method: See
-            :py:class:`~torchio.transforms.preprocessing.normalization_transform.NormalizationTransform`.
+            :class:`~torchio.transforms.preprocessing.normalization_transform.NormalizationTransform`.
         p: Probability that this transform will be applied.
-        keys: See :py:class:`~torchio.transforms.Transform`.
+        keys: See :class:`~torchio.transforms.Transform`.
 
     .. _this scikit-image example: https://scikit-image.org/docs/dev/auto_examples/color_exposure/plot_equalize.html#sphx-glr-auto-examples-color-exposure-plot-equalize-py
     .. _nn-UNet paper: https://arxiv.org/abs/1809.10486
@@ -37,13 +36,15 @@ class RescaleIntensity(NormalizationTransform):
             percentiles: TypeRangeFloat = (1, 99),
             masking_method: TypeMaskingMethod = None,
             p: float = 1,
-            keys: Optional[List[str]] = None,
+            keys: Optional[Sequence[str]] = None,
             ):
         super().__init__(masking_method=masking_method, p=p, keys=keys)
+        self.out_min_max = out_min_max
         self.out_min, self.out_max = self.parse_range(
             out_min_max, 'out_min_max')
         self.percentiles = self.parse_range(
             percentiles, 'percentiles', min_constraint=0, max_constraint=100)
+        self.args_names = 'out_min_max', 'percentiles', 'masking_method'
 
     def apply_normalization(
             self,
@@ -72,15 +73,10 @@ class RescaleIntensity(NormalizationTransform):
                 f'Rescaling image "{image_name}" not possible'
                 ' due to division by zero'
             )
-            warnings.warn(message)
+            warnings.warn(message, RuntimeWarning)
             return tensor
         array /= array_max  # [0, 1]
         out_range = self.out_max - self.out_min
         array *= out_range  # [0, out_range]
         array += self.out_min  # [out_min, out_max]
         return torch.from_numpy(array)
-
-
-@deprecated('Rescale is deprecated. Use RescaleIntensity instead')
-class Rescale(RescaleIntensity):
-    pass

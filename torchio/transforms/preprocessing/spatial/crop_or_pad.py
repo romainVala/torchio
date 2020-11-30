@@ -1,8 +1,7 @@
 import warnings
-from typing import Union, Tuple, Optional, List
+from typing import Union, Tuple, Optional, Sequence
 
 import numpy as np
-from deprecated import deprecated
 
 from .pad import Pad
 from .crop import Crop
@@ -21,25 +20,24 @@ class CropOrPad(BoundsTransform):
         target_shape: Tuple :math:`(W, H, D)`. If a single value :math:`N` is
             provided, then :math:`H = W = D = N`.
         padding_mode: Same as :attr:`padding_mode` in
-            :py:class:`~torchio.transforms.Pad`.
+            :class:`~torchio.transforms.Pad`.
         mask_name: If ``None``, the centers of the input and output volumes
             will be the same.
             If a string is given, the output volume center will be the center
             of the bounding box of non-zero values in the image named
-            :py:attr:`mask_name`.
+            :attr:`mask_name`.
         p: Probability that this transform will be applied.
-        keys: See :py:class:`~torchio.transforms.Transform`.
+        keys: See :class:`~torchio.transforms.Transform`.
 
     Example:
         >>> import torchio as tio
-        >>> from torchio.transforms import CropOrPad
         >>> subject = tio.Subject(
         ...     chest_ct=tio.ScalarImage('subject_a_ct.nii.gz'),
         ...     heart_mask=tio.LabelMap('subject_a_heart_seg.nii.gz'),
         ... )
         >>> subject.chest_ct.shape
         torch.Size([1, 512, 512, 289])
-        >>> transform = CropOrPad(
+        >>> transform = tio.CropOrPad(
         ...     (120, 80, 180),
         ...     mask_name='heart_mask',
         ... )
@@ -53,7 +51,7 @@ class CropOrPad(BoundsTransform):
             padding_mode: Union[str, float] = 0,
             mask_name: Optional[str] = None,
             p: float = 1,
-            keys: Optional[List[str]] = None,
+            keys: Optional[Sequence[str]] = None,
             ):
         super().__init__(target_shape, p=p, keys=keys)
         self.padding_mode = padding_mode
@@ -167,7 +165,7 @@ class CropOrPad(BoundsTransform):
                 f' not found in subject keys "{tuple(subject.keys())}".'
                 ' Using volume center instead'
             )
-            warnings.warn(message)
+            warnings.warn(message, RuntimeWarning)
             return self._compute_center_crop_or_pad(subject=subject)
 
         mask = subject[self.mask_name].numpy()
@@ -177,7 +175,7 @@ class CropOrPad(BoundsTransform):
                 f'All values found in the mask "{self.mask_name}"'
                 ' are zero. Using volume center instead'
             )
-            warnings.warn(message)
+            warnings.warn(message, RuntimeWarning)
             return self._compute_center_crop_or_pad(subject=subject)
 
         # Original subject shape (from mask shape)
@@ -217,15 +215,9 @@ class CropOrPad(BoundsTransform):
 
     def apply_transform(self, subject: Subject) -> Subject:
         padding_params, cropping_params = self.compute_crop_or_pad(subject)
-        padding_kwargs = dict(
-            padding_mode=self.padding_mode)
+        padding_kwargs = {'padding_mode': self.padding_mode}
         if padding_params is not None:
             subject = Pad(padding_params, **padding_kwargs)(subject)
         if cropping_params is not None:
             subject = Crop(cropping_params)(subject)
         return subject
-
-
-@deprecated('CenterCropOrPad is deprecated. Use CropOrPad instead.')
-class CenterCropOrPad(CropOrPad):
-    """Crop or pad around image center."""

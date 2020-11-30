@@ -1,15 +1,17 @@
-from typing import Union, Sequence, List, Dict
+import warnings
+from typing import Union, Sequence, Dict
 
-import json
 import torch
-import torchio
 import numpy as np
 from torchvision.transforms import Compose as PyTorchCompose
 
 from ...data.subject import Subject
 from ...utils import gen_seed
 from .. import Transform
-from . import RandomTransform, Interpolation
+from . import RandomTransform
+
+
+TypeTransformsDict = Union[Dict[Transform, float], Sequence[Transform]]
 
 
 class Compose(Transform):
@@ -17,18 +19,51 @@ class Compose(Transform):
 
     Args:
         transforms: Sequence of instances of
-            :py:class:`~torchio.transforms.transform.Transform`.
+            :class:`~torchio.transforms.transform.Transform`.
         p: Probability that this transform will be applied.
 
     .. note::
-        This is a thin wrapper of :py:class:`torchvision.transforms.Compose`.
+        This is a thin wrapper of :class:`torchvision.transforms.Compose`.
     """
-    def __init__(self, transforms: Sequence[Transform] = [], p: float = 1, metrics: Dict = None):
-        super().__init__(p=p, metrics=metrics)
+    def __init__(self, transforms: Sequence[Transform], p: float = 1):
+        super().__init__(p=p)
+        if not transforms:
+            raise ValueError('The list of transforms is empty')
+        for transform in transforms:
+            if not callable(transform):
+                message = (
+                    'One or more of the objects passed to the Compose transform'
+                    f' are not callable: "{transform}"'
+                )
+                raise TypeError(message)
         self.transform = PyTorchCompose(transforms)
+        self.transforms = self.transform.transforms
 
-    def apply_transform(self, subject: Subject):
+    def __len__(self):
+        return len(self.transforms)
+
+    def __getitem__(self, index) -> Transform:
+        return self.transforms[index]
+
+    def __repr__(self) -> str:
+        return self.transform.__repr__()
+
+    def apply_transform(self, subject: Subject) -> Subject:
         return self.transform(subject)
+
+    def is_invertible(self) -> bool:
+        return all(t.is_invertible() for t in self.transforms)
+
+    def inverse(self) -> Transform:
+        transforms = []
+        for transform in self.transforms:
+            if transform.is_invertible():
+                transforms.append(transform.inverse())
+            else:
+                message = f'Skipping {transform.name} as it is not invertible'
+                warnings.warn(message, RuntimeWarning)
+        transforms.reverse()
+        return Compose(transforms)
 
 
 class OneOf(RandomTransform):
@@ -36,7 +71,7 @@ class OneOf(RandomTransform):
 
     Args:
         transforms: Dictionary with instances of
-            :py:class:`~torchio.transforms.transform.Transform` as keys and
+            :class:`~torchio.transforms.transform.Transform` as keys and
             probabilities as values. Probabilities are normalized so they sum
             to one. If a sequence is given, the same probability will be
             assigned to each transform.
@@ -49,20 +84,19 @@ class OneOf(RandomTransform):
         ...     tio.RandomAffine(): 0.75,
         ...     tio.RandomElasticDeformation(): 0.25,
         ... }  # Using 3 and 1 as probabilities would have the same effect
-        >>> transform = torchio.transforms.OneOf(transforms_dict)
+        >>> transform = tio.OneOf(transforms_dict)
         >>> transformed = transform(colin)
 
     """
     def __init__(
             self,
-            transforms: Union[dict, Sequence[Transform]],
+            transforms: TypeTransformsDict,
             p: float = 1,
-            **kwargs
             ):
-        super().__init__(p=p, **kwargs)
+        super().__init__(p=p)
         self.transforms_dict = self._get_transforms_dict(transforms)
 
-    def apply_transform(self, subject: Subject):
+    def apply_transform(self, subject: Subject) -> Subject:
         weights = torch.Tensor(list(self.transforms_dict.values()))
         index = torch.multinomial(weights, 1)
         transforms = list(self.transforms_dict.keys())
@@ -70,7 +104,10 @@ class OneOf(RandomTransform):
         transformed = transform(subject)
         return transformed
 
-    def _get_transforms_dict(self, transforms: Union[dict, Sequence]):
+    def _get_transforms_dict(
+            self,
+            transforms: TypeTransformsDict,
+            ) -> Dict[Transform, float]:
         if isinstance(transforms, dict):
             transforms_dict = dict(transforms)
             self._normalize_probabilities(transforms_dict)
@@ -94,7 +131,9 @@ class OneOf(RandomTransform):
         return transforms_dict
 
     @staticmethod
-    def _normalize_probabilities(transforms_dict: dict):
+    def _normalize_probabilities(
+            transforms_dict: Dict[Transform, float],
+            ) -> None:
         probabilities = np.array(list(transforms_dict.values()), dtype=float)
         if np.any(probabilities < 0):
             message = (
