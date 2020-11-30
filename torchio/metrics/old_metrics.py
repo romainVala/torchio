@@ -49,7 +49,7 @@ def _ssim_3D(img1, img2, window, window_size, channel, size_average=False, mask=
         else:
             print('WARNIGN RRR remove 0 in image')
             res = ssim_map.mean(axis=list(range(1, img1.ndim))) #one value per patch
-        return res
+        return res.squeeze(0)
     else:
         return ssim_map
 
