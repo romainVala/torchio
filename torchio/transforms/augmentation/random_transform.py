@@ -21,8 +21,9 @@ class RandomTransform(Transform):
             self,
             p: float = 1,
             keys: Optional[Sequence[str]] = None,
+            metrics = None,
             ):
-        super().__init__(p=p, keys=keys)
+        super().__init__(p=p, keys=keys, metrics=metrics)
 
     def parse_degrees(
             self,
