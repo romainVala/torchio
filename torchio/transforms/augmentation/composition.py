@@ -28,7 +28,7 @@ class Compose(Transform):
     def __init__(self, transforms: Sequence[Transform], p: float = 1):
         super().__init__(p=p)
         if not transforms:
-            raise ValueError('The list of transforms is empty')
+            print('oups empty transform') #raise ValueError('The list of transforms is empty')
         for transform in transforms:
             if not callable(transform):
                 message = (
