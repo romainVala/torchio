@@ -403,5 +403,7 @@ class Transform(ABC):
     @property
     def name(self):
         return self.__class__.__name__
+
+    @staticmethod
     def get_sitk_interpolator(interpolation: str) -> int:
         return get_sitk_interpolator(interpolation)
