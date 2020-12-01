@@ -73,10 +73,9 @@ class Transform(ABC):
 
         data_parser = DataParser(data, keys=self.keys)
         subject = data_parser.get_subject()
+        orig = subject #todo marche aussi si self.copy is false ?
         if self.copy:
             subject = copy.copy(subject)
-
-        orig = subject
 
         with np.errstate(all='warn'):
             transformed = self.apply_transform(subject)
@@ -131,6 +130,9 @@ class Transform(ABC):
             OneOf,
             CropOrPad,
         )
+        #print(self.name)
+        if self.name=='RandomMotionFromTimeCourse':
+            subject.add_transform_all(self)
         if not isinstance(self, call_others):
             subject.add_transform(self, self._get_reproducing_arguments())
 
