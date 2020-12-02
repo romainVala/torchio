@@ -8,6 +8,7 @@ import torch
 
 from ... import TypeRangeFloat
 from .. import Transform
+from ...transforms.data_parser import TypeTransformInput
 
 
 class RandomTransform(Transform):
@@ -24,6 +25,35 @@ class RandomTransform(Transform):
             metrics = None,
             ):
         super().__init__(p=p, keys=keys, metrics=metrics)
+
+    def __call__(
+        self,
+        data: TypeTransformInput,
+        seed: int = None,
+    ) -> TypeTransformInput:
+        """Transform data and return a result of the same type.
+
+        Args:
+            data: Instance of :py:class:`~torchio.Subject`, 4D
+                :py:class:`torch.Tensor` or 4D NumPy array with dimensions
+                :math:`(C, W, H, D)`, where :math:`C` is the number of channels
+                and :math:`W, H, D` are the spatial dimensions. If the input is
+                a tensor, the affine matrix is an identity and a tensor will be
+                also returned.
+            seed: Seed for :py:mod:`torch` random number generator.
+        """
+        if not seed:
+            seed = self.get_random_seed()
+
+        # Store the current rng_state to reset it after the execution
+        torch_rng_state = torch.random.get_rng_state()
+        torch.manual_seed(seed=seed)
+        self.seed = seed
+
+        transformed = super().__call__(data=data)
+
+        torch.random.set_rng_state(torch_rng_state)
+        return transformed
 
     def parse_degrees(
             self,
