@@ -52,8 +52,16 @@ class MapMetric(Metric, ABC):
             else:
                 for mask_key in mask_keys_in_sample:
                     mask_data = sample[mask_key][DATA]
-                    masked_map = metric_map[mask_data > 0]
-                    if self.average_method is not None:
-                        masked_map = self.average_method(masked_map)
-                    masked_maps[self.metric_name + "_" + mask_key] = masked_map
+                    if mask_data.shape[0] > metric_map.shape[0] : #case of a 4D mask, make all label
+                        for num_label, label_mask in enumerate(mask_data):
+                            masked_map = metric_map[label_mask.unsqueeze(0) > 0]
+                            if self.average_method is not None:
+                                masked_map = self.average_method(masked_map)
+                            masked_maps[self.metric_name + "_" + mask_key + f'_L{num_label}'] = masked_map
+
+                    else:
+                        masked_map = metric_map[mask_data > 0]
+                        if self.average_method is not None:
+                            masked_map = self.average_method(masked_map)
+                        masked_maps[self.metric_name + "_" + mask_key] = masked_map
         return masked_maps
