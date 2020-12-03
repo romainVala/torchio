@@ -53,12 +53,15 @@ class MapMetric(Metric, ABC):
                 for mask_key in mask_keys_in_sample:
                     mask_data = sample[mask_key][DATA]
                     if mask_data.shape[0] > metric_map.shape[0] : #case of a 4D mask, make all label
-                        for num_label, label_mask in enumerate(mask_data):
-                            masked_map = metric_map[label_mask.unsqueeze(0) > 0]
-                            if self.average_method is not None:
-                                masked_map = self.average_method(masked_map)
-                            masked_maps[self.metric_name + "_" + mask_key + f'_L{num_label}'] = masked_map
-
+                        if self.average_method is None: #for global metrics without average
+                            for num_label, label_mask in enumerate(mask_data):
+                                masked_map = metric_map[label_mask.unsqueeze(0) > 0] #todo there should be a threshold to get mask data
+                                masked_maps[self.metric_name + "_" + mask_key + f'_L{num_label}'] = masked_map
+                        else: #make a weighted mean Warning do not take the average_method
+                            weighted_map = metric_map.repeat((mask_data.shape[0], 1, 1, 1))* mask_data
+                            weighted_means = weighted_map.sum(dim=(1,2,3)) /  mask_data.sum(dim=(1,2,3))
+                            for num_label in range(0, mask_data.shape[0]):
+                                masked_maps[self.metric_name + "_" + mask_key + f'_L{num_label}'] = weighted_means[num_label]
                     else:
                         masked_map = metric_map[mask_data > 0]
                         if self.average_method is not None:
