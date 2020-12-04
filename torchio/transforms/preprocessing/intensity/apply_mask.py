@@ -18,6 +18,7 @@ class ApplyMask(NormalizationTransform):
             **kwargs
             ):
         super().__init__(masking_method=masking_method, p=p, **kwargs)
+        self.args_names = 'masking_method',
 
     def apply_normalization(
             self,
