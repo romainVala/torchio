@@ -40,7 +40,7 @@ class RandomTransform(Transform):
             seed: Seed for :py:mod:`torch` random number generator.
         """
         if not seed:
-            seed = self.get_random_seed()
+            seed = self._get_random_seed()
 
         # Store the current rng_state to reset it after the execution
         torch_rng_state = torch.random.get_rng_state()
