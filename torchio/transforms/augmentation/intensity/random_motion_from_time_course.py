@@ -20,9 +20,9 @@ class RandomMotionFromTimeCourse(RandomTransform):
                  swallowMagnitude: Tuple[float, float] = (2,6), suddenFrequency: Tuple[int, int] = (0,5),
                  suddenMagnitude: Tuple[float, float] = (2,6), fitpars: Union[List, np.ndarray] = None,
                  displacement_shift_strategy: str = None, freq_encoding_dim: List = [0], tr: float = 2.3, es: float = 4E-3,
-                 nufft: bool = True,  oversampling_pct: float = 0.3, p: float = 1,
-                 preserve_center_frequency_pct: float = 0, correct_motion: bool = False,  metrics: Dict = None,
-                 keys: Optional[List[str]] = None, res_dir: str = None):
+                 nufft: bool = True,  oversampling_pct: float = 0.3,
+                 preserve_center_frequency_pct: float = 0, correct_motion: bool = False,
+                 res_dir: str = None, **kwargs):
         """
         parameters to simulate 3 types of displacement random noise swllow or sudden mouvement
         :param nT (int): number of points of the time course
@@ -48,7 +48,7 @@ class RandomMotionFromTimeCourse(RandomTransform):
         Note currently on freq_encoding_dim=0 give the same ringing direction for rotation and translation, dim 1 and 2 are not coherent
         Note fot suddenFrequency and swallowFrequency min max must differ and the max is never achieved, so to have 0 put (0,1)
         """
-        super(RandomMotionFromTimeCourse, self).__init__(p=p, metrics=metrics, keys=keys)
+        super(RandomMotionFromTimeCourse, self).__init__(**kwargs)
         self.tr = tr
         self.es = es
         self.nT = nT
