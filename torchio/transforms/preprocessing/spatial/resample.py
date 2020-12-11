@@ -1,6 +1,6 @@
 from pathlib import Path
 from numbers import Number
-from typing import Union, Tuple, Optional, Sequence
+from typing import Union, Tuple, Optional
 
 import torch
 import numpy as np
@@ -8,7 +8,7 @@ import SimpleITK as sitk
 
 from ....data.subject import Subject
 from ....data.image import Image, ScalarImage
-from ....torchio import DATA, AFFINE, TypeTripletFloat
+from ....torchio import TypeTripletFloat
 from ....utils import sitk_to_nib
 from ... import SpatialTransform
 
@@ -29,17 +29,14 @@ class Resample(SpatialTransform):
             If a string or :class:`~pathlib.Path` is given,
             all images will be resampled using the image
             with that name as reference or found at the path.
-            An instance of :class:`torchio.Image` can also be passed.
+            An instance of :class:`~torchio.Image` can also be passed.
         pre_affine_name: Name of the *image key* (not subject key) storing an
             affine matrix that will be applied to the image header before
             resampling. If ``None``, the image is resampled with an identity
             transform. See usage in the example below.
-        image_interpolation: String that defines the interpolation technique.
-            Supported interpolation techniques for resampling
-            are ``'nearest'``, ``'linear'`` and ``'bspline'``.
-        scalars_only: Apply only to instances of :class:`torchio.ScalarImage`.
-        p: Probability that this transform will be applied.
-        keys: See :class:`~torchio.transforms.Transform`.
+        image_interpolation: See :ref:`Interpolation`.
+        scalars_only: Apply only to instances of :class:`~torchio.ScalarImage`.
+        **kwargs: See :class:`~torchio.transforms.Transform` for additional keyword arguments.
 
     Example:
         >>> import torchio as tio
@@ -58,10 +55,9 @@ class Resample(SpatialTransform):
             image_interpolation: str = 'linear',
             pre_affine_name: Optional[str] = None,
             scalars_only: bool = False,
-            p: float = 1,
-            keys: Optional[Sequence[str]] = None,
+            **kwargs
             ):
-        super().__init__(p=p, keys=keys)
+        super().__init__(**kwargs)
         self.target = target
         self.reference_image, self.target_spacing = self.parse_target(target)
         self.image_interpolation = self.parse_interpolation(image_interpolation)
@@ -172,7 +168,7 @@ class Resample(SpatialTransform):
                 matrix = image[self.pre_affine_name]
                 if isinstance(matrix, torch.Tensor):
                     matrix = matrix.numpy()
-                image[AFFINE] = matrix @ image[AFFINE]
+                image.affine = matrix @ image.affine
 
             floating_itk = image.as_sitk(force_3d=True)
 
@@ -205,8 +201,8 @@ class Resample(SpatialTransform):
             resampled = resampler.Execute(floating_itk)
 
             array, affine = sitk_to_nib(resampled)
-            image[DATA] = torch.from_numpy(array)
-            image[AFFINE] = affine
+            image.data = torch.from_numpy(array)
+            image.affine = affine
         return subject
 
     @staticmethod

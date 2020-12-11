@@ -1,5 +1,5 @@
 from collections import defaultdict
-from typing import Union, Tuple, Optional, Sequence, Dict, List
+from typing import Union, Tuple, Dict, List
 
 import torch
 import numpy as np
@@ -30,18 +30,16 @@ class RandomBiasField(RandomTransform, IntensityTransform):
             If a tuple :math:`(a, b)` is specified, then
             :math:`n \sim \mathcal{U}(a, b)`.
         order: Order of the basis polynomial functions.
-        p: Probability that this transform will be applied.
-        keys: See :class:`~torchio.transforms.Transform`.
+        **kwargs: See :class:`~torchio.transforms.Transform` for additional keyword arguments.
     """
     def __init__(
             self,
             coefficients: Union[float, Tuple[float, float]] = 0.5,
             order: int = 3,
-            p: float = 1,
-            keys: Optional[Sequence[str]] = None,
+            **kwargs
             ):
-        super().__init__(p=p, keys=keys)
-        self.coefficients_range = self.parse_range(
+        super().__init__(**kwargs)
+        self.coefficients_range = self._parse_range(
             coefficients, 'coefficients_range')
         self.order = _parse_order(order)
 
@@ -54,7 +52,7 @@ class RandomBiasField(RandomTransform, IntensityTransform):
             )
             arguments['coefficients'][image_name] = coefficients
             arguments['order'][image_name] = self.order
-        transform = BiasField(**arguments)
+        transform = BiasField(**self.add_include_exclude(arguments))
         transformed = transform(subject)
         return transformed
 
@@ -80,15 +78,15 @@ class BiasField(IntensityTransform):
     Args:
         coefficients: Magnitudes of the polinomial coefficients.
         order: Order of the basis polynomial functions.
-        keys: See :class:`~torchio.transforms.Transform`.
+        **kwargs: See :class:`~torchio.transforms.Transform` for additional keyword arguments.
     """
     def __init__(
             self,
             coefficients: Union[List[float], Dict[str, List[float]]],
             order: Union[int, Dict[str, int]],
-            keys: Optional[Sequence[str]] = None,
+            **kwargs
             ):
-        super().__init__(keys=keys)
+        super().__init__(**kwargs)
         self.coefficients = coefficients
         self.order = order
         self.invert_transform = False
@@ -111,7 +109,7 @@ class BiasField(IntensityTransform):
                 image.data, order, coefficients)
             if self.invert_transform:
                 np.divide(1, bias_field, out=bias_field)
-            image[DATA] = image[DATA] * torch.from_numpy(bias_field)
+            image.data = image[DATA] * torch.from_numpy(bias_field)
         return subject
 
     @staticmethod

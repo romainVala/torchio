@@ -1,11 +1,11 @@
 import warnings
 from collections import defaultdict
-from typing import Tuple, Optional, Sequence
+from typing import Tuple
 
 import torch
 
 from ....utils import to_tuple
-from ....torchio import DATA, TypeRangeFloat
+from ....torchio import TypeRangeFloat
 from ....data.subject import Subject
 from ... import IntensityTransform
 from .. import RandomTransform
@@ -24,8 +24,7 @@ class RandomGamma(RandomTransform, IntensityTransform):
             Negative and positive values for this argument perform gamma
             compression and expansion, respectively.
             See the `Gamma correction`_ Wikipedia entry for more information.
-        p: Probability that this transform will be applied.
-        keys: See :class:`~torchio.transforms.Transform`.
+        **kwargs: See :class:`~torchio.transforms.Transform` for additional keyword arguments.
 
     .. _Gamma correction: https://en.wikipedia.org/wiki/Gamma_correction
 
@@ -46,18 +45,17 @@ class RandomGamma(RandomTransform, IntensityTransform):
     def __init__(
             self,
             log_gamma: TypeRangeFloat = (-0.3, 0.3),
-            p: float = 1,
-            keys: Optional[Sequence[str]] = None,
+            **kwargs
             ):
-        super().__init__(p=p, keys=keys)
-        self.log_gamma_range = self.parse_range(log_gamma, 'log_gamma')
+        super().__init__(**kwargs)
+        self.log_gamma_range = self._parse_range(log_gamma, 'log_gamma')
 
     def apply_transform(self, subject: Subject) -> Subject:
         arguments = defaultdict(dict)
         for name, image in self.get_images_dict(subject).items():
             gammas = [self.get_params(self.log_gamma_range) for _ in image.data]
             arguments['gamma'][name] = gammas
-        transform = Gamma(**arguments)
+        transform = Gamma(**self.add_include_exclude(arguments))
         transformed = transform(subject)
         return transformed
 
@@ -75,7 +73,7 @@ class Gamma(IntensityTransform):
             Negative and positive values for this argument perform gamma
             compression and expansion, respectively.
             See the `Gamma correction`_ Wikipedia entry for more information.
-        keys: See :class:`~torchio.transforms.Transform`.
+        **kwargs: See :class:`~torchio.transforms.Transform` for additional keyword arguments.
 
     .. _Gamma correction: https://en.wikipedia.org/wiki/Gamma_correction
 
@@ -96,9 +94,9 @@ class Gamma(IntensityTransform):
     def __init__(
             self,
             gamma: float,
-            keys: Optional[Sequence[str]] = None,
+            **kwargs
             ):
-        super().__init__(keys=keys)
+        super().__init__(**kwargs)
         self.gamma = gamma
         self.args_names = ('gamma',)
         self.invert_transform = False
@@ -117,7 +115,7 @@ class Gamma(IntensityTransform):
                 else:
                     transformed_tensor = power(tensor, gamma)
                 transformed_tensors.append(transformed_tensor)
-            image[DATA] = torch.stack(transformed_tensors)
+            image.data = torch.stack(transformed_tensors)
         return subject
 
 

@@ -1,12 +1,12 @@
 from collections import defaultdict
-from typing import Optional, Tuple, Union, List, Sequence, Dict
+from typing import Tuple, Union, List, Sequence, Dict
 
 import torch
 import numpy as np
 
 from ....data.subject import Subject
 from ....utils import to_tuple
-from ....torchio import DATA, TypeTuple, TypeData, TypeTripletInt
+from ....torchio import TypeTuple, TypeData, TypeTripletInt
 from ... import IntensityTransform
 from .. import RandomTransform
 
@@ -22,20 +22,18 @@ class RandomSwap(RandomTransform, IntensityTransform):
 
     Args:
         patch_size: Tuple of integers :math:`(w, h, d)` to swap patches
-            of size :math:`h \times w \times d`.
+            of size :math:`w \times h \times d`.
             If a single number :math:`n` is provided, :math:`w = h = d = n`.
         num_iterations: Number of times that two patches will be swapped.
-        p: Probability that this transform will be applied.
-        keys: See :class:`~torchio.transforms.Transform`.
+        **kwargs: See :class:`~torchio.transforms.Transform` for additional keyword arguments.
     """
     def __init__(
             self,
             patch_size: TypeTuple = 15,
             num_iterations: int = 100,
-            p: float = 1,
-            keys: Optional[Sequence[str]] = None,
+            **kwargs,
             ):
-        super().__init__(p=p, keys=keys)
+        super().__init__(**kwargs)
         self.patch_size = np.array(to_tuple(patch_size))
         self.num_iterations = self._parse_num_iterations(num_iterations)
 
@@ -87,7 +85,7 @@ class RandomSwap(RandomTransform, IntensityTransform):
             )
             arguments['locations'][name] = locations
             arguments['patch_size'][name] = self.patch_size
-        transform = Swap(**arguments)
+        transform = Swap(**self.add_include_exclude(arguments))
         transformed = transform(subject)
         return transformed
 
@@ -100,18 +98,18 @@ class Swap(IntensityTransform):
 
     Args:
         patch_size: Tuple of integers :math:`(w, h, d)` to swap patches
-            of size :math:`h \times w \times d`.
+            of size :math:`w \times h \times d`.
             If a single number :math:`n` is provided, :math:`w = h = d = n`.
         num_iterations: Number of times that two patches will be swapped.
-        keys: See :class:`~torchio.transforms.Transform`.
+        **kwargs: See :class:`~torchio.transforms.Transform` for additional keyword arguments.
     """
     def __init__(
             self,
             patch_size: Union[TypeTripletInt, Dict[str, TypeTripletInt]],
             locations: Union[TypeLocations, Dict[str, TypeLocations]],
-            keys: Optional[Sequence[str]] = None,
+            **kwargs
             ):
-        super().__init__(keys=keys)
+        super().__init__(**kwargs)
         self.locations = locations
         self.patch_size = patch_size
         self.args_names = 'locations', 'patch_size'
@@ -125,7 +123,7 @@ class Swap(IntensityTransform):
                 patch_size = self.patch_size[name]
             if self.invert_transform:
                 locations.reverse()
-            image[DATA] = swap(image.data, patch_size, locations)
+            image.data = swap(image.data, patch_size, locations)
         return subject
 
 

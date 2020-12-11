@@ -1,12 +1,12 @@
 from collections import defaultdict
-from typing import Union, Tuple, Optional, Sequence, Dict
+from typing import Union, Tuple, Dict
 
 import torch
 import numpy as np
 import scipy.ndimage as ndi
 
 from ....utils import to_tuple
-from ....torchio import DATA, TypeData, TypeTripletFloat, TypeSextetFloat
+from ....torchio import TypeData, TypeTripletFloat, TypeSextetFloat
 from ....data.subject import Subject
 from ... import IntensityTransform
 from .. import RandomTransform
@@ -27,16 +27,14 @@ class RandomBlur(RandomTransform, IntensityTransform):
             then :math:`\sigma_i \sim \mathcal{U}(0, x)`.
             If three values :math:`(x_1, x_2, x_3)` are provided,
             then :math:`\sigma_i \sim \mathcal{U}(0, x_i)`.
-        p: Probability that this transform will be applied.
-        keys: See :class:`~torchio.transforms.Transform`.
+        **kwargs: See :class:`~torchio.transforms.Transform` for additional keyword arguments.
     """
     def __init__(
             self,
             std: Union[float, Tuple[float, float]] = (0, 2),
-            p: float = 1,
-            keys: Optional[Sequence[str]] = None,
+            **kwargs
             ):
-        super().__init__(p=p, keys=keys)
+        super().__init__(**kwargs)
         self.std_ranges = self.parse_params(std, None, 'std', min_constraint=0)
 
     def apply_transform(self, subject: Subject) -> Subject:
@@ -44,7 +42,7 @@ class RandomBlur(RandomTransform, IntensityTransform):
         for name, image in self.get_images_dict(subject).items():
             stds = [self.get_params(self.std_ranges) for _ in image.data]
             arguments['std'][name] = stds
-        transform = Blur(**arguments)
+        transform = Blur(**self.add_include_exclude(arguments))
         transformed = transform(subject)
         return transformed
 
@@ -60,14 +58,14 @@ class Blur(IntensityTransform):
         std: Tuple :math:`(\sigma_1, \sigma_2, \sigma_3)` representing the
             the standard deviations (in mm) of the standard deviations
             of the Gaussian kernels used to blur the image along each axis.
-        keys: See :class:`~torchio.transforms.Transform`.
+        **kwargs: See :class:`~torchio.transforms.Transform` for additional keyword arguments.
     """
     def __init__(
             self,
             std: Union[TypeTripletFloat, Dict[str, TypeTripletFloat]],
-            keys: Optional[Sequence[str]] = None,
+            **kwargs
             ):
-        super().__init__(keys=keys)
+        super().__init__(**kwargs)
         self.std = std
         self.args_names = ('std',)
 
@@ -85,7 +83,7 @@ class Blur(IntensityTransform):
                     std,
                 )
                 transformed_tensors.append(transformed_tensor)
-            image[DATA] = torch.stack(transformed_tensors)
+            image.data = torch.stack(transformed_tensors)
         return subject
 
 

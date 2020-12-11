@@ -2,7 +2,6 @@
 
 """The setup script."""
 
-import os
 from setuptools import setup, find_packages
 
 with open('README.md', encoding='utf8') as readme_file:
@@ -23,18 +22,11 @@ requirements = [
 ]
 
 
-def is_slicer_python():
-    """
-    Returns True if the code is believed to be executed from within Slicer's
-    internal Python.
-    """
-    python_home = os.environ.get('PYTHONHOME')
-    return python_home is not None and 'Slicer' in python_home
-
-
 # New versions of Slicer need SimpleITK 2, but SimpleITK is preferred
 # because of https://github.com/SimpleITK/SimpleITK/issues/1239
-if not is_slicer_python():
+try:
+    import SimpleITK  # noqa: F401
+except ImportError:
     requirements.append('SimpleITK<2')
 
 
@@ -58,7 +50,8 @@ setup(
     ),
     entry_points={
         'console_scripts': [
-            'torchio-transform=torchio.cli:apply_transform',
+            'torchio-transform=torchio.cli.apply_transform:main',
+            'tiohd=torchio.cli.print_info:main',
         ],
     },
     extras_require={
@@ -76,6 +69,6 @@ setup(
     test_suite='tests',
     tests_require=[],
     url='https://github.com/fepegar/torchio',
-    version='0.18.0',
+    version='0.18.3',
     zip_safe=False,
 )

@@ -1,12 +1,12 @@
 from collections import defaultdict
-from typing import Tuple, Optional, Sequence, List, Union, Dict
+from typing import Tuple, Sequence, List, Union, Dict
 
 import torch
 import numpy as np
 import SimpleITK as sitk
 
 from ....utils import nib_to_sitk
-from ....torchio import DATA, AFFINE, TypeTripletFloat
+from ....torchio import TypeTripletFloat
 from ....data.subject import Subject
 from ... import IntensityTransform, FourierTransform
 from .. import RandomTransform
@@ -38,8 +38,7 @@ class RandomMotion(RandomTransform, IntensityTransform, FourierTransform):
         num_transforms: Number of simulated movements.
             Larger values generate more distorted images.
         image_interpolation: See :ref:`Interpolation`.
-        p: Probability that this transform will be applied.
-        keys: See :class:`~torchio.transforms.Transform`.
+        **kwargs: See :class:`~torchio.transforms.Transform` for additional keyword arguments.
 
     .. warning:: Large numbers of movements lead to longer execution times for
         3D images.
@@ -50,10 +49,9 @@ class RandomMotion(RandomTransform, IntensityTransform, FourierTransform):
             translation: float = 10,  # in mm
             num_transforms: int = 2,
             image_interpolation: str = 'linear',
-            p: float = 1,
-            keys: Optional[Sequence[str]] = None,
+            **kwargs
             ):
-        super().__init__(p=p, keys=keys)
+        super().__init__(**kwargs)
         self.degrees_range = self.parse_degrees(degrees)
         self.translation_range = self.parse_translation(translation)
         if not 0 < num_transforms or not isinstance(num_transforms, int):
@@ -79,7 +77,7 @@ class RandomMotion(RandomTransform, IntensityTransform, FourierTransform):
             arguments['degrees'][name] = degrees_params
             arguments['translation'][name] = translation_params
             arguments['image_interpolation'][name] = self.image_interpolation
-        transform = Motion(**arguments)
+        transform = Motion(**self.add_include_exclude(arguments))
         transformed = transform(subject)
         return transformed
 
@@ -126,7 +124,7 @@ class Motion(IntensityTransform, FourierTransform):
         translation: Sequence of translations :math:`(t_1, t_2, t_3)` in mm.
         times: Sequence of times from 0 to 1 at which the motions happen.
         image_interpolation: See :ref:`Interpolation`.
-        keys: See :class:`~torchio.transforms.Transform`.
+        **kwargs: See :class:`~torchio.transforms.Transform` for additional keyword arguments.
     """
     def __init__(
             self,
@@ -134,9 +132,9 @@ class Motion(IntensityTransform, FourierTransform):
             translation: Union[TypeTripletFloat, Dict[str, TypeTripletFloat]],
             times: Union[Sequence[float], Dict[str, Sequence[float]]],
             image_interpolation: Union[Sequence[str], Dict[str, Sequence[str]]],
-            keys: Optional[Sequence[str]] = None,
+            **kwargs
             ):
-        super().__init__(keys=keys)
+        super().__init__(**kwargs)
         self.degrees = degrees
         self.translation = translation
         self.times = times
@@ -160,10 +158,10 @@ class Motion(IntensityTransform, FourierTransform):
                 times = self.times[image_name]
                 image_interpolation = self.image_interpolation[image_name]
             result_arrays = []
-            for data in image[DATA]:
+            for channel in image.data:
                 sitk_image = nib_to_sitk(
-                    data[np.newaxis],
-                    image[AFFINE],
+                    channel[np.newaxis],
+                    image.affine,
                     force_3d=True,
                 )
                 transforms = self.get_rigid_transforms(
@@ -171,15 +169,15 @@ class Motion(IntensityTransform, FourierTransform):
                     translation,
                     sitk_image,
                 )
-                data = self.add_artifact(
+                transformed_channel = self.add_artifact(
                     sitk_image,
                     transforms,
                     times,
                     image_interpolation,
                 )
-                result_arrays.append(data)
+                result_arrays.append(transformed_channel)
             result = np.stack(result_arrays)
-            image[DATA] = torch.from_numpy(result)
+            image.data = torch.from_numpy(result)
         return subject
 
     def get_rigid_transforms(

@@ -1,10 +1,9 @@
 from collections import defaultdict
-from typing import Tuple, Optional, Union, Sequence, Dict
+from typing import Tuple, Union, Dict
 
 import torch
 import numpy as np
 
-from ....torchio import DATA
 from ....data.subject import Subject
 from ... import IntensityTransform, FourierTransform
 from .. import RandomTransform
@@ -39,8 +38,7 @@ class RandomGhosting(RandomTransform, IntensityTransform):
         restore: Number between ``0`` and ``1`` indicating how much of the
             :math:`k`-space center should be restored after removing the planes
             that generate the artifact.
-        p: Probability that this transform will be applied.
-        keys: See :class:`~torchio.transforms.Transform`.
+        **kwargs: See :class:`~torchio.transforms.Transform` for additional keyword arguments.
 
     .. note:: The execution time of this transform does not depend on the
         number of ghosts.
@@ -51,10 +49,9 @@ class RandomGhosting(RandomTransform, IntensityTransform):
             axes: Union[int, Tuple[int, ...]] = (0, 1, 2),
             intensity: Union[float, Tuple[float, float]] = (0.5, 1),
             restore: float = 0.02,
-            p: float = 1,
-            keys: Optional[Sequence[str]] = None,
+            **kwargs
             ):
-        super().__init__(p=p, keys=keys)
+        super().__init__(**kwargs)
         if not isinstance(axes, tuple):
             try:
                 axes = tuple(axes)
@@ -64,9 +61,9 @@ class RandomGhosting(RandomTransform, IntensityTransform):
             if not isinstance(axis, str) and axis not in (0, 1, 2):
                 raise ValueError(f'Axes must be in (0, 1, 2), not "{axes}"')
         self.axes = axes
-        self.num_ghosts_range = self.parse_range(
+        self.num_ghosts_range = self._parse_range(
             num_ghosts, 'num_ghosts', min_constraint=0, type_constraint=int)
-        self.intensity_range = self.parse_range(
+        self.intensity_range = self._parse_range(
             intensity, 'intensity_range', min_constraint=0)
         self.restore = _parse_restore(restore)
 
@@ -87,7 +84,7 @@ class RandomGhosting(RandomTransform, IntensityTransform):
             arguments['axis'][name] = axis_param
             arguments['intensity'][name] = intensity_param
             arguments['restore'][name] = self.restore
-        transform = Ghosting(**arguments)
+        transform = Ghosting(**self.add_include_exclude(arguments))
         transformed = transform(subject)
         return transformed
 
@@ -123,7 +120,7 @@ class Ghosting(IntensityTransform, FourierTransform):
         restore: Number between ``0`` and ``1`` indicating how much of the
             :math:`k`-space center should be restored after removing the planes
             that generate the artifact.
-        keys: See :class:`~torchio.transforms.Transform`.
+        **kwargs: See :class:`~torchio.transforms.Transform` for additional keyword arguments.
 
     .. note:: The execution time of this transform does not depend on the
         number of ghosts.
@@ -134,9 +131,9 @@ class Ghosting(IntensityTransform, FourierTransform):
             axis: Union[int, Dict[str, int]],
             intensity: Union[float, Dict[str, float]],
             restore: Union[float, Dict[str, float]],
-            keys: Optional[Sequence[str]] = None,
+            **kwargs
             ):
-        super().__init__(keys=keys)
+        super().__init__(**kwargs)
         self.axis = axis
         self.num_ghosts = num_ghosts
         self.intensity = intensity
@@ -164,7 +161,7 @@ class Ghosting(IntensityTransform, FourierTransform):
                     restore,
                 )
                 transformed_tensors.append(transformed_tensor)
-            image[DATA] = torch.stack(transformed_tensors)
+            image.data = torch.stack(transformed_tensors)
         return subject
 
     def add_artifact(
@@ -208,7 +205,7 @@ class Ghosting(IntensityTransform, FourierTransform):
             spectrum[:, :, mk] = restore
 
         array_ghosts = self.inv_fourier_transform(spectrum)
-        array_ghosts = np.real(array_ghosts)
+        array_ghosts = np.real(array_ghosts).astype(np.float32)
         return torch.from_numpy(array_ghosts)
 
 

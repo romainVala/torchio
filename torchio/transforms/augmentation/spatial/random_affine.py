@@ -76,8 +76,7 @@ class RandomAffine(RandomTransform, SpatialTransform):
             `Otsu threshold <https://ieeexplore.ieee.org/document/4310076>`_.
             If it is a number, that value will be used.
         image_interpolation: See :ref:`Interpolation`.
-        p: Probability that this transform will be applied.
-        keys: See :class:`~torchio.transforms.Transform`.
+        **kwargs: See :class:`~torchio.transforms.Transform` for additional keyword arguments.
 
     Example:
         >>> import torchio as tio
@@ -104,10 +103,9 @@ class RandomAffine(RandomTransform, SpatialTransform):
             center: str = 'image',
             default_pad_value: Union[str, float] = 'minimum',
             image_interpolation: str = 'linear',
-            p: float = 1,
-            keys: Optional[Sequence[str]] = None,
+            **kwargs
             ):
-        super().__init__(p=p, keys=keys)
+        super().__init__(**kwargs)
         self.isotropic = isotropic
         _parse_scales_isotropic(scales, isotropic)
         self.scales = self.parse_params(scales, 1, 'scales', min_constraint=0)
@@ -153,7 +151,7 @@ class RandomAffine(RandomTransform, SpatialTransform):
             default_pad_value=self.default_pad_value,
             image_interpolation=self.image_interpolation,
         )
-        transform = Affine(**arguments)
+        transform = Affine(**self.add_include_exclude(arguments))
         transformed = transform(subject)
         return transformed
 
@@ -180,7 +178,7 @@ class Affine(SpatialTransform):
             `Otsu threshold <https://ieeexplore.ieee.org/document/4310076>`_.
             If it is a number, that value will be used.
         image_interpolation: See :ref:`Interpolation`.
-        keys: See :class:`~torchio.transforms.Transform`.
+        **kwargs: See :class:`~torchio.transforms.Transform` for additional keyword arguments.
     """
     def __init__(
             self,
@@ -190,9 +188,9 @@ class Affine(SpatialTransform):
             center: str = 'image',
             default_pad_value: Union[str, float] = 'minimum',
             image_interpolation: str = 'linear',
-            keys: Optional[Sequence[str]] = None,
+            **kwargs
             ):
-        super().__init__(keys=keys)
+        super().__init__(**kwargs)
         self.scales = self.parse_params(
             scales,
             None,
@@ -284,7 +282,7 @@ class Affine(SpatialTransform):
             for tensor in image[DATA]:
                 transformed_tensor = self.apply_affine_transform(
                     tensor,
-                    image[AFFINE],
+                    image.affine,
                     scaling_params.tolist(),
                     rotation_params.tolist(),
                     translation_params.tolist(),
@@ -292,7 +290,7 @@ class Affine(SpatialTransform):
                     center_lps=center,
                 )
                 transformed_tensors.append(transformed_tensor)
-            image[DATA] = torch.stack(transformed_tensors)
+            image.data = torch.stack(transformed_tensors)
         return subject
 
     def apply_affine_transform(

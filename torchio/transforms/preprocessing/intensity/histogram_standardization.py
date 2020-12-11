@@ -30,8 +30,8 @@ class HistogramStandardization(NormalizationTransform):
             NumPy arrays defining the landmarks after training with
             :meth:`torchio.transforms.HistogramStandardization.train`.
         masking_method: See
-            :class:`~torchio.transforms.preprocessing.normalization_transform.NormalizationTransform`.
-        p: Probability that this transform will be applied.
+            :class:`~torchio.transforms.preprocessing.intensity.NormalizationTransform`.
+        **kwargs: See :class:`~torchio.transforms.Transform` for additional keyword arguments.
 
     Example:
         >>> import torch
@@ -48,9 +48,9 @@ class HistogramStandardization(NormalizationTransform):
             self,
             landmarks: TypeLandmarks,
             masking_method: TypeMaskingMethod = None,
-            p: float = 1,
+            **kwargs
             ):
-        super().__init__(masking_method=masking_method, p=p)
+        super().__init__(masking_method=masking_method, **kwargs)
         self.landmarks = landmarks
         self.landmarks_dict = self._parse_landmarks(landmarks)
         self.args_names = 'landmarks', 'masking_method'
@@ -88,7 +88,7 @@ class HistogramStandardization(NormalizationTransform):
             raise KeyError(message)
         image_dict = subject[image_name]
         landmarks = self.landmarks_dict[image_name]
-        image_dict[DATA] = normalize(
+        image_dict.data = normalize(
             image_dict[DATA],
             landmarks,
             mask=mask,

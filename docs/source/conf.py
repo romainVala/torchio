@@ -25,7 +25,7 @@ author = 'Fernando Pérez-García'
 
 # version is the short X.Y version
 # release is the full version, including alpha/beta/rc tags
-version = release = '0.18.0'
+version = release = '0.18.3'
 
 
 # -- General configuration ---------------------------------------------------
@@ -54,6 +54,7 @@ intersphinx_mapping = {
     'torch': ('https://pytorch.org/docs/master/', None),  # https://github.com/pytorch/fairseq/blob/adb5b9c71f7ef4fe2f258e0da102d819ab9920ef/docs/conf.py#L131
     'torchvision': ('https://pytorch.org/docs/master/', None),
     'nibabel': ('https://nipy.org/nibabel/', None),
+    'numpy': ('https://numpy.org/doc/stable/', None),
 }
 
 # Add any paths that contain templates here, relative to this directory.

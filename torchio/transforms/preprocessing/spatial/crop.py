@@ -1,9 +1,6 @@
-from typing import Sequence, Optional
-
 import numpy as np
 import nibabel as nib
 
-from ....torchio import DATA, AFFINE
 from ....data.subject import Subject
 from .bounds_transform import BoundsTransform, TypeBounds
 
@@ -16,7 +13,7 @@ class Crop(BoundsTransform):
             :math:`(w_{ini}, w_{fin}, h_{ini}, h_{fin}, d_{ini}, d_{fin})`
             defining the number of values cropped from the edges of each axis.
             If the initial shape of the image is
-            :math:`H \times W \times D`, the final shape will be
+            :math:`W \times H \times D`, the final shape will be
             :math:`(- w_{ini} + W - w_{fin}) \times (- h_{ini} + H - h_{fin})
             \times (- d_{ini} + D - d_{fin})`.
             If only three values :math:`(w, h, d)` are provided, then
@@ -26,14 +23,14 @@ class Crop(BoundsTransform):
             If only one value :math:`n` is provided, then
             :math:`w_{ini} = w_{fin} = h_{ini} = h_{fin}
             = d_{ini} = d_{fin} = n`.
+        **kwargs: See :class:`~torchio.transforms.Transform` for additional keyword arguments.
     """
     def __init__(
             self,
             cropping: TypeBounds,
-            p: float = 1,
-            keys: Optional[Sequence[str]] = None,
+            **kwargs
             ):
-        super().__init__(cropping, p=p, keys=keys)
+        super().__init__(cropping, **kwargs)
         self.cropping = cropping
         self.args_names = ('cropping',)
 
@@ -48,8 +45,8 @@ class Crop(BoundsTransform):
             new_affine[:3, 3] = new_origin
             i0, j0, k0 = index_ini
             i1, j1, k1 = index_fin
-            image[DATA] = image[DATA][:, i0:i1, j0:j1, k0:k1].clone()
-            image[AFFINE] = new_affine
+            image.data = image.data[:, i0:i1, j0:j1, k0:k1].clone()
+            image.affine = new_affine
         return sample
 
     def inverse(self):

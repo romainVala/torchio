@@ -1,11 +1,10 @@
 from numbers import Number
-from typing import Union, Sequence, Optional
+from typing import Union
 
 import numpy as np
 import nibabel as nib
 import torch
 
-from ....torchio import DATA, AFFINE
 from ....data.subject import Subject
 from .bounds_transform import BoundsTransform, TypeBounds
 
@@ -30,8 +29,7 @@ class Pad(BoundsTransform):
             d_{ini} = d_{fin} = n`.
         padding_mode: See possible modes in `NumPy docs`_. If it is a number,
             the mode will be set to ``'constant'``.
-        p: Probability that this transform will be applied.
-        keys: See :class:`~torchio.transforms.Transform`.
+        **kwargs: See :class:`~torchio.transforms.Transform` for additional keyword arguments.
 
     .. _NumPy docs: https://numpy.org/doc/stable/reference/generated/numpy.pad.html
     """
@@ -54,10 +52,9 @@ class Pad(BoundsTransform):
             self,
             padding: TypeBounds,
             padding_mode: Union[str, float] = 0,
-            p: float = 1,
-            keys: Optional[Sequence[str]] = None,
+            **kwargs
             ):
-        super().__init__(padding, p=p, keys=keys)
+        super().__init__(padding, **kwargs)
         self.padding = padding
         self.padding_mode, self.fill = self.parse_padding_mode(padding_mode)
         self.args_names = 'padding', 'padding_mode'
@@ -88,9 +85,9 @@ class Pad(BoundsTransform):
                 kwargs['constant_values'] = self.fill
             pad_params = self.bounds_parameters
             paddings = (0, 0), pad_params[:2], pad_params[2:4], pad_params[4:]
-            padded = np.pad(image[DATA], paddings, **kwargs)
-            image[DATA] = torch.from_numpy(padded)
-            image[AFFINE] = new_affine
+            padded = np.pad(image.data, paddings, **kwargs)
+            image.data = torch.from_numpy(padded)
+            image.affine = new_affine
         return subject
 
     def inverse(self):

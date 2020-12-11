@@ -2,7 +2,7 @@
 This is the docstring of random transform module
 """
 
-from typing import Optional, Tuple, Sequence
+from typing import Tuple
 
 import torch
 
@@ -15,16 +15,13 @@ class RandomTransform(Transform):
     """Base class for stochastic augmentation transforms.
 
     Args:
-        p: Probability that this transform will be applied.
-        keys: See :class:`~torchio.transforms.Transform`.
+        **kwargs: See :class:`~torchio.transforms.Transform` for additional keyword arguments.
     """
     def __init__(
             self,
-            p: float = 1,
-            keys: Optional[Sequence[str]] = None,
-            metrics = None,
+            **kwargs
             ):
-        super().__init__(p=p, keys=keys, metrics=metrics)
+        super().__init__(**kwargs)
 
     def __call__(
         self,
@@ -55,24 +52,29 @@ class RandomTransform(Transform):
         torch.random.set_rng_state(torch_rng_state)
         return transformed
 
+    def add_include_exclude(self, kwargs):
+        kwargs['include'] = self.include
+        kwargs['exclude'] = self.exclude
+        return kwargs
+
     def parse_degrees(
             self,
             degrees: TypeRangeFloat,
             ) -> Tuple[float, float]:
-        return self.parse_range(degrees, 'degrees')
+        return self._parse_range(degrees, 'degrees')
 
     def parse_translation(
             self,
             translation: TypeRangeFloat,
             ) -> Tuple[float, float]:
-        return self.parse_range(translation, 'translation')
+        return self._parse_range(translation, 'translation')
 
     @staticmethod
     def sample_uniform(a, b):
         return torch.FloatTensor(1).uniform_(a, b)
 
     @staticmethod
-    def get_random_seed():
+    def _get_random_seed():
         """Generate a random seed.
 
         Returns:

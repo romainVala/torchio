@@ -58,8 +58,7 @@ class RandomLabelsToImage(RandomTransform, IntensityTransform):
             Discretization is done taking the class of the highest value per
             voxel in the different partial-volume label maps using
             :func:`torch.argmax()` on the channel dimension (i.e. 0).
-        p: Probability that this transform will be applied.
-        keys: See :class:`~torchio.transforms.Transform`.
+        **kwargs: See :class:`~torchio.transforms.Transform` for additional keyword arguments.
 
     .. note:: It is recommended to blur the new images to make the result more
         realistic. See
@@ -103,10 +102,9 @@ class RandomLabelsToImage(RandomTransform, IntensityTransform):
             discretize: bool = False,
             create_mask_index = None,
             create_mask_name = None,
-            p: float = 1,
-            keys: Optional[Sequence[str]] = None,
+            **kwargs
             ):
-        super().__init__(p=p, keys=keys)
+        super().__init__(**kwargs)
         self.label_key = _parse_label_key(label_key)
         self.used_labels = _parse_used_labels(used_labels)
         self.mean, self.std = self.parse_mean_and_std(mean, std)
@@ -182,16 +180,16 @@ class RandomLabelsToImage(RandomTransform, IntensityTransform):
             else:
                 raise RuntimeError(f'No label maps found in subject: {subject}')
 
-        arguments = dict(
-            label_key=self.label_key,
-            mean=[],
-            std=[],
-            image_key=self.image_key,
-            used_labels=self.used_labels,
-            discretize=self.discretize,
-            create_mask_index=self.create_mask_index,
-            create_mask_name=self.create_mask_name
-        )
+        arguments = {
+            'label_key': self.label_key,
+            'mean': [],
+            'std': [],
+            'image_key': self.image_key,
+            'used_labels': self.used_labels,
+            'discretize': self.discretize,
+            'create_mask_index': self.create_mask_index,
+            'create_mask_name': self.create_mask_name
+}
 
         label_map = subject[self.label_key][DATA]
 
@@ -223,7 +221,7 @@ class RandomLabelsToImage(RandomTransform, IntensityTransform):
             arguments['mean'].append(mean)
             arguments['std'].append(std)
 
-        transform = LabelsToImage(**arguments)
+        transform = LabelsToImage(**self.add_include_exclude(arguments))
         transformed = transform(subject)
         return transformed
 
@@ -274,7 +272,7 @@ class LabelsToImage(IntensityTransform):
             voxel in the different partial-volume label maps using
             :func:`torch.argmax()` on the channel dimension (i.e. 0).
         seed: Seed for the random number generator.
-        keys: See :class:`~torchio.transforms.Transform`.
+        **kwargs: See :class:`~torchio.transforms.Transform` for additional keyword arguments.
 
     .. note:: It is recommended to blur the new images to make the result more
         realistic. See
@@ -290,9 +288,9 @@ class LabelsToImage(IntensityTransform):
             discretize: bool = False,
             create_mask_index=None,
             create_mask_name=None,
-            keys: Optional[List[str]] = None,
+            **kwargs
             ):
-        super().__init__(keys=keys)
+        super().__init__(**kwargs)
         self.label_key = _parse_label_key(label_key)
         self.used_labels = _parse_used_labels(used_labels)
         self.mean, self.std = mean, std
