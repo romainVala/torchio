@@ -77,7 +77,8 @@ class RandomMotionFromTimeCourse(RandomTransform):
         self.to_substract = None
         self.res_dir = res_dir
         self.nb_saved = 0
-        self.args_names = ('metrics','mean_DispP','rmse_Disp','meanDispP_wTF2','rmse_Disp_wTF2')
+        self.args_names = ('nT','maxDisp','maxRot','noiseBasePars','swallowFrequency')
+                           #'metrics','mean_DispP','rmse_Disp','meanDispP_wTF2','rmse_Disp_wTF2')
 
     def apply_transform(self, sample):
         for image_name, image_dict in sample.get_images_dict().items():
