@@ -3,11 +3,13 @@ from typing import Tuple, Optional, List, Union, Dict
 import torch
 import numpy as np
 from ....data.subject import Subject
-from ....torchio import LABEL, DATA, AFFINE, TYPE, TypeRangeFloat, STEM
+from ....constants import LABEL, DATA, AFFINE, TYPE, STEM
+from ....typing import TypeRangeFloat
 from .. import RandomTransform
+from ... import SpatialTransform
 
 
-class RandomAffineFFT(RandomTransform):
+class RandomAffineFFT(RandomTransform, SpatialTransform):
     r"""Random affine transformation.
 
     Args:

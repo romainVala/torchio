@@ -4,7 +4,8 @@ from typing import Tuple, Union
 import torch
 
 from ....data.subject import Subject
-from ....torchio import DATA, TypeCallable
+from ....constants import DATA
+from ....typing import TypeCallable
 from . import NormalizationTransform
 
 

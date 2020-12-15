@@ -8,7 +8,6 @@ from .intensity.rescale import RescaleIntensity
 from .intensity.z_normalization import ZNormalization
 from .intensity.histogram_standardization import HistogramStandardization
 
-from .intensity.histogram_equalize import HistogramEqualize
 from .intensity.histogram_random_change import HistogramRandomChange
 
 from .intensity.apply_mask import ApplyMask
