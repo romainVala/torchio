@@ -10,7 +10,7 @@ import numpy as np
 import SimpleITK as sitk
 
 from ..data.subject import Subject
-from .. import TypeData, TypeNumber, TypeKeys
+from ..typing import TypeData, TypeNumber, TypeKeys
 from ..utils import nib_to_sitk, sitk_to_nib, to_tuple
 from .interpolation import Interpolation, get_sitk_interpolator
 from .data_parser import DataParser, TypeTransformInput
@@ -121,8 +121,6 @@ class Transform(ABC):
         for image in transformed.get_images(intensity_only=False):
             ndim = image.data.ndim
             assert ndim == 4, f'Output of {self.name} is {ndim}D'
-            dtype = image.data.dtype
-            assert dtype is torch.float32, f'Output of {self.name} is {dtype}'
 
         output = data_parser.get_output(transformed)
         return output

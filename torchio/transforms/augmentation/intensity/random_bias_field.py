@@ -4,7 +4,7 @@ from typing import Union, Tuple, Dict, List
 import torch
 import numpy as np
 
-from ....torchio import DATA, TypeData
+from ....typing import TypeData
 from ....data.subject import Subject
 from ... import IntensityTransform
 from .. import RandomTransform
@@ -109,7 +109,7 @@ class BiasField(IntensityTransform):
                 image.data, order, coefficients)
             if self.invert_transform:
                 np.divide(1, bias_field, out=bias_field)
-            image.data = image[DATA] * torch.from_numpy(bias_field)
+            image.data = image.data * torch.from_numpy(bias_field)
         return subject
 
     @staticmethod

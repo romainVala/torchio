@@ -1,7 +1,8 @@
 from typing import Sequence, Optional
 import torch
+from ..typing import TypeCallable
 from ..data.subject import Subject
-from ..torchio import DATA, TYPE, TypeCallable
+from ..constants import TYPE
 from .transform import Transform
 
 
@@ -43,18 +44,12 @@ class Lambda(Transform):
                 if image_type not in self.types_to_apply:
                     continue
 
-            function_arg = image[DATA]
+            function_arg = image.data
             result = self.function(function_arg)
             if not isinstance(result, torch.Tensor):
                 message = (
                     'The returned value from the callable argument must be'
                     f' of type {torch.Tensor}, not {type(result)}'
-                )
-                raise ValueError(message)
-            if result.dtype != torch.float32:
-                message = (
-                    'The data type of the returned value must be'
-                    f' of type {torch.float32}, not {result.dtype}'
                 )
                 raise ValueError(message)
             if result.ndim != function_arg.ndim:

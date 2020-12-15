@@ -2,9 +2,9 @@ from typing import Tuple, Optional, Sequence, List
 
 import torch
 
-from ....torchio import DATA, TypeData, TypeRangeFloat
 from ....utils import check_sequence
 from ....data.subject import Subject
+from ....typing import TypeData, TypeRangeFloat
 from ....data.image import ScalarImage, LabelMap
 from ... import IntensityTransform
 from .. import RandomTransform
@@ -191,11 +191,11 @@ class RandomLabelsToImage(RandomTransform, IntensityTransform):
             'create_mask_name': self.create_mask_name
 }
 
-        label_map = subject[self.label_key][DATA]
+        label_map = subject[self.label_key].data
 
         # Find out if we face a partial-volume image or a label map.
         # One-hot-encoded label map is considered as a partial-volume image
-        all_discrete = label_map.eq(label_map.round()).all()
+        all_discrete = label_map.eq(label_map.float().round()).all()
         same_num_dims = label_map.squeeze().dim() < label_map.dim()
         is_discretized = all_discrete and same_num_dims
 
@@ -318,7 +318,7 @@ class LabelsToImage(IntensityTransform):
 
         # Find out if we face a partial-volume image or a label map.
         # One-hot-encoded label map is considered as a partial-volume image
-        all_discrete = label_map.eq(label_map.round()).all()
+        all_discrete = label_map.eq(label_map.float().round()).all()
         same_num_dims = label_map.squeeze().dim() < label_map.dim()
         is_discretized = all_discrete and same_num_dims
 
@@ -364,7 +364,7 @@ class LabelsToImage(IntensityTransform):
                 bg_mask = label_map == -1
             else:
                 bg_mask = label_map.sum(dim=0, keepdim=True) < 0.5
-            final_image[DATA][bg_mask] = original_image[DATA][bg_mask]
+            final_image.data[bg_mask] = original_image.data[bg_mask].float()
 
         if self.create_mask_index is not None:
             #create a mask with the sum of the label

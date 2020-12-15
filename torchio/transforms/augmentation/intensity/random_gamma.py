@@ -5,7 +5,7 @@ from typing import Tuple
 import torch
 
 from ....utils import to_tuple
-from ....torchio import TypeRangeFloat
+from ....typing import TypeRangeFloat
 from ....data.subject import Subject
 from ... import IntensityTransform
 from .. import RandomTransform
@@ -108,6 +108,7 @@ class Gamma(IntensityTransform):
                 gamma = self.gamma[name]
             gammas = to_tuple(gamma, length=len(image.data))
             transformed_tensors = []
+            image.data = image.data.float()
             for gamma, tensor in zip(gammas, image.data):
                 if self.invert_transform:
                     correction = power(tensor, 1 - gamma)
