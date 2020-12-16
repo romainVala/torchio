@@ -1,6 +1,6 @@
 from .map_metric import MapMetric
 from ..data import Subject
-from ..torchio import DATA
+from ..constants import DATA
 from typing import Callable, Union, List
 
 

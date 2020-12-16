@@ -2,7 +2,7 @@ import torch
 from .map_metric import MapMetric
 from .utils import spatial_filter_nd, gauss_kernel_3d
 from ..data import Subject
-from ..torchio import DATA
+from ..constants import DATA
 
 
 class SSIM3D(MapMetric):

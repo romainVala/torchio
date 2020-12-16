@@ -1,6 +1,6 @@
 from .base_metric import Metric
 from ..data.subject import Subject
-from ..torchio import DATA
+from ..constants import DATA
 from typing import Sequence, Union
 from abc import ABC
 import numpy as np
