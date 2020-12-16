@@ -11,14 +11,16 @@ except ImportError:
     _finufft = False
 
 from .. import RandomTransform
+from ... import IntensityTransform
 
 
-class RandomMotionFromTimeCourse(RandomTransform):
+class RandomMotionFromTimeCourse(RandomTransform, IntensityTransform):
 
     def __init__(self, nT: int = 200, maxDisp: Tuple[float, float] = (2,5), maxRot: Tuple[float, float] = (2,5),
                  noiseBasePars: Tuple[float, float] = (5,15), swallowFrequency: Tuple[float, float] = (0,5),
                  swallowMagnitude: Tuple[float, float] = (2,6), suddenFrequency: Tuple[int, int] = (0,5),
-                 suddenMagnitude: Tuple[float, float] = (2,6), fitpars: Union[List, np.ndarray] = None,
+                 suddenMagnitude: Tuple[float, float] = (2,6), maxGlobalDisp=None, maxGlobalRot=None,
+                 fitpars: Union[List, np.ndarray] = None,
                  displacement_shift_strategy: str = None, freq_encoding_dim: List = [0], tr: float = 2.3, es: float = 4E-3,
                  nufft: bool = True,  oversampling_pct: float = 0.3,
                  preserve_center_frequency_pct: float = 0, correct_motion: bool = False,
@@ -37,6 +39,9 @@ class RandomMotionFromTimeCourse(RandomTransform):
         optional (float, float, float) where the third is the probability to performe this type of noise
         :param suddenMagnitude (float, float): (min, max) magnitude of the sudden movements to generate
         if fitpars is not None previous parameter are not used
+        :param maxGlobalDisp (float, float): (min, max) of the global translations. A random number is taken from this interval
+        to scale each translations if they are bigger. If None, it won't be used
+        :param maxGlobalRot same as  maxGlobalDisp but for Rotations
         :param fitpars : movement parameters to use (if specified, will be applied as such, no movement is simulated)
         :param displacement_shift (bool): whether or not to substract the time course by the values of the center of the kspace
         :param freq_encoding_dim (tuple of ints): potential frequency encoding dims to use (one of them is randomly chosen)
@@ -59,6 +64,8 @@ class RandomMotionFromTimeCourse(RandomTransform):
         self.swallowMagnitude = swallowMagnitude
         self.suddenFrequency = suddenFrequency
         self.suddenMagnitude = suddenMagnitude
+        self.maxGlobalDisp = maxGlobalDisp
+        self.maxGlobalRot = maxGlobalRot
         self.displacement_shift_strategy = displacement_shift_strategy
         self.preserve_center_frequency_pct = preserve_center_frequency_pct
         self.freq_encoding_choice = freq_encoding_dim
@@ -81,7 +88,7 @@ class RandomMotionFromTimeCourse(RandomTransform):
                            #'metrics','mean_DispP','rmse_Disp','meanDispP_wTF2','rmse_Disp_wTF2')
 
     def apply_transform(self, sample):
-        for image_name, image_dict in sample.get_images_dict().items():
+        for image_name, image_dict in self.get_images_dict(sample).items():
             image_data = np.squeeze(image_dict['data'])[..., np.newaxis, np.newaxis]
             original_image = np.squeeze(image_data[:, :, :, 0, 0])
 
@@ -255,6 +262,9 @@ class RandomMotionFromTimeCourse(RandomTransform):
         swallowFrequency = torch.randint(self.swallowFrequency[0], self.swallowFrequency[1], (1,)).item()
         suddenFrequency = torch.randint(self.suddenFrequency[0], self.suddenFrequency[1], (1,)).item()
 
+        maxGlobalDisp =  self._rand_uniform(min=self.maxGlobalDisp[0], max=self.maxGlobalDisp[1]) if self.maxGlobalDisp else float('inf')
+        maxGlobalRot  =  self._rand_uniform(min=self.maxGlobalRot[0], max=self.maxGlobalRot[1]) if self.maxGlobalRot else float('inf')
+
         #prba to include the different type of noise
         proba_noiseBase = self.noiseBasePars[2] if len(self.noiseBasePars) == 3 else 1
         proba_swallow = self.swallowFrequency[2] if len(self.swallowFrequency) == 3 else 1
@@ -301,8 +311,23 @@ class RandomMotionFromTimeCourse(RandomTransform):
 
         if self.preserve_center_frequency_pct:
             center = np.int(np.floor(fitpars.shape[1]/2))
+            if self.displacement_shift_strategy == "center_zero": #added here to remove global motion outside center
+                to_substract = fitpars[:, center]
+                to_substract_tile = np.tile(to_substract[..., np.newaxis],(1, fitpars.shape[1]))
+                fitpars = fitpars - to_substract_tile
+
             nbpts = np.int(np.floor(fitpars.shape[1] * self.preserve_center_frequency_pct/2))
             fitpars[:, center-nbpts:center+nbpts] = 0
+
+        #rescale to global max if needed
+        max_wanted = maxGlobalDisp
+        for i in range(6):
+            if i==3 :
+                max_wanted = maxGlobalRot
+            mm = np.max(np.abs(fitpars[i, :]))
+            if mm > max_wanted:
+                fitpars[i, :] = fitpars[i, :] * max_wanted / mm
+
         self.fitpars = fitpars
 
 
