@@ -54,13 +54,15 @@ class Transform(ABC):
             include: TypeKeys = None,
             exclude: TypeKeys = None,
             keys: TypeKeys = None,
-            metrics: Dict = None
+            metrics: Dict = None,
+            keep_before = None
             ):
         self.probability = self.parse_probability(p)
         self.copy = copy
         self.keys = keys
         self.default_image_name = 'default_image_name'
         self.metrics = metrics
+        self.keep_before = keep_before
 
         if keys is not None:
             message = (
@@ -98,6 +100,11 @@ class Transform(ABC):
         orig = subject #todo marche aussi si self.copy is false ?
         if self.copy:
             subject = copy.copy(subject)
+
+        if self.keep_before:
+            new_key = 'before' + self.name + '_' + self.keep_before
+            subject[new_key] = orig[self.keep_before]
+            self.exclude = [new_key] if self.exclude is None else self.exclude.append(new_key)
 
         with np.errstate(all='warn'):
             transformed = self.apply_transform(subject)
