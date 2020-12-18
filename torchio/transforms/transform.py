@@ -102,12 +102,21 @@ class Transform(ABC):
             subject = copy.copy(subject)
 
         if self.keep_before:
+            from ..data.image import LabelMap
+            affine = subject[self.keep_before]['affine']
             new_key = 'before' + self.name + '_' + self.keep_before
-            subject[new_key] = orig[self.keep_before]
-            self.exclude = [new_key] if self.exclude is None else self.exclude.append(new_key)
+            new_image = LabelMap(affine=affine, tensor=orig[self.keep_before]['data'])
+
+            #self.exclude = [new_key] if self.exclude is None else self.exclude.append(new_key)
 
         with np.errstate(all='warn'):
             transformed = self.apply_transform(subject)
+
+        if self.keep_before: #also add diff
+            new_key2 = 'diff' + self.name + '_' + self.keep_before
+            new_image2 = LabelMap(affine=affine, tensor=orig[self.keep_before]['data'] -  transformed[self.keep_before]['data'])
+            transformed.add_image(new_image, new_key)
+            transformed.add_image(new_image2, new_key2)
 
         if isinstance(transformed, list):
             return transformed
