@@ -113,11 +113,7 @@ class Subject(dict):
         from .. import transforms
         transforms_list = []
         for transform_name, arguments in self.applied_transforms:
-            if transform_name== 'RandomMotionFromTimeCourse':
-                arguments['name'] = transform_name
-                transforms_list.append(arguments)
-            else:
-                transform = getattr(transforms, transform_name)(**arguments)
+            transform = getattr(transforms, transform_name)(**arguments)
             transforms_list.append(transform)
         return transforms_list
 

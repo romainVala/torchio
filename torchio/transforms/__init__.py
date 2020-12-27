@@ -24,7 +24,7 @@ from .augmentation.intensity import RandomMotion, Motion
 from .augmentation.intensity import RandomGhosting, Ghosting
 from .augmentation.intensity import RandomBiasField, BiasField
 from .augmentation.intensity import RandomLabelsToImage, LabelsToImage
-from .augmentation.intensity import RandomMotionFromTimeCourse
+from .augmentation.intensity import RandomMotionFromTimeCourse, MotionFromTimeCourse
 
 # Preprocessing
 from .preprocessing import Pad
