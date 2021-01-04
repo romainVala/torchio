@@ -25,7 +25,7 @@ author = 'Fernando Pérez-García'
 
 # version is the short X.Y version
 # release is the full version, including alpha/beta/rc tags
-version = release = '0.18.8'
+version = release = '0.18.15'
 
 
 # -- General configuration ---------------------------------------------------
@@ -41,7 +41,7 @@ extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.viewcode',
     'sphinx.ext.githubpages',
-    'sphinx_rtd_theme',
+    'sphinx_copybutton',
     'sphinx.ext.napoleon',
     'sphinx.ext.intersphinx',
     'matplotlib.sphinxext.plot_directive',
@@ -49,9 +49,10 @@ extensions = [
 
 # Add mappings
 # https://kevin.burke.dev/kevin/sphinx-interlinks/
+# https://github.com/pytorch/fairseq/blob/adb5b9c71f7ef4fe2f258e0da102d819ab9920ef/docs/conf.py#L131
 intersphinx_mapping = {
     'python': ('https://docs.python.org/3', None),
-    'torch': ('https://pytorch.org/docs/master/', None),  # https://github.com/pytorch/fairseq/blob/adb5b9c71f7ef4fe2f258e0da102d819ab9920ef/docs/conf.py#L131
+    'torch': ('https://pytorch.org/docs/master/', None),
     'torchvision': ('https://pytorch.org/docs/master/', None),
     'nibabel': ('https://nipy.org/nibabel/', None),
     'numpy': ('https://numpy.org/doc/stable/', None),
@@ -90,20 +91,21 @@ pygments_style = None
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = 'sphinx_rtd_theme'
+html_theme = 'furo'
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
 #
 html_theme_options = {
-    'navigation_depth': 3,
+    # 'navigation_depth': 3,  # for sphinx theme
+    # "announcement": "<em>Important</em> announcement!",
 }
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ['_static']
+# html_static_path = ['_static']
 
 # Custom sidebar templates, must be a dictionary that maps document names
 # to template names.
@@ -190,9 +192,12 @@ epub_title = project
 # A list of files that should not be packed into the epub file.
 epub_exclude_files = ['search.html']
 
+# CopyButton configuration
+copybutton_prompt_text = r'>>> |\.\.\. |\$ |In \[\d*\]: | {2,5}\.\.\.: | {5,8}: '  # noqa: E501,FS003
+copybutton_prompt_is_regexp = True
 
-def setup(app):
-    app.add_js_file('copybutton.js')
+# def setup(app):
+#     app.add_js_file('copybutton.js')
 
 
 # -- Extension configuration -------------------------------------------------

@@ -6,6 +6,7 @@ import numpy as np
 
 from ..constants import TYPE, INTENSITY
 from .image import Image
+from ..utils import get_subclasses
 
 
 class Subject(dict):
@@ -110,26 +111,30 @@ class Subject(dict):
 
     @property
     def history(self):
-        from .. import transforms
+        from ..transforms.transform import Transform
+        transform_classes = {cls.__name__: cls for cls in get_subclasses(Transform)}
+
         transforms_list = []
         for transform_name, arguments in self.applied_transforms:
             if transform_name== 'RandomMotionFromTimeCourse':
                 arguments['name'] = transform_name
                 transforms_list.append(arguments)
             else:
-                transform = getattr(transforms, transform_name)(**arguments)
-            transforms_list.append(transform)
+                transform = transform_classes[transform_name](**arguments)
+                transforms_list.append(transform)
         return transforms_list
 
     def get_composed_history(self) -> 'Transform':
         from ..transforms.augmentation.composition import Compose
         return Compose(self.history)
 
-    def get_inverse_transform(self) -> 'Transform':
-        return self.get_composed_history().inverse()
+    def get_inverse_transform(self, warn=True) -> 'Transform':
+        return self.get_composed_history().inverse(warn=warn)
 
-    def apply_inverse_transform(self) -> 'Subject':
-        return self.get_inverse_transform()(self)
+    def apply_inverse_transform(self, warn=True) -> 'Subject':
+        transformed = self.get_inverse_transform(warn=warn)(self)
+        transformed.clear_history()
+        return transformed
 
     def clear_history(self) -> None:
         self.applied_transforms = []

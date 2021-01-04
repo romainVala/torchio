@@ -1,4 +1,3 @@
-import os
 import ast
 import gzip
 import shutil
@@ -12,11 +11,8 @@ import nibabel as nib
 import SimpleITK as sitk
 from tqdm import trange
 
-from .constants import INTENSITY, REPO_URL
-from .typing import TypeData, TypeNumber, TypePath
-
-
-FLIP_XY = np.diag((-1, -1, 1))  # used to switch between LPS and RAS
+from .constants import INTENSITY
+from .typing import TypeNumber, TypePath
 
 
 def to_tuple(
@@ -152,132 +148,6 @@ def guess_type(string: str) -> Any:
     return value
 
 
-def get_rotation_and_spacing_from_affine(
-        affine: np.ndarray,
-        ) -> Tuple[np.ndarray, np.ndarray]:
-    # From https://github.com/nipy/nibabel/blob/master/nibabel/orientations.py
-    rotation_zoom = affine[:3, :3]
-    spacing = np.sqrt(np.sum(rotation_zoom * rotation_zoom, axis=0))
-    rotation = rotation_zoom / spacing
-    return rotation, spacing
-
-
-def nib_to_sitk(
-        data: TypeData,
-        affine: TypeData,
-        squeeze: bool = False,
-        force_3d: bool = False,
-        force_4d: bool = False,
-        ) -> sitk.Image:
-    """Create a SimpleITK image from a tensor and a 4x4 affine matrix."""
-    if data.ndim != 4:
-        raise ValueError(f'Input must be 4D, but has shape {tuple(data.shape)}')
-    # Possibilities
-    # (1, w, h, 1)
-    # (c, w, h, 1)
-    # (1, w, h, 1)
-    # (c, w, h, d)
-    array = np.asarray(data)
-    affine = np.asarray(affine).astype(np.float64)
-
-    is_multichannel = array.shape[0] > 1 and not force_4d
-    is_2d = array.shape[3] == 1 and not force_3d
-    if is_2d:
-        array = array[..., 0]
-    if not is_multichannel and not force_4d:
-        array = array[0]
-    array = array.transpose()  # (W, H, D, C) or (W, H, D)
-    image = sitk.GetImageFromArray(array, isVector=is_multichannel)
-
-    rotation, spacing = get_rotation_and_spacing_from_affine(affine)
-    origin = np.dot(FLIP_XY, affine[:3, 3])
-    direction = np.dot(FLIP_XY, rotation)
-    if is_2d:  # ignore first dimension if 2D (1, W, H, 1)
-        direction = direction[:2, :2]
-    image.SetOrigin(origin)  # should I add a 4th value if force_4d?
-    image.SetSpacing(spacing)
-    image.SetDirection(direction.flatten())
-    if data.ndim == 4:
-        assert image.GetNumberOfComponentsPerPixel() == data.shape[0]
-    num_spatial_dims = 2 if is_2d else 3
-    assert image.GetSize() == data.shape[1: 1 + num_spatial_dims]
-    return image
-
-
-def sitk_to_nib(
-        image: sitk.Image,
-        keepdim: bool = False,
-        ) -> Tuple[np.ndarray, np.ndarray]:
-    data = sitk.GetArrayFromImage(image).transpose()
-    num_components = image.GetNumberOfComponentsPerPixel()
-    if num_components == 1:
-        data = data[np.newaxis]  # add channels dimension
-    input_spatial_dims = image.GetDimension()
-    if input_spatial_dims == 2:
-        data = data[..., np.newaxis]
-    if not keepdim:
-        data = ensure_4d(data, num_spatial_dims=input_spatial_dims)
-    assert data.shape[0] == num_components
-    assert data.shape[1: 1 + input_spatial_dims] == image.GetSize()
-    spacing = np.array(image.GetSpacing())
-    direction = np.array(image.GetDirection())
-    origin = image.GetOrigin()
-    if len(direction) == 9:
-        rotation = direction.reshape(3, 3)
-    elif len(direction) == 4:  # ignore first dimension if 2D (1, W, H, 1)
-        rotation_2d = direction.reshape(2, 2)
-        rotation = np.eye(3)
-        rotation[:2, :2] = rotation_2d
-        spacing = *spacing, 1
-        origin = *origin, 0
-    else:
-        raise RuntimeError(f'Direction not understood: {direction}')
-    rotation = np.dot(FLIP_XY, rotation)
-    rotation_zoom = rotation * spacing
-    translation = np.dot(FLIP_XY, origin)
-    affine = np.eye(4)
-    affine[:3, :3] = rotation_zoom
-    affine[:3, 3] = translation
-    return data, affine
-
-
-def ensure_4d(tensor: TypeData, num_spatial_dims=None) -> TypeData:
-    # I wish named tensors were properly supported in PyTorch
-    num_dimensions = tensor.ndim
-    if num_dimensions == 4:
-        pass
-    elif num_dimensions == 5:  # hope (W, H, D, 1, C)
-        if tensor.shape[-2] == 1:
-            tensor = tensor[..., 0, :]
-            tensor = tensor.permute(3, 0, 1, 2)
-        else:
-            raise ValueError('5D is not supported for shape[-2] > 1')
-    elif num_dimensions == 2:  # assume 2D monochannel (W, H)
-        tensor = tensor[np.newaxis, ..., np.newaxis]  # (1, W, H, 1)
-    elif num_dimensions == 3:  # 2D multichannel or 3D monochannel?
-        if num_spatial_dims == 2:
-            tensor = tensor[..., np.newaxis]  # (C, W, H, 1)
-        elif num_spatial_dims == 3:  # (W, H, D)
-            tensor = tensor[np.newaxis]  # (1, W, H, D)
-        else:  # try to guess
-            shape = tensor.shape
-            maybe_rgb = 3 in (shape[0], shape[-1])
-            if maybe_rgb:
-                if shape[-1] == 3:  # (W, H, 3)
-                    tensor = tensor.permute(2, 0, 1)  # (3, W, H)
-                tensor = tensor[..., np.newaxis]  # (3, W, H, 1)
-            else:  # (W, H, D)
-                tensor = tensor[np.newaxis]  # (1, W, H, D)
-    else:
-        message = (
-            f'{num_dimensions}D images not supported yet. Please create an'
-            f' issue in {REPO_URL} if you would like support for them'
-        )
-        raise ValueError(message)
-    assert tensor.ndim == 4
-    return tensor
-
-
 def get_torchio_cache_dir():
     return Path('~/.cache/torchio').expanduser()
 
@@ -341,81 +211,7 @@ def history_collate(batch: Sequence, collate_transforms=True):
         return dictionary
 
 
-# Adapted from torchvision, removing print statements
-def download_and_extract_archive(
-        url: str,
-        download_root: TypePath,
-        extract_root: Optional[TypePath] = None,
-        filename: Optional[TypePath] = None,
-        md5: str = None,
-        remove_finished: bool = False,
-        ) -> None:
-    download_root = os.path.expanduser(download_root)
-    if extract_root is None:
-        extract_root = download_root
-    if not filename:
-        filename = os.path.basename(url)
-    download_url(url, download_root, filename, md5)
-    archive = os.path.join(download_root, filename)
-    from torchvision.datasets.utils import extract_archive
-    extract_archive(archive, extract_root, remove_finished)
-
-
-# Adapted from torchvision, removing print statements
-def download_url(
-        url: str,
-        root: TypePath,
-        filename: Optional[TypePath] = None,
-        md5: str = None,
-        ) -> None:
-    """Download a file from a url and place it in root.
-
-    Args:
-        url: URL to download file from
-        root: Directory to place downloaded file in
-        filename: Name to save the file under.
-            If ``None``, use the basename of the URL
-        md5: MD5 checksum of the download. If None, do not check
-    """
-    import urllib
-    from torchvision.datasets.utils import check_integrity, gen_bar_updater
-
-    root = os.path.expanduser(root)
-    if not filename:
-        filename = os.path.basename(url)
-    fpath = os.path.join(root, filename)
-    os.makedirs(root, exist_ok=True)
-    # check if file is already present locally
-    if not check_integrity(fpath, md5):
-        try:
-            print('Downloading ' + url + ' to ' + fpath)  # noqa: T001
-            urllib.request.urlretrieve(
-                url, fpath,
-                reporthook=gen_bar_updater()
-            )
-        except (urllib.error.URLError, OSError) as e:
-            if url[:5] == 'https':
-                url = url.replace('https:', 'http:')
-                message = (
-                    'Failed download. Trying https -> http instead.'
-                    ' Downloading ' + url + ' to ' + fpath
-                )
-                print(message)  # noqa: T001
-                urllib.request.urlretrieve(
-                    url, fpath,
-                    reporthook=gen_bar_updater()
-                )
-            else:
-                raise e
-        # check integrity of downloaded file
-        if not check_integrity(fpath, md5):
-            raise RuntimeError('File not found or corrupted.')
-
-
-def check_uint_to_int(array):
-    # This is because PyTorch won't take uint16 nor uint32
-    if array.dtype == np.uint16:
-        return array.astype(np.int32)
-    if array.dtype == np.uint32:
-        return array.astype(np.int64)
-    return array
+def get_subclasses(target_class: type) -> List[type]:
+    subclasses = target_class.__subclasses__()
+    subclasses += sum((get_subclasses(cls) for cls in subclasses), [])
+    return subclasses

@@ -6,9 +6,10 @@ import torch
 import numpy as np
 import SimpleITK as sitk
 
-from ....data.image import ScalarImage
+from ....utils import to_tuple
+from ....data.io import nib_to_sitk
 from ....data.subject import Subject
-from ....utils import to_tuple, nib_to_sitk
+from ....data.image import ScalarImage
 from ....typing import TypeTripletInt, TypeTripletFloat
 from ... import SpatialTransform
 from .. import RandomTransform
@@ -55,7 +56,8 @@ class RandomElasticDeformation(RandomTransform, SpatialTransform):
             The value of the dense displacement at each voxel is always
             interpolated with cubic B-splines from the values at the control
             points of the coarse grid.
-        **kwargs: See :class:`~torchio.transforms.Transform` for additional keyword arguments.
+        **kwargs: See :class:`~torchio.transforms.Transform` for additional
+            keyword arguments.
 
     `This gist <https://gist.github.com/fepegar/b723d15de620cd2a3a4dbd71e491b59d>`_
     can also be used to better understand the meaning of the parameters.
@@ -108,7 +110,7 @@ class RandomElasticDeformation(RandomTransform, SpatialTransform):
         .. [#] Technically, :math:`2 \epsilon` should be added to the
             image bounds, where :math:`\epsilon = 2^{-3}` `according to ITK
             source code <https://github.com/InsightSoftwareConsortium/ITK/blob/633f84548311600845d54ab2463d3412194690a8/Modules/Core/Transform/include/itkBSplineTransformInitializer.hxx#L116-L138>`_.
-    """
+    """  # noqa: E501
 
     def __init__(
             self,
@@ -134,7 +136,8 @@ class RandomElasticDeformation(RandomTransform, SpatialTransform):
                 ' or use more control points.'
             )
             raise ValueError(message)
-        self.image_interpolation = self.parse_interpolation(image_interpolation)
+        self.image_interpolation = self.parse_interpolation(
+            image_interpolation)
 
     @staticmethod
     def get_params(
@@ -186,7 +189,8 @@ class ElasticDeformation(SpatialTransform):
         control_points:
         max_displacement:
         image_interpolation: See :ref:`Interpolation`.
-        **kwargs: See :class:`~torchio.transforms.Transform` for additional keyword arguments.
+        **kwargs: See :class:`~torchio.transforms.Transform` for additional
+            keyword arguments.
     """
 
     def __init__(
@@ -199,7 +203,8 @@ class ElasticDeformation(SpatialTransform):
         super().__init__(**kwargs)
         self.control_points = control_points
         self.max_displacement = max_displacement
-        self.image_interpolation = self.parse_interpolation(image_interpolation)
+        self.image_interpolation = self.parse_interpolation(
+            image_interpolation)
         self.invert_transform = False
         self.args_names = (
             'control_points',
@@ -253,12 +258,13 @@ class ElasticDeformation(SpatialTransform):
                 interpolation = self.image_interpolation
             if image.is_2d():
                 control_points[..., -1] = 0  # no displacement in IS axis
-            image.data = self.apply_bspline_transform(
+            transformed = self.apply_bspline_transform(
                 image.data,
                 image.affine,
                 control_points,
                 interpolation,
             )
+            image.set_data(transformed)
         return subject
 
     def apply_bspline_transform(
@@ -281,10 +287,11 @@ class ElasticDeformation(SpatialTransform):
                 bspline_transform,
                 self.max_displacement,
             )
+            interpolator = self.get_sitk_interpolator(interpolation)
             resampler = sitk.ResampleImageFilter()
             resampler.SetReferenceImage(reference)
             resampler.SetTransform(bspline_transform)
-            resampler.SetInterpolator(self.get_sitk_interpolator(interpolation))
+            resampler.SetInterpolator(interpolator)
             resampler.SetDefaultPixelValue(component.min().item())
             resampler.SetOutputPixelType(sitk.sitkFloat32)
             resampled = resampler.Execute(floating)

@@ -21,10 +21,12 @@ class TestTransforms(TorchioTestCase):
         swap_patch = (2, 3, 4) if is_3d else (3, 4, 1)
         pad_args = (1, 2, 3, 0, 5, 6) if is_3d else (0, 0, 3, 0, 5, 6)
         crop_args = (3, 2, 8, 0, 1, 4) if is_3d else (0, 0, 8, 0, 1, 4)
+        remapping = {1: 2, 2: 1, 3: 20, 4: 25}
         transforms = [
             tio.CropOrPad(cp_args),
             tio.ToCanonical(),
             tio.RandomAnisotropy(downsampling=(1.75, 2), axes=axes_downsample),
+            tio.EnsureShapeMultiple(2, method='crop'),
             tio.Resample((1, 1.1, 1.25)),
             tio.RandomFlip(axes=flip_axes, flip_probability=1),
             tio.RandomMotion(),
@@ -44,6 +46,9 @@ class TestTransforms(TorchioTestCase):
                 tio.RandomAffine(): 3,
                 elastic: 1,
             }),
+            tio.RemapLabels(remapping=remapping, masking_method='Left'),
+            tio.RemoveLabels([1, 3]),
+            tio.SequentialLabels(),
             tio.Pad(pad_args, padding_mode=3),
             tio.Crop(crop_args),
         ]
@@ -86,7 +91,7 @@ class TestTransforms(TorchioTestCase):
     def test_transforms_sitk(self):
         tensor = torch.rand(2, 4, 5, 8)
         affine = np.diag((-1, 2, -3, 1))
-        image = tio.utils.nib_to_sitk(tensor, affine)
+        image = tio.data.io.nib_to_sitk(tensor, affine)
         transform = self.get_transform(
             channels=('default_image_name',), labels=False)
         transformed = transform(image)
@@ -116,11 +121,18 @@ class TestTransforms(TorchioTestCase):
         composed = self.get_transform(channels=('t1', 't2'), is_3d=True)
         subject = self.make_multichannel(self.sample_subject)
         subject = self.flip_affine_x(subject)
-        for transform in composed.transform.transforms:
+        transformed = None
+        for transform in composed.transforms:
             transformed = transform(subject)
             trsf_channels = len(transformed.t1.data)
             assert trsf_channels > 1, f'Lost channels in {transform.name}'
-            if transform.name != 'RandomLabelsToImage':
+            exclude = (
+                'RandomLabelsToImage',
+                'RemapLabels',
+                'RemoveLabels',
+                'SequentialLabels',
+            )
+            if transform.name not in exclude:
                 self.assertEqual(
                     subject.shape[0],
                     transformed.shape[0],
@@ -146,7 +158,7 @@ class TestTransforms(TorchioTestCase):
         subject = copy.deepcopy(self.sample_subject)
         composed = self.get_transform(channels=('t1', 't2'), is_3d=True)
         subject = self.flip_affine_x(subject)
-        for transform in composed.transform.transforms:
+        for transform in composed.transforms:
             original_data = copy.deepcopy(subject.t1.data)
             transform(subject)
             self.assertTensorEqual(

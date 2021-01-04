@@ -97,6 +97,14 @@ at [OpenAI](https://openai.com/) ([link](https://jack-clark.net/2020/03/17/)).
 
 ---
 
+<p align="center">
+  <a href="https://torchio.readthedocs.io/transforms/augmentation.html">
+    <img style="width: 360px; height: 360px; overflow: hidden;" src="docs/images/augmentation.gif" alt="Augmentation">
+  </a>
+</p>
+
+---
+
 <table align="center">
     <tr>
         <td align="center">Original</td>
@@ -302,6 +310,7 @@ Thanks goes to all these people ([emoji key](https://allcontributors.org/docs/en
     <td align="center"><a href="https://github.com/jwitos"><img src="https://avatars2.githubusercontent.com/u/948674?v=4" width="100px;" alt=""/><br /><sub><b>Jan Witowski</b></sub></a><br /><a href="https://github.com/fepegar/torchio/commits?author=jwitos" title="Documentation">📖</a></td>
     <td align="center"><a href="https://github.com/dmus"><img src="https://avatars1.githubusercontent.com/u/464378?v=4" width="100px;" alt=""/><br /><sub><b>Derk Mus</b></sub></a><br /><a href="https://github.com/fepegar/torchio/commits?author=dmus" title="Documentation">📖</a> <a href="https://github.com/fepegar/torchio/commits?author=dmus" title="Code">💻</a></td>
     <td align="center"><a href="http://www.linkedin.com/in/che85"><img src="https://avatars2.githubusercontent.com/u/10195822?v=4" width="100px;" alt=""/><br /><sub><b>Christian Herz</b></sub></a><br /><a href="https://github.com/fepegar/torchio/issues?q=author%3Ache85" title="Bug reports">🐛</a></td>
+    <td align="center"><a href="https://github.com/efirdc"><img src="https://avatars3.githubusercontent.com/u/5416313?v=4" width="100px;" alt=""/><br /><sub><b>Cory Efird</b></sub></a><br /><a href="https://github.com/fepegar/torchio/commits?author=efirdc" title="Code">💻</a></td>
   </tr>
 </table>
 

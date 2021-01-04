@@ -1,6 +1,7 @@
 import urllib.parse
-from ...utils import get_torchio_cache_dir, download_and_extract_archive
 from ... import ScalarImage, LabelMap
+from ...utils import get_torchio_cache_dir
+from ...download import download_and_extract_archive
 from .mni import SubjectMNI
 
 
@@ -23,7 +24,8 @@ def format_age(n):
 class Pediatric(SubjectMNI):
     """MNI pediatric atlases.
 
-    See `the MNI website <http://nist.mni.mcgill.ca/?p=974>`_ for more information.
+    See `the MNI website <http://nist.mni.mcgill.ca/?p=974>`_ for more
+    information.
 
     Arguments:
         years: Tuple of 2 ages. Possible values are: ``(4.5, 18.5)``,
@@ -32,8 +34,8 @@ class Pediatric(SubjectMNI):
             ``(7.5, 13.5)``,
             ``(10, 14)`` and
             ``(13, 18.5)``.
-        symmetric: If ``True``, the left-right symmetric templates will be used.
-            If ``False``, the asymmetric (natural) templates will be used.
+        symmetric: If ``True``, the left-right symmetric templates will be
+            used. Else, the asymmetric (natural) templates will be used.
     """
     def __init__(self, years, symmetric=False):
         self.url_dir = 'http://www.bic.mni.mcgill.ca/~vfonov/nihpd/obj1/'

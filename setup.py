@@ -12,12 +12,12 @@ with open('HISTORY.rst', encoding='utf8') as history_file:
 
 requirements = [
     'Click',
+    'Deprecated',
     'humanize',
     'nibabel',
     'numpy',
     'scipy',
     'torch>=1.1',
-    'torchvision',
     'tqdm',
 ]
 
@@ -69,6 +69,6 @@ setup(
     test_suite='tests',
     tests_require=[],
     url='https://github.com/fepegar/torchio',
-    version='0.18.8',
+    version='0.18.15',
     zip_safe=False,
 )
