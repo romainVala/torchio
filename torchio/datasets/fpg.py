@@ -1,7 +1,8 @@
 import urllib.parse
 from .. import Subject, ScalarImage, LabelMap, DATA_REPO
-from ..utils import get_torchio_cache_dir, download_url
 from ..data.io import read_matrix
+from ..download import download_url
+from ..utils import get_torchio_cache_dir
 
 
 class FPG(Subject):
@@ -42,7 +43,7 @@ class FPG(Subject):
         self.gif_colors = GIF_COLORS
 
     def plot(self, *args, **kwargs):
-        super().plot(*args, **kwargs, cmap_dict=dict(seg=self.gif_colors))
+        super().plot(*args, **kwargs, cmap_dict={'seg': self.gif_colors})
 
 
 GIF_COLORS = {

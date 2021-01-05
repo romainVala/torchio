@@ -1,6 +1,7 @@
 import urllib.parse
-from ...utils import get_torchio_cache_dir, download_and_extract_archive
-from ... import ScalarImage, LabelMap
+from ...data import ScalarImage, LabelMap
+from ...utils import get_torchio_cache_dir
+from ...download import download_and_extract_archive
 from .mni import SubjectMNI
 
 
@@ -54,7 +55,7 @@ class Colin27(SubjectMNI):
         >>> colin_2008.t1
         ScalarImage(shape: (1, 362, 434, 362); spacing: (0.50, 0.50, 0.50); orientation: RAS+; memory: 217.0 MiB; type: intensity)
 
-    """
+    """  # noqa: E501
     def __init__(self, version=1998):
         if version not in (1998, 2008):
             raise ValueError(f'Version must be 1998 or 2008, not "{version}"')
@@ -73,7 +74,7 @@ class Colin27(SubjectMNI):
             if version == 2008:
                 path = download_root / 'colin27_cls_tal_hires.nii'
                 cls_image = LabelMap(path)
-                cls_image.data = cls_image.data.round().byte()
+                cls_image.set_data(cls_image.data.round().byte())
                 cls_image.save(path)
 
         if version == 1998:

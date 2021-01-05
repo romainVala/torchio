@@ -6,9 +6,10 @@ import torch
 import numpy as np
 import SimpleITK as sitk
 
+from ....data.io import nib_to_sitk
 from ....data.subject import Subject
-from ....constants import INTENSITY, DATA, AFFINE, TYPE
-from ....utils import nib_to_sitk, get_major_sitk_version, to_tuple
+from ....constants import INTENSITY, TYPE
+from ....utils import get_major_sitk_version, to_tuple
 from ....typing import TypeRangeFloat, TypeSextetFloat, TypeTripletFloat
 from ... import SpatialTransform
 from .. import RandomTransform
@@ -69,7 +70,8 @@ class RandomAffine(RandomTransform, SpatialTransform):
             `Otsu threshold <https://ieeexplore.ieee.org/document/4310076>`_.
             If it is a number, that value will be used.
         image_interpolation: See :ref:`Interpolation`.
-        **kwargs: See :class:`~torchio.transforms.Transform` for additional keyword arguments.
+        **kwargs: See :class:`~torchio.transforms.Transform` for additional
+            keyword arguments.
 
     Example:
         >>> import torchio as tio
@@ -171,7 +173,8 @@ class Affine(SpatialTransform):
             `Otsu threshold <https://ieeexplore.ieee.org/document/4310076>`_.
             If it is a number, that value will be used.
         image_interpolation: See :ref:`Interpolation`.
-        **kwargs: See :class:`~torchio.transforms.Transform` for additional keyword arguments.
+        **kwargs: See :class:`~torchio.transforms.Transform` for additional
+            keyword arguments.
     """
     def __init__(
             self,
@@ -283,7 +286,7 @@ class Affine(SpatialTransform):
                     center_lps=center,
                 )
                 transformed_tensors.append(transformed_tensor)
-            image.data = torch.stack(transformed_tensors)
+            image.set_data(torch.stack(transformed_tensors))
         return subject
 
     def apply_affine_transform(

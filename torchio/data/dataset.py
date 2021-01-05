@@ -1,6 +1,5 @@
 import copy
-import collections
-from typing import Sequence, Optional, Callable
+from typing import Sequence, Optional, Callable, Iterable
 
 from torch.utils.data import Dataset
 
@@ -19,10 +18,12 @@ class SubjectsDataset(Dataset):
     and an optional transform applied to the volumes after loading.
 
     Args:
-        subjects: List of instances of
-            :class:`~torchio.Subject`.
+        subjects: List of instances of :class:`~torchio.Subject`.
         transform: An instance of :class:`~torchio.transforms.Transform`
             that will be applied to each subject.
+        load_getitem: Load all subject images before returning it in
+            :meth:`__getitem__`. Set it to ``False`` if some of the images will
+            not be needed during training.
 
     Example:
         >>> import torchio as tio
@@ -53,7 +54,7 @@ class SubjectsDataset(Dataset):
     .. _SimpleITK: https://itk.org/Wiki/ITK/FAQ#What_3D_file_formats_can_ITK_import_and_export.3F
     .. _DICOM: https://www.dicomstandard.org/
     .. _affine matrix: https://nipy.org/nibabel/coordinate_systems.html
-    """
+    """  # noqa: E501
 
     def __init__(
             self,
@@ -63,6 +64,7 @@ class SubjectsDataset(Dataset):
             load_from_dir = None,
             add_to_load = None,
             add_to_load_regexp = None,
+            load_getitem: bool = True,
             ):
         self.load_from_dir = load_from_dir
         self.add_to_load = add_to_load
@@ -73,6 +75,7 @@ class SubjectsDataset(Dataset):
         self._transform: Optional[Callable]
         self.set_transform(transform)
         self.save_to_dir = save_to_dir
+        self.load_getitem = load_getitem
 
     def __len__(self):
         return len(self.subjects)
@@ -122,9 +125,9 @@ class SubjectsDataset(Dataset):
             #print('subject with keys {}'.format(subject.keys()))
         else:
             subject = self.subjects[index]
-            subject = copy.deepcopy(subject) # cheap since images not loaded yet
-            # subject = self._get_sample_dict_from_subject(subject)
-            subject.load()
+            subject = copy.deepcopy(subject)  # cheap since images not loaded yet
+            if self.load_getitem:
+                subject.load()
 
         # Apply transform (this is usually the bottleneck)
         if self._transform is not None:
@@ -153,11 +156,15 @@ class SubjectsDataset(Dataset):
         return self._transform
 
     @staticmethod
-    def _parse_subjects_list(subjects_list: Sequence[Subject]) -> None:
-        # Check that it's list or tuple
-        if not isinstance(subjects_list, collections.abc.Sequence):
-            raise TypeError(
-                f'Subject list must be a sequence, not {type(subjects_list)}')
+    def _parse_subjects_list(subjects_list: Iterable[Subject]) -> None:
+        # Check that it's an iterable
+        try:
+            iter(subjects_list)
+        except TypeError as e:
+            message = (
+                f'Subject list must be an iterable, not {type(subjects_list)}'
+            )
+            raise TypeError(message) from e
 
         # Check that it's not empty
         if not subjects_list:

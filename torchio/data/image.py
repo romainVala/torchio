@@ -5,25 +5,32 @@ from typing import Any, Dict, Tuple, Optional, Union, Sequence, List
 import torch
 import humanize
 import numpy as np
-from PIL import Image as ImagePIL
 import nibabel as nib
 import SimpleITK as sitk
+from PIL import Image as ImagePIL
+from deprecated import deprecated
 
-from ..utils import (
-    nib_to_sitk,
-    get_rotation_and_spacing_from_affine,
-    get_stem,
-    ensure_4d,
-    check_uint_to_int,
-)
+from ..utils import get_stem
 from ..typing import TypeData, TypePath, TypeTripletInt, TypeTripletFloat
 from ..constants import DATA, TYPE, AFFINE, PATH, STEM, INTENSITY, LABEL
-from .io import read_image, write_image
+from .io import (
+    ensure_4d,
+    read_image,
+    write_image,
+    nib_to_sitk,
+    check_uint_to_int,
+    get_rotation_and_spacing_from_affine,
+)
 
 
 PROTECTED_KEYS = DATA, AFFINE, TYPE, PATH, STEM
 TypeBound = Tuple[float, float]
 TypeBounds = Tuple[TypeBound, TypeBound, TypeBound]
+
+deprecation_message = (
+    'Setting the image data with the property setter is deprecated. Use the'
+    ' set_data() method instead'
+)
 
 
 class Image(dict):
@@ -102,7 +109,7 @@ class Image(dict):
             warnings.warn(
                 'Not specifying the image type is deprecated and will be'
                 ' mandatory in the future. You can probably use tio.ScalarImage'
-                'or LabelMap instead', DeprecationWarning,
+                ' or tio.LabelMap instead', DeprecationWarning,
             )
             type = INTENSITY
 
@@ -113,7 +120,7 @@ class Image(dict):
         tensor = self._parse_tensor(tensor)
         affine = self._parse_affine(affine)
         if tensor is not None:
-            self.data = tensor
+            self.set_data(tensor)
             self.affine = affine
             self._loaded = True
         for key in PROTECTED_KEYS:
@@ -139,7 +146,8 @@ class Image(dict):
             ])
         else:
             properties.append(f'path: "{self.path}"')
-        properties.append(f'dtype: {self.data.type()}')
+        if self._loaded:
+            properties.append(f'dtype: {self.data.type()}')
         properties = '; '.join(properties)
         string = f'{self.__class__.__name__}({properties})'
         return string
@@ -171,7 +179,16 @@ class Image(dict):
         return self[DATA]
 
     @data.setter
+    @deprecated(version='0.18.16', reason=deprecation_message)
     def data(self, tensor: TypeData):
+        self.set_data(tensor)
+
+    def set_data(self, tensor: TypeData):
+        """Store a 4D tensor in the :attr:`data` key and attribute.
+
+        Args:
+            tensor: 4D tensor with dimensions :math:`(C, W, H, D)`.
+        """
         self[DATA] = self._parse_tensor(tensor, none_ok=False)
 
     @property
@@ -284,16 +301,19 @@ class Image(dict):
     # flake8: noqa: E701
     @staticmethod
     def flip_axis(axis: str) -> str:
-        if axis == 'R': return 'L'
-        elif axis == 'L': return 'R'
-        elif axis == 'A': return 'P'
-        elif axis == 'P': return 'A'
-        elif axis == 'I': return 'S'
-        elif axis == 'S': return 'I'
+        if axis == 'R': flipped_axis = 'L'
+        elif axis == 'L': flipped_axis = 'R'
+        elif axis == 'A': flipped_axis = 'P'
+        elif axis == 'P': flipped_axis = 'A'
+        elif axis == 'I': flipped_axis = 'S'
+        elif axis == 'S': flipped_axis = 'I'
+        elif axis == 'T': flipped_axis = 'B'
+        elif axis == 'B': flipped_axis = 'T'
         else:
             values = ', '.join('LRPAISTB')
             message = f'Axis not understood. Please use one of: {values}'
             raise ValueError(message)
+        return flipped_axis
 
     def get_spacing_string(self) -> str:
         strings = [f'{n:.2f}' for n in self.spacing]
@@ -318,8 +338,8 @@ class Image(dict):
             path = Path(path).expanduser()
         except TypeError:
             message = (
-                f'Expected type str or Path but found {path} with '
-                f'{type(path)} instead'
+                f'Expected type str or Path but found {path} with type'
+                f' {type(path)} instead'
             )
             raise TypeError(message)
         except RuntimeError:
@@ -371,9 +391,11 @@ class Image(dict):
         return ensure_4d(tensor)
 
     @staticmethod
-    def _parse_affine(affine: np.ndarray) -> np.ndarray:
+    def _parse_affine(affine: TypeData) -> np.ndarray:
         if affine is None:
             return np.eye(4)
+        if isinstance(affine, torch.Tensor):
+            affine = affine.numpy()
         if not isinstance(affine, np.ndarray):
             raise TypeError(f'Affine must be a NumPy array, not {type(affine)}')
         if affine.shape != (4, 4):
@@ -412,7 +434,7 @@ class Image(dict):
                 RuntimeError(message)
             tensors.append(new_tensor)
         tensor = torch.cat(tensors)
-        self.data = tensor
+        self.set_data(tensor)
         self.affine = affine
         self._loaded = True
 

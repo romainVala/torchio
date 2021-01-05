@@ -27,7 +27,8 @@ class RandomBlur(RandomTransform, IntensityTransform):
             then :math:`\sigma_i \sim \mathcal{U}(0, x)`.
             If three values :math:`(x_1, x_2, x_3)` are provided,
             then :math:`\sigma_i \sim \mathcal{U}(0, x_i)`.
-        **kwargs: See :class:`~torchio.transforms.Transform` for additional keyword arguments.
+        **kwargs: See :class:`~torchio.transforms.Transform` for additional
+            keyword arguments.
     """
     def __init__(
             self,
@@ -58,7 +59,8 @@ class Blur(IntensityTransform):
         std: Tuple :math:`(\sigma_1, \sigma_2, \sigma_3)` representing the
             the standard deviations (in mm) of the standard deviations
             of the Gaussian kernels used to blur the image along each axis.
-        **kwargs: See :class:`~torchio.transforms.Transform` for additional keyword arguments.
+        **kwargs: See :class:`~torchio.transforms.Transform` for additional
+            keyword arguments.
     """
     def __init__(
             self,
@@ -83,7 +85,7 @@ class Blur(IntensityTransform):
                     std,
                 )
                 transformed_tensors.append(transformed_tensor)
-            image.data = torch.stack(transformed_tensors)
+            image.set_data(torch.stack(transformed_tensors))
         return subject
 
 

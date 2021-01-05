@@ -1,10 +1,6 @@
 Preprocessing
 =============
 
-.. contents::
-   :local:
-
-
 Intensity
 ---------
 
@@ -59,6 +55,13 @@ Spatial
     :members: _get_six_bounds_parameters
 
 
+:class:`EnsureShapeMultiple`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: EnsureShapeMultiple
+    :show-inheritance:
+
+
 :class:`Crop`
 ~~~~~~~~~~~~~
 
@@ -84,4 +87,30 @@ Spatial
 ~~~~~~~~~~~~~~~~~~~~
 
 .. autoclass:: ToCanonical
+    :show-inheritance:
+
+Label
+---------
+
+.. currentmodule:: torchio.transforms.preprocessing.label
+
+
+:class:`RemapLabels`
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: RemapLabels
+    :show-inheritance:
+
+
+:class:`RemoveLabels`
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: RemoveLabels
+    :show-inheritance:
+
+
+:class:`SequentialLabels`
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: SequentialLabels
     :show-inheritance:

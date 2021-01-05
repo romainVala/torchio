@@ -31,7 +31,8 @@ class HistogramStandardization(NormalizationTransform):
             :meth:`torchio.transforms.HistogramStandardization.train`.
         masking_method: See
             :class:`~torchio.transforms.preprocessing.intensity.NormalizationTransform`.
-        **kwargs: See :class:`~torchio.transforms.Transform` for additional keyword arguments.
+        **kwargs: See :class:`~torchio.transforms.Transform` for additional
+            keyword arguments.
 
     Example:
         >>> import torch
@@ -43,7 +44,7 @@ class HistogramStandardization(NormalizationTransform):
         >>> transform = tio.HistogramStandardization(landmarks)
         >>> torch.save(landmarks, 'path_to_landmarks.pth')
         >>> transform = tio.HistogramStandardization('path_to_landmarks.pth')
-    """
+    """  # noqa: E501
     def __init__(
             self,
             landmarks: TypeLandmarks,
@@ -88,11 +89,8 @@ class HistogramStandardization(NormalizationTransform):
             raise KeyError(message)
         image = subject[image_name]
         landmarks = self.landmarks_dict[image_name]
-        image.data = normalize(
-            image.data,
-            landmarks,
-            mask=mask,
-        )
+        normalized = normalize(image.data, landmarks, mask=mask)
+        image.set_data(normalized)
 
     @classmethod
     def train(
@@ -151,23 +149,23 @@ class HistogramStandardization(NormalizationTransform):
             ... }
             >>>
             >>> transform = HistogramStandardization(landmarks_dict)
-        """
+        """  # noqa: E501
         quantiles_cutoff = DEFAULT_CUTOFF if cutoff is None else cutoff
         percentiles_cutoff = 100 * np.array(quantiles_cutoff)
         percentiles_database = []
         percentiles = _get_percentiles(percentiles_cutoff)
         for image_file_path in tqdm(images_paths):
             tensor, _ = read_image(image_file_path)
-            data = tensor.numpy()
             if masking_function is not None:
-                mask = masking_function(data)
+                mask = masking_function(tensor)
             else:
                 if mask_path is not None:
                     mask, _ = read_image(mask_path)
                     mask = mask.numpy() > 0
                 else:
-                    mask = np.ones_like(data, dtype=np.bool)
-            percentile_values = np.percentile(data[mask], percentiles)
+                    mask = np.ones_like(tensor, dtype=np.bool)
+            array = tensor.numpy()
+            percentile_values = np.percentile(array[mask], percentiles)
             percentiles_database.append(percentile_values)
         percentiles_database = np.vstack(percentiles_database)
         mapping = _get_average_mapping(percentiles_database)

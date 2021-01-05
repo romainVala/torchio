@@ -1,9 +1,11 @@
 Click
+Deprecated
 SimpleITK<2
+furo
 humanize
 nibabel
 numpy
 scipy
+sphinx-copybutton
 torch>=1.1
-torchvision
 tqdm

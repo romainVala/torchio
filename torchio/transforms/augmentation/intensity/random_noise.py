@@ -24,7 +24,8 @@ class RandomNoise(RandomTransform, IntensityTransform):
             then :math:`\sigma \sim \mathcal{U}(a, b)`.
             If only one value :math:`d` is provided,
             :math:`\sigma \sim \mathcal{U}(0, d)`.
-        **kwargs: See :class:`~torchio.transforms.Transform` for additional keyword arguments.
+        **kwargs: See :class:`~torchio.transforms.Transform` for additional
+            keyword arguments.
     """
     def __init__(
             self,
@@ -71,7 +72,8 @@ class Noise(IntensityTransform):
         std: Standard deviation :math:`\sigma` of the Gaussian distribution
             from which the noise is sampled.
         seed: Seed for the random number generator.
-        **kwargs: See :class:`~torchio.transforms.Transform` for additional keyword arguments.
+        **kwargs: See :class:`~torchio.transforms.Transform` for additional
+            keyword arguments.
     """
     def __init__(
             self,
@@ -96,7 +98,7 @@ class Noise(IntensityTransform):
                 noise = get_noise(image.data, mean, std)
             if self.invert_transform:
                 noise *= -1
-            image.data = image.data + noise
+            image.set_data(image.data + noise)
         return subject
 
 
