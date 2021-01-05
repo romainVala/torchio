@@ -122,27 +122,27 @@ class RandomMotionFromTimeCourse(RandomTransform, IntensityTransform):
                  swallowMagnitude: Tuple[float, float] = (2,6), suddenFrequency: Tuple[int, int] = (0,5),
                  suddenMagnitude: Tuple[float, float] = (2,6), maxGlobalDisp: Tuple[float, float] = None,
                  maxGlobalRot: Tuple[float, float] = None):
-        maxDisp = self._rand_uniform(min=maxDisp[0], max=maxDisp[1])
-        maxRot = self._rand_uniform(min=maxRot[0], max=maxRot[1])
-        noiseBasePars = self._rand_uniform(min=noiseBasePars[0], max=noiseBasePars[1])
-        swallowMagnitude = [self._rand_uniform(min=swallowMagnitude[0], max=swallowMagnitude[1]),
+        maxDisp_r = self._rand_uniform(min=maxDisp[0], max=maxDisp[1])
+        maxRot_r = self._rand_uniform(min=maxRot[0], max=maxRot[1])
+        noiseBasePars_r = self._rand_uniform(min=noiseBasePars[0], max=noiseBasePars[1])
+        swallowMagnitude_r = [self._rand_uniform(min=swallowMagnitude[0], max=swallowMagnitude[1]),
                             self._rand_uniform(min=swallowMagnitude[0], max=swallowMagnitude[1])]
 
-        suddenMagnitude = [self._rand_uniform(min=suddenMagnitude[0], max=suddenMagnitude[1]),
+        suddenMagnitude_r = [self._rand_uniform(min=suddenMagnitude[0], max=suddenMagnitude[1]),
                            self._rand_uniform(min=suddenMagnitude[0], max=suddenMagnitude[1])]
 
-        swallowFrequency = torch.randint(swallowFrequency[0], swallowFrequency[1], (1,)).item()
-        suddenFrequency = torch.randint(suddenFrequency[0], suddenFrequency[1], (1,)).item()
+        swallowFrequency_r = torch.randint(swallowFrequency[0], swallowFrequency[1], (1,)).item()
+        suddenFrequency_r = torch.randint(suddenFrequency[0], suddenFrequency[1], (1,)).item()
 
-        maxGlobalDisp = self._rand_uniform(min=maxGlobalDisp[0],
-                                           max=maxGlobalDisp[1]) if self.maxGlobalDisp else float('inf')
-        maxGlobalRot = self._rand_uniform(min=maxGlobalRot[0],
-                                          max=maxGlobalRot[1]) if self.maxGlobalRot else float('inf')
+        maxGlobalDisp_r = self._rand_uniform(min=maxGlobalDisp[0],
+                                           max=maxGlobalDisp[1]) if maxGlobalDisp else float('inf')
+        maxGlobalRot_r = self._rand_uniform(min=maxGlobalRot[0],
+                                          max=maxGlobalRot[1]) if maxGlobalRot else float('inf')
 
         # prba to include the different type of noise
-        proba_noiseBase = noiseBasePars[2] if len(self.noiseBasePars) == 3 else 1
-        proba_swallow = swallowFrequency[2] if len(self.swallowFrequency) == 3 else 1
-        proba_sudden = suddenFrequency[2] if len(self.suddenFrequency) == 3 else 1
+        proba_noiseBase = noiseBasePars[2] if len(noiseBasePars) == 3 else 1
+        proba_swallow = swallowFrequency[2] if len(swallowFrequency) == 3 else 1
+        proba_sudden = suddenFrequency[2] if len(suddenFrequency) == 3 else 1
 
         do_noise, do_swallow, do_sudden = False, False, False
 
@@ -154,8 +154,8 @@ class RandomMotionFromTimeCourse(RandomTransform, IntensityTransform):
         if do_swallow is False: swallowFrequency = 0
         if do_sudden is False: suddenFrequency = 0
 
-        return (maxDisp, maxRot, noiseBasePars, swallowMagnitude, suddenMagnitude, swallowFrequency, suddenFrequency,
-                maxGlobalDisp, maxGlobalRot)
+        return (maxDisp_r, maxRot_r, noiseBasePars_r, swallowMagnitude_r, suddenMagnitude_r, swallowFrequency_r,
+                suddenFrequency_r, maxGlobalDisp_r, maxGlobalRot_r)
 
     def _calc_dimensions(self, im_shape):
         """
