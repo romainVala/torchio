@@ -113,15 +113,10 @@ class Subject(dict):
     def history(self):
         from ..transforms.transform import Transform
         transform_classes = {cls.__name__: cls for cls in get_subclasses(Transform)}
-
         transforms_list = []
         for transform_name, arguments in self.applied_transforms:
-            if transform_name== 'RandomMotionFromTimeCourse':
-                arguments['name'] = transform_name
-                transforms_list.append(arguments)
-            else:
-                transform = transform_classes[transform_name](**arguments)
-                transforms_list.append(transform)
+            transform = transform_classes[transform_name](**arguments)
+            transforms_list.append(transform)
         return transforms_list
 
     def get_composed_history(self) -> 'Transform':

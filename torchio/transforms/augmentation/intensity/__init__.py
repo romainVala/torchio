@@ -7,7 +7,7 @@ from .random_motion import RandomMotion, Motion
 from .random_ghosting import RandomGhosting, Ghosting
 from .random_bias_field import RandomBiasField, BiasField
 from .random_labels_to_image import RandomLabelsToImage, LabelsToImage
-from .random_motion_from_time_course import RandomMotionFromTimeCourse
+from .random_motion_from_time_course import RandomMotionFromTimeCourse, MotionFromTimeCourse
 
 
 __all__ = [

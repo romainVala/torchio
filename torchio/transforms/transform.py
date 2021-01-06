@@ -189,9 +189,6 @@ class Transform(ABC):
             EnsureShapeMultiple,
             SequentialLabels,
         )
-        #print(self.name)
-        if self.name=='RandomMotionFromTimeCourse':
-            subject.add_transform_all(self)
         if not isinstance(self, call_others):
             subject.add_transform(self, self._get_reproducing_arguments())
 
