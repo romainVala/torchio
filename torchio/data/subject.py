@@ -51,6 +51,7 @@ class Subject(dict):
         self._parse_images(self.get_images(intensity_only=False))
         self.update_attributes()  # this allows me to do e.g. subject.t1
         self.applied_transforms = []
+        self.transforms_metrics = []
 
     def __repr__(self):
         num_images = len(self.get_images(intensity_only=False))
@@ -70,6 +71,7 @@ class Subject(dict):
             result_dict[key] = value
         new = Subject(result_dict)
         new.applied_transforms = self.applied_transforms[:]
+        new.transforms_metrics = self.transforms_metrics[:]
         return new
 
     def __len__(self):
@@ -119,6 +121,10 @@ class Subject(dict):
             transforms_list.append(transform)
         return transforms_list
 
+    @property
+    def _transforms_metrics(self):
+        return self.transforms_metrics
+
     def get_composed_history(self) -> 'Transform':
         from ..transforms.augmentation.composition import Compose
         return Compose(self.history)
@@ -133,6 +139,7 @@ class Subject(dict):
 
     def clear_history(self) -> None:
         self.applied_transforms = []
+        self.transforms_metrics = []
 
     def check_consistent_attribute(self, attribute: str) -> None:
         values_dict = {}
@@ -207,6 +214,13 @@ class Subject(dict):
 
     def get_first_image(self) -> Image:
         return self.get_images(intensity_only=False)[0]
+
+    def add_metrics(self,
+                    transform: 'Transform',
+                    metrics: dict) -> None:
+        from torchio.transforms.augmentation import RandomTransform
+        if isinstance(transform, RandomTransform):
+            self.transforms_metrics.append((transform.name, metrics))
 
     # flake8: noqa: F821
     def add_transform(
