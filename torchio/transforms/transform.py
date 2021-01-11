@@ -112,6 +112,9 @@ class Transform(ABC):
         if isinstance(data, list):
             return [self.__call__(ii) for ii in data]
 
+        if self.metrics:
+            self._metrics = dict()
+
         data_parser = DataParser(data, keys=self.include)
         subject = data_parser.get_subject()
         orig = subject #todo marche aussi si self.copy is false ?
@@ -140,17 +143,19 @@ class Transform(ABC):
 
         if self.metrics:
             _metrics = [metric_func(orig, transformed) for metric_func in self.metrics.values()]
-            self._metrics = dict()
 
             for dict_metrics in _metrics:
                 for sample_key, metric_vals in dict_metrics.items():
-                    if not sample_key in self._metrics.keys():
+                    if sample_key not in self._metrics.keys():
                         self._metrics[sample_key] = dict()
                     for metric_name, metric_val in metric_vals.items():
                         self._metrics[sample_key][metric_name] = metric_val
-            #self._metrics = pd.DataFrame.from_dict(self._metrics).to_dict(orient="list")
+
+        if hasattr(self, "_metrics"):
+            transformed.add_metrics(self, self._metrics)
 
         self.add_transform_to_subject_history(transformed)
+
         for image in transformed.get_images(intensity_only=False):
             ndim = image.data.ndim
             assert ndim == 4, f'Output of {self.name} is {ndim}D'

@@ -115,6 +115,7 @@ class RandomMotionFromTimeCourse(RandomTransform, IntensityTransform):
 
         transform = MotionFromTimeCourse(**self.add_include_exclude(arguments))
         transformed = transform(sample)
+        self._metrics = transform._metrics
         return transformed
 
     def random_params(self, maxDisp: Tuple[float, float] = (2,5), maxRot: Tuple[float, float] = (2,5),
@@ -596,13 +597,14 @@ class MotionFromTimeCourse(IntensityTransform):
         #frequency_encoding_dim = len(im_shape) - 1 if frequency_encoding_dim == -1 else frequency_encoding_dim
 
     def _compute_motion_metrics(self, fitpars, fitpars_interp, img_fft):
-        self.mean_DispP = calculate_mean_Disp_P(fitpars)
-        self.rmse_Disp = calculate_mean_RMSE_displacment(fitpars)
+        self._metrics = dict()
+        self._metrics["mean_DispP"] = calculate_mean_Disp_P(fitpars)
+        self._metrics["rmse_Disp"] = calculate_mean_RMSE_displacment(fitpars)
 
         w_coef = np.abs(img_fft)
 
-        self.meanDispP_wTF2 = calculate_mean_Disp_P(fitpars_interp,  w_coef)
-        self.rmse_Disp_wTF2 = calculate_mean_RMSE_displacment(fitpars_interp,  w_coef)
+        self._metrics["meanDispP_wTF2"] = calculate_mean_Disp_P(fitpars_interp,  w_coef)
+        self._metrics["rmse_Disp_wTF2"] = calculate_mean_RMSE_displacment(fitpars_interp,  w_coef)
 
 
         #self.mean_DispP_iterp = calculate_mean_Disp_P(fitpars_interp) #not usefule, same as computed on fitpars
