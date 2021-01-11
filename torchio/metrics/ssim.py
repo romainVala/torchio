@@ -86,8 +86,14 @@ def functional_ssim(x, y, k1=.01, k2=.01, k3=.01, L=None, alpha=1, beta=1, gamma
         kernel_params = gauss_kernel_3d(sigma=sigma, truncate=truncate)
         kernel_params = kernel_params.reshape(1, 1, *kernel_params.shape).float()
     else:
-        kernel_params = torch.ones((1, 1, kernel_size, kernel_size, kernel_size))
-        kernel_params /= kernel_size ** 3
+        n_dim = x.dim() - 2
+        if n_dim==1:
+            kernel_params = torch.ones((1, 1, kernel_size))
+            kernel_params /= kernel_size
+            kernel_params = kernel_params.double()
+        else:
+            kernel_params = torch.ones((1, 1, kernel_size, kernel_size, kernel_size))
+            kernel_params /= kernel_size ** 3
 
     #print('sim K {} is {}'.format(kernel, kernel_params))
     c1 = (k1 * L) ** 2
