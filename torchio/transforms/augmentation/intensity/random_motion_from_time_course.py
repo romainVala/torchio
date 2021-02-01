@@ -550,8 +550,9 @@ class MotionFromTimeCourse(IntensityTransform):
             im_freq_domain = self._fft_im(original_image)
             translated_im_freq_domain = _translate_freq_domain(freq_domain=im_freq_domain,
                                                                translations=translations)
+            apply_rotation = np.sum(fitpars_interp[3:,:].flatten()) > 0
             # iNufft for rotations
-            if _finufft:
+            if _finufft and apply_rotation:
                 corrupted_im = _nufft(freq_domain_data=translated_im_freq_domain, rotations=rotations,
                                       im_shape=original_image.shape, frequency_encoding_dim=frequency_encoding_dim,
                                       phase_encoding_shape=self.phase_encoding_shape)
@@ -613,6 +614,13 @@ class MotionFromTimeCourse(IntensityTransform):
         #ff_interp, to_substract = self.demean_fitpar(fitpars_interp, original_image)
         #self.rmse_DispTF = calculate_mean_RMSE_displacment(ff_interp, original_image)
 
+        #compute meand disp as we
+        ff = fitpars_interp
+        to_substract = np.zeros(6)
+        for i in range(0, 6):
+            ffi = ff[i].reshape(-1)
+            w_coef_flat = w_coef.reshape(-1)
+            self._metrics[f'wTF_Disp_{i}'] = np.sum(ffi * w_coef_flat) / np.sum(w_coef_flat)
 
 
 def _interpolate_space_timing_1D(fitpars, nT, phase_encoding_shape, frequency_encoding_dim, phase_encoding_dims):
