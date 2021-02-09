@@ -604,8 +604,11 @@ class MotionFromTimeCourse(IntensityTransform):
 
         w_coef = np.abs(img_fft)
 
-        self._metrics["meanDispP_wTF2"] = calculate_mean_Disp_P(fitpars_interp,  w_coef)
-        self._metrics["rmse_Disp_wTF2"] = calculate_mean_RMSE_displacment(fitpars_interp,  w_coef)
+        self._metrics["meanDispP_wTF"] = calculate_mean_Disp_P(fitpars_interp,  w_coef)
+        self._metrics["rmse_Disp_wTF"] = calculate_mean_RMSE_displacment(fitpars_interp,  w_coef)
+
+        self._metrics["meanDispP_wTF2"] = calculate_mean_Disp_P(fitpars_interp,  w_coef**2)
+        self._metrics["rmse_Disp_wTF2"] = calculate_mean_RMSE_displacment(fitpars_interp,  w_coef**2)
 
 
         #self.mean_DispP_iterp = calculate_mean_Disp_P(fitpars_interp) #not usefule, same as computed on fitpars
@@ -617,10 +620,16 @@ class MotionFromTimeCourse(IntensityTransform):
         #compute meand disp as we
         ff = fitpars_interp
         to_substract = np.zeros(6)
+        disp_mean=[]
         for i in range(0, 6):
             ffi = ff[i].reshape(-1)
             w_coef_flat = w_coef.reshape(-1)
             self._metrics[f'wTF_Disp_{i}'] = np.sum(ffi * w_coef_flat) / np.sum(w_coef_flat)
+            self._metrics[f'wTF2_Disp_{i}'] = np.sum(ffi * w_coef_flat**2) / np.sum(w_coef_flat**2)
+            disp_mean.append(  np.sum(np.abs(ffi) * w_coef_flat) / np.sum(w_coef_flat) )
+        self._metrics['wTF_absDisp_t'] = np.mean(disp_mean[:3])
+        self._metrics['wTF_absDisp_r'] = np.mean(disp_mean[3:])
+        self._metrics['wTF_absDisp_a'] = np.mean(disp_mean)
 
 
 def _interpolate_space_timing_1D(fitpars, nT, phase_encoding_shape, frequency_encoding_dim, phase_encoding_dims):
