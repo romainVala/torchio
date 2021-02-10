@@ -157,7 +157,44 @@ def mutual_information_2d(x, y, sigma=1, normalized=True):
     return 2*mi
 
 
-def _grad_ratio(input,target, do_scat=False, do_nmi=True, do_entropy=True):
+def _get_autocor(data, nb_off_center = 3):
+    data = (data - torch.mean(data))
+    data = data / torch.std(data)
+    N = torch.prod(torch.tensor(data.shape)).numpy()
+    data = data.numpy()
+
+    tfi = np.fft.fftshift(np.fft.fftn(np.fft.ifftshift(data))).astype(np.complex128) / N
+    freq_domain = tfi * np.conjugate(tfi)
+
+    output = np.fft.ifftshift(np.fft.ifftn(freq_domain) * N)
+    #plt.figure();    plt.plot(np.abs(output.flatten()))
+
+    d = np.array(data.shape)
+    d_center = d // 2
+    dfcent = np.abs(
+        output[d_center[0] - nb_off_center:d_center[0] + nb_off_center+1,
+        d_center[1] - nb_off_center:d_center[1] + nb_off_center+1,
+        d_center[2] - nb_off_center:d_center[2] + nb_off_center+1])
+    aa = np.mgrid[-nb_off_center:nb_off_center+1, -nb_off_center:nb_off_center+1, -nb_off_center:nb_off_center+1]
+
+
+    [i1, i2, i3] = np.meshgrid(np.arange(nb_off_center*2+1)-nb_off_center,  np.arange(nb_off_center*2+1)-nb_off_center,
+                               np.arange(nb_off_center*2+1)-nb_off_center)
+    dist_ind=np.sqrt(i1**2+i2**2+i3**2)
+    dist_flat = dist_ind.flatten()
+    unique_dist = np.unique(dist_flat)
+    cor_coef = np.zeros_like(unique_dist)
+    for iind, one_dist in enumerate(unique_dist):
+        ii = dist_ind==one_dist
+        cor_coef[iind] = np.mean(dfcent[ii])
+
+    correlation_slope, b = np.polyfit(unique_dist[1:6], cor_coef[1:6], 1)
+    corelation1 = cor_coef[unique_dist==1]
+    corelation2 = cor_coef[unique_dist==2]
+    corelation3 = cor_coef[unique_dist==3]
+    return corelation1, corelation2, corelation3, correlation_slope
+
+def _grad_ratio(input,target, do_scat=False, do_nmi=True, do_entropy=True, do_autocorr=True):
     #print(f' i shape {input.shape}')
      #not sure how to handel batch size (first dim) TODO
     input = input[0]
@@ -213,6 +250,17 @@ def _grad_ratio(input,target, do_scat=False, do_nmi=True, do_entropy=True):
         entro_grad1 = np.sum([ _entropy(np.abs(gg)) for gg in grad_i])
         entro_grad2 = np.sum([ _entropy(np.abs(gg)) for gg in grad_t])
         res_dict['EGratio'] = entro_grad1 / entro_grad2
+    if do_autocorr:
+        c1, c2, c3, cdiff = get_autocor(input, nb_off_center=3)
+        c1m, c2m, c3m, cdiffm = get_autocor(target, nb_off_center=3)
+        res_dict['cor1_ratio'] = c1/c1m
+        res_dict['cor2_ratio'] = c2 / c2m
+        res_dict['cor3_ratio'] = c3 / c3m
+        res_dict['cor_diff_ratio'] = cdiffm / cdiff
+        res_dict['cor1_orig'] = c1
+        res_dict['cor2_orig'] = c2
+        res_dict['cor3_orig'] = c3
+        res_dict['cor_diff_orig'] = cdiff
 
     return res_dict
 
