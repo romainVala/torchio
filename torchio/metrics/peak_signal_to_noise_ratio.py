@@ -85,8 +85,9 @@ def _psnr(input, target, normalization='max'):
 def _entropy(x):
     #simple definition from autofocusing literature
     x = x.ravel()
-    x = x[abs(x)>1e-6]
-    bmax = bmax = np.square(np.sum(x**2)) #np.sum(x**2) #change le 9 02 2021
+    x = abs(x) #log need positiv number !
+    x = x[abs(x)>1e-6]  #avoid 0 values
+    bmax = np.square(np.sum(x**2)) #np.sum(x**2) #change le 9 02 2021
     proba = x / bmax
     return - np.sum( np.log(x)*x )
 
@@ -251,9 +252,9 @@ def _grad_ratio(input,target, do_scat=False, do_nmi=True, do_entropy=True, do_au
         entro_grad2 = np.sum([ _entropy(np.abs(gg)) for gg in grad_t])
         res_dict['EGratio'] = entro_grad1 / entro_grad2
     if do_autocorr:
-        c1, c2, c3, cdiff = get_autocor(input, nb_off_center=3)
-        c1m, c2m, c3m, cdiffm = get_autocor(target, nb_off_center=3)
-        res_dict['cor1_ratio'] = c1/c1m
+        c1, c2, c3, cdiff = _get_autocor(input, nb_off_center=3)
+        c1m, c2m, c3m, cdiffm = _get_autocor(target, nb_off_center=3)
+        res_dict['cor1_ratio'] = c1 / c1m
         res_dict['cor2_ratio'] = c2 / c2m
         res_dict['cor3_ratio'] = c3 / c3m
         res_dict['cor_diff_ratio'] = cdiffm / cdiff
