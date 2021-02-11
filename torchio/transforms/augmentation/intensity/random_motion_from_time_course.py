@@ -550,7 +550,7 @@ class MotionFromTimeCourse(IntensityTransform):
             im_freq_domain = self._fft_im(original_image)
             translated_im_freq_domain = _translate_freq_domain(freq_domain=im_freq_domain,
                                                                translations=translations)
-            apply_rotation = np.sum(fitpars_interp[3:,:].flatten()) > 0
+            apply_rotation = np.sum(np.abs(fitpars_interp[3:,:].flatten())) > 0
             # iNufft for rotations
             if _finufft and apply_rotation:
                 corrupted_im = _nufft(freq_domain_data=translated_im_freq_domain, rotations=rotations,
