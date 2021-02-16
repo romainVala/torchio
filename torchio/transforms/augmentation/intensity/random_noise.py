@@ -81,26 +81,27 @@ class Noise(IntensityTransform):
             mean: Union[float, Dict[str, float]],
             std: Union[float, Dict[str, float]],
             seed: Union[int, Sequence[int]],
-            abs_after_noise: bool,
+            abs_after_noise: bool = False,
             **kwargs
             ):
         super().__init__(**kwargs)
         self.mean = mean
         self.std = std
         self.seed = seed
+        self.abs_after_noise = abs_after_noise
         self.invert_transform = False
         self.args_names = 'mean', 'std', 'seed', 'abs_after_noise'
 
     def apply_transform(self, subject: Subject) -> Subject:
-        mean, std, seed = args = self.mean, self.std, self.seed
+        mean, std, seed, abs_after_noise = args = self.mean, self.std, self.seed, self.abs_after_noise
         for name, image in self.get_images_dict(subject).items():
             if self.arguments_are_dict():
-                mean, std, seed = [arg[name] for arg in args]
+                mean, std, seed, abs_after_noise = [arg[name] for arg in args]
             with self._use_seed(seed):
                 noise = get_noise(image.data, mean, std)
             if self.invert_transform:
                 noise *= -1
-            if self.abs_after_noise:
+            if abs_after_noise:
                 image.set_data(abs(image.data + noise))
             else:
                 image.set_data(image.data + noise)
