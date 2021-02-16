@@ -46,6 +46,7 @@ class RandomNoise(RandomTransform, IntensityTransform):
             arguments['mean'][image_name] = mean
             arguments['std'][image_name] = std
             arguments['seed'][image_name] = seed
+            arguments['abs_after_noise'][image_name] = self.abs_after_noise
         transform = Noise(**self.add_include_exclude(arguments))
         transformed = transform(subject)
         return transformed
@@ -80,6 +81,7 @@ class Noise(IntensityTransform):
             mean: Union[float, Dict[str, float]],
             std: Union[float, Dict[str, float]],
             seed: Union[int, Sequence[int]],
+            abs_after_noise: bool,
             **kwargs
             ):
         super().__init__(**kwargs)
@@ -87,7 +89,7 @@ class Noise(IntensityTransform):
         self.std = std
         self.seed = seed
         self.invert_transform = False
-        self.args_names = 'mean', 'std', 'seed'
+        self.args_names = 'mean', 'std', 'seed', 'abs_after_noise'
 
     def apply_transform(self, subject: Subject) -> Subject:
         mean, std, seed = args = self.mean, self.std, self.seed
@@ -98,7 +100,10 @@ class Noise(IntensityTransform):
                 noise = get_noise(image.data, mean, std)
             if self.invert_transform:
                 noise *= -1
-            image.set_data(image.data + noise)
+            if self.abs_after_noise:
+                image.set_data(abs(image.data + noise))
+            else:
+                image.set_data(image.data + noise)
         return subject
 
 
