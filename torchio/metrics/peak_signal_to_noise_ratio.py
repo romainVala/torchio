@@ -190,9 +190,9 @@ def _get_autocor(data, nb_off_center = 3):
         cor_coef[iind] = np.mean(dfcent[ii])
 
     correlation_slope, b = np.polyfit(unique_dist[1:6], cor_coef[1:6], 1)
-    corelation1 = cor_coef[unique_dist==1]
-    corelation2 = cor_coef[unique_dist==2]
-    corelation3 = cor_coef[unique_dist==3]
+    corelation1 = cor_coef[unique_dist==1][0]
+    corelation2 = cor_coef[unique_dist==2][0]
+    corelation3 = cor_coef[unique_dist==3][0]
     return corelation1, corelation2, corelation3, correlation_slope
 
 def _grad_ratio(input,target, do_scat=False, do_nmi=True, do_entropy=True, do_autocorr=True):
