@@ -89,10 +89,9 @@ Spatial
 .. autoclass:: ToCanonical
     :show-inheritance:
 
+
 Label
 ---------
-
-.. currentmodule:: torchio.transforms.preprocessing.label
 
 
 :class:`RemapLabels`
@@ -113,4 +112,25 @@ Label
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. autoclass:: SequentialLabels
+    :show-inheritance:
+
+
+:class:`OneHot`
+~~~~~~~~~~~~~~~
+
+.. autoclass:: OneHot
+    :show-inheritance:
+
+
+:class:`Contour`
+~~~~~~~~~~~~~~~~
+
+.. autoclass:: Contour
+    :show-inheritance:
+
+
+:class:`KeepLargestComponent`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: KeepLargestComponent
     :show-inheritance:

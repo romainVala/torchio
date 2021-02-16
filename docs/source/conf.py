@@ -25,7 +25,7 @@ author = 'Fernando Pérez-García'
 
 # version is the short X.Y version
 # release is the full version, including alpha/beta/rc tags
-version = release = '0.18.15'
+version = release = '0.18.29'
 
 
 # -- General configuration ---------------------------------------------------
@@ -85,6 +85,11 @@ exclude_patterns: List[str] = []
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = None
 
+# https://www.sphinx-doc.org/en/master/usage/configuration.html#confval-nitpicky
+# This generates a lot of warnings because of the broken internal links, which
+# makes the docs build fail because of the "fail_on_warning: true" option in
+# the .readthedocs.yml config file
+# nitpicky = True
 
 # -- Options for HTML output -------------------------------------------------
 
@@ -97,9 +102,11 @@ html_theme = 'furo'
 # further.  For a list of options available for each theme, see the
 # documentation.
 #
+arxiv_url = 'https://arxiv.org/abs/2003.04696'
+link = f'<a href="{arxiv_url}">arXiv preprint</a>'
 html_theme_options = {
     # 'navigation_depth': 3,  # for sphinx theme
-    # "announcement": "<em>Important</em> announcement!",
+    'announcement': f'Check out our new, extended {link} (12 Jan 2021)',
 }
 
 # Add any paths that contain custom static files (such as style sheets) here,

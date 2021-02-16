@@ -1,11 +1,11 @@
 import torch
 
-from ....data import LabelMap
-from ...transform import Transform, TypeMaskingMethod
+from ...transform import TypeMaskingMethod
 from .remap_labels import RemapLabels
+from .label_transform import LabelTransform
 
 
-class SequentialLabels(Transform):
+class SequentialLabels(LabelTransform):
     r"""Remap the integer IDs of labels in a LabelMap to be sequential.
 
     For example, if a label map has 6 labels with IDs (3, 5, 9, 15, 16, 23),
@@ -14,8 +14,7 @@ class SequentialLabels(Transform):
     This transformation is always `fully invertible <invertibility>`_.
 
     Args:
-        masking_method: See
-            :class:`~torchio.RemapLabels`.
+        masking_method: See :class:`~torchio.transforms.RemapLabels`.
         **kwargs: See :class:`~torchio.transforms.Transform` for additional
             keyword arguments.
     """
@@ -26,18 +25,9 @@ class SequentialLabels(Transform):
             ):
         super().__init__(**kwargs)
         self.masking_method = masking_method
-        self.args_names = []
 
     def apply_transform(self, subject):
-        images_dict = subject.get_images_dict(
-            intensity_only=False,
-            include=self.include,
-            exclude=self.exclude,
-        )
-        for name, image in images_dict.items():
-            if not isinstance(image, LabelMap):
-                continue
-
+        for name, image in self.get_images_dict(subject).items():
             unique_labels = torch.unique(image.data)
             remapping = {
                 unique_labels[i].item(): i

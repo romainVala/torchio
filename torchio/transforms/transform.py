@@ -1,9 +1,9 @@
 import copy
 import numbers
 import warnings
-from typing import Union, Tuple
 from abc import ABC, abstractmethod
 from contextlib import contextmanager
+from typing import Union, Tuple, Optional, Dict
 
 import torch
 import numpy as np
@@ -38,8 +38,8 @@ class Transform(ABC):
     """Abstract class for all TorchIO transforms.
 
     All subclasses must overwrite
-    :meth:`Transform.apply_transform`,
-    which takes data, applies some transformation and returns the result.
+    :meth:`~torchio.transforms.Transform.apply_transform`,
+    which takes some input, applies a transformation and returns the result.
 
     The input can be an instance of
     :class:`torchio.Subject`,
@@ -63,6 +63,8 @@ class Transform(ABC):
             transform such as :class:`~torchio.transforms.RandomBlur`,
             the transform will be only applied to the MRI, as the label map is
             excluded by default by spatial transforms.
+        keep: Dictionary with the names of the images that will be kept in the
+            subject and their new names.
     """
     def __init__(
             self,
@@ -72,7 +74,8 @@ class Transform(ABC):
             exclude: TypeKeys = None,
             keys: TypeKeys = None,
             metrics: Dict = None,
-            keep_before = None
+            keep_before = None,
+            keep: Optional[Dict[str, str]] = None,
             ):
         self.probability = self.parse_probability(p)
         self.copy = copy
@@ -90,6 +93,11 @@ class Transform(ABC):
             include = keys
         self.include, self.exclude = self.parse_include_and_exclude(
             include, exclude)
+        self.keep = keep
+        # args_names is the sequence of parameters from self that need to be
+        # passed to a non-random version of a random transform. They are also
+        # used to invert invertible transforms
+        self.args_names = ()
 
     def __call__(
             self,
@@ -98,7 +106,7 @@ class Transform(ABC):
         """Transform data and return a result of the same type.
 
         Args:
-            data: Instance of 1) :class:`~torchio.Subject`, 4D
+            data: Instance of :class:`torchio.Subject`, 4D
                 :class:`torch.Tensor` or :class:`numpy.ndarray` with dimensions
                 :math:`(C, W, H, D)`, where :math:`C` is the number of channels
                 and :math:`W, H, D` are the spatial dimensions. If the input is
@@ -118,6 +126,10 @@ class Transform(ABC):
         data_parser = DataParser(data, keys=self.include)
         subject = data_parser.get_subject()
         orig = subject #todo marche aussi si self.copy is false ?
+        if self.keep is not None:
+            images_to_keep = {}
+            for name, new_name in self.keep.items():
+                images_to_keep[new_name] = copy.copy(subject[name])
         if self.copy:
             subject = copy.copy(subject)
 
@@ -154,6 +166,9 @@ class Transform(ABC):
         if hasattr(self, "_metrics"):
             transformed.add_metrics(self, self._metrics)
 
+        if self.keep is not None:
+            for name, image in images_to_keep.items():
+                transformed.add_image(image, name)
         self.add_transform_to_subject_history(transformed)
 
         for image in transformed.get_images(intensity_only=False):
@@ -179,13 +194,13 @@ class Transform(ABC):
         return self.__class__.__name__
 
     @abstractmethod
-    def apply_transform(self, subject: Subject):
+    def apply_transform(self, subject: Subject) -> Subject:
         raise NotImplementedError
 
     def add_transform_to_subject_history(self, subject):
         from .augmentation import RandomTransform
         from . import Compose, OneOf, CropOrPad, EnsureShapeMultiple
-        from .preprocessing.label import SequentialLabels
+        from .preprocessing import SequentialLabels
         call_others = (
             RandomTransform,
             Compose,
@@ -526,14 +541,14 @@ class Transform(ABC):
         mask = tensor > tensor.float().mean()
         return mask
 
-    @staticmethod
     def get_mask_from_masking_method(
+            self,
             masking_method: TypeMaskingMethod,
             subject: Subject,
             tensor: torch.Tensor,
             ) -> torch.Tensor:
         if masking_method is None:
-            return Transform.ones(tensor)
+            return self.ones(tensor)
         elif callable(masking_method):
             return masking_method(tensor)
         elif type(masking_method) is str:
@@ -542,15 +557,15 @@ class Transform(ABC):
                 return subject[masking_method].data.bool()
             masking_method = masking_method.capitalize()
             if masking_method in anat_axes:
-                return Transform.get_mask_from_anatomical_label(
+                return self.get_mask_from_anatomical_label(
                     masking_method, tensor)
         elif type(masking_method) in (tuple, list, int):
-            return Transform.get_mask_from_bounds(masking_method, tensor)
+            return self.get_mask_from_bounds(masking_method, tensor)
         message = (
             'Masking method parameter must be a function, a label map name,'
             f' an anatomical label: {anat_axes}, or a bounds parameter'
             ' (an int, tuple of 3 ints, or tuple of 6 ints),'
-            f' not {masking_method} of type {type(masking_method)}'
+            f' not "{masking_method}" of type "{type(masking_method)}"'
         )
         raise ValueError(message)
 
@@ -584,10 +599,11 @@ class Transform(ABC):
 
     @staticmethod
     def get_mask_from_bounds(
+            self,
             bounds_parameters: TypeBounds,
             tensor: torch.Tensor,
             ) -> torch.Tensor:
-        bounds_parameters = Transform.parse_bounds(bounds_parameters)
+        bounds_parameters = self.parse_bounds(bounds_parameters)
         low = bounds_parameters[::2]
         high = bounds_parameters[1::2]
         i0, j0, k0 = low

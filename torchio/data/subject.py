@@ -1,12 +1,15 @@
 import copy
 import pprint
-from typing import Any, Dict, List, Tuple, Optional, Sequence
+from typing import Any, Dict, List, Tuple, Optional, Sequence, TYPE_CHECKING
 
 import numpy as np
 
 from ..constants import TYPE, INTENSITY
 from .image import Image
 from ..utils import get_subclasses
+
+if TYPE_CHECKING:
+    from ..transforms import Transform, Compose
 
 
 class Subject(dict):
@@ -113,11 +116,32 @@ class Subject(dict):
 
     @property
     def history(self):
+        # Kept for backwards compatibility
+        return self.get_applied_transforms()
+
+    def is_2d(self):
+        return all(i.is_2d() for i in self.get_images(intensity_only=False))
+
+    def get_applied_transforms(
+            self,
+            ignore_intensity: bool = False,
+            image_interpolation: Optional[str] = None,
+            ) -> List['Transform']:
         from ..transforms.transform import Transform
-        transform_classes = {cls.__name__: cls for cls in get_subclasses(Transform)}
+        from ..transforms.intensity_transform import IntensityTransform
+        name_to_transform = {
+            cls.__name__: cls
+            for cls in get_subclasses(Transform)
+        }
         transforms_list = []
         for transform_name, arguments in self.applied_transforms:
-            transform = transform_classes[transform_name](**arguments)
+            transform = name_to_transform[transform_name](**arguments)
+            if ignore_intensity and isinstance(transform, IntensityTransform):
+                continue
+            resamples = hasattr(transform, 'image_interpolation')
+            if resamples and image_interpolation is not None:
+                parsed = transform.parse_interpolation(image_interpolation)
+                transform.image_interpolation = parsed
             transforms_list.append(transform)
         return transforms_list
 
@@ -125,15 +149,50 @@ class Subject(dict):
     def _transforms_metrics(self):
         return self.transforms_metrics
 
-    def get_composed_history(self) -> 'Transform':
+    def get_composed_history(
+            self,
+            ignore_intensity: bool = False,
+            image_interpolation: Optional[str] = None,
+            ) -> 'Compose':
         from ..transforms.augmentation.composition import Compose
-        return Compose(self.history)
+        transforms = self.get_applied_transforms(
+            ignore_intensity=ignore_intensity,
+            image_interpolation=image_interpolation,
+        )
+        return Compose(transforms)
 
-    def get_inverse_transform(self, warn=True) -> 'Transform':
-        return self.get_composed_history().inverse(warn=warn)
+    def get_inverse_transform(
+            self,
+            warn: bool = True,
+            ignore_intensity: bool = True,
+            image_interpolation: Optional[str] = None,
+            ) ->  'Compose':
+        """Get a reversed list of the inverses of the applied transforms.
 
-    def apply_inverse_transform(self, warn=True) -> 'Subject':
-        transformed = self.get_inverse_transform(warn=warn)(self)
+        Args:
+            warn: Issue a warning if some transforms are not invertible.
+            ignore_intensity: If ``True``, all instances of
+                :class:`~torchio.transforms.intensity_transform.IntensityTransform`
+                will be ignored.
+            image_interpolation: Modify interpolation for scalar images inside
+                transforms that perform resampling.
+        """
+        history_transform = self.get_composed_history(
+            ignore_intensity=ignore_intensity,
+            image_interpolation=image_interpolation,
+        )
+        inverse_transform = history_transform.inverse(warn=warn)
+        return inverse_transform
+
+    def apply_inverse_transform(self, **kwargs) -> 'Subject':
+        """Try to apply the inverse of all applied transforms, in reverse order.
+
+        Args:
+            **kwargs: Keyword arguments passed on to
+                :meth:`~torchio.data.subject.Subject.get_inverse_transform`.
+        """
+        inverse_transform = self.get_inverse_transform(**kwargs)
+        transformed = inverse_transform(self)
         transformed.clear_history()
         return transformed
 
@@ -209,7 +268,11 @@ class Subject(dict):
             include: Optional[Sequence[str]] = None,
             exclude: Optional[Sequence[str]] = None,
             ) -> List[Image]:
-        images_dict = self.get_images_dict(intensity_only=intensity_only, include=include, exclude=exclude)
+        images_dict = self.get_images_dict(
+            intensity_only=intensity_only,
+            include=include,
+            exclude=exclude,
+        )
         return list(images_dict.values())
 
     def get_first_image(self) -> Image:
@@ -239,7 +302,7 @@ class Subject(dict):
         self.applied_transforms.append((transform.name, parameters_dict))
 
     def load(self) -> None:
-        """Load images in subject."""
+        """Load images in subject on RAM."""
         for image in self.get_images(intensity_only=False):
             image.load()
 
@@ -255,8 +318,14 @@ class Subject(dict):
     def remove_image(self, image_name: str) -> None:
         """Remove an image."""
         del self[image_name]
+        delattr(self, image_name)
 
     def plot(self, **kwargs) -> None:
-        """Plot images."""
+        """Plot images using matplotlib.
+
+        Args:
+            **kwargs: Keyword arguments that will be passed on to
+                :class:`~torchio.data.image.Image`.
+        """
         from ..visualization import plot_subject  # avoid circular import
         plot_subject(self, **kwargs)

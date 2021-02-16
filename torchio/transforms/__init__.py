@@ -39,9 +39,12 @@ from .preprocessing import EnsureShapeMultiple
 from .preprocessing import HistogramStandardization
 from .preprocessing import ApplyMask
 from .preprocessing.intensity.histogram_standardization import train_histogram
-from .preprocessing.label.remap_labels import RemapLabels
-from .preprocessing.label.sequential_labels import SequentialLabels
-from .preprocessing.label.remove_labels import RemoveLabels
+from .preprocessing import OneHot
+from .preprocessing import Contour
+from .preprocessing import RemapLabels
+from .preprocessing import RemoveLabels
+from .preprocessing import SequentialLabels
+from .preprocessing import KeepLargestComponent
 
 __all__ = [
     'Transform',
@@ -89,7 +92,10 @@ __all__ = [
     'EnsureShapeMultiple',
     'train_histogram',
     'ApplyMask',
+    'OneHot',
+    'Contour',
     'RemapLabels',
-    'SequentialLabels',
     'RemoveLabels',
+    'SequentialLabels',
+    'KeepLargestComponent',
 ]

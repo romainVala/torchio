@@ -1,6 +1,10 @@
 Transforms
 ----------
 
+.. image:: ../../images/fpg_progressive.gif
+    :alt: Augmented image
+
+
 TorchIO transforms take as input instances of
 :class:`~torchio.Subject` or
 :class:`~torchio.Image` (and its subclasses), 4D PyTorch tensors,
@@ -72,12 +76,12 @@ Reproducibility
 ---------------
 
 When transforms are instantiated, we typically need to pass values that will be
-used to sample the transform parameters when the :meth:`__call__` method of the
+used to sample the transform parameters when the :meth:`~torchio.transforms.Transform.__call__` method of the
 transform is called, i.e., when the transform instance is called.
 
 All random transforms have a corresponding deterministic class, that can be
-applied again to obtain exactly the same result. The :class:`Subject` class
-contains some convenience methods to reproduce transforms::
+applied again to obtain exactly the same result. The :class:`~torchio.Subject` class
+contains some convenient methods to reproduce transforms::
 
     >>> import torchio as tio
     >>> subject = tio.datasets.FPG()
@@ -125,10 +129,10 @@ or `aleatoric uncertainty estimation <https://www.sciencedirect.com/science/arti
     >>> segmentations = []
     >>> num_segmentations = 10
     >>> for _ in range(num_segmentations):
-    ...     transform = tio.RandomAffine()
+    ...     transform = tio.RandomAffine(image_interpolation='bspline')
     ...     transformed = transform(subject)
     ...     segmentation = model(transformed)
-    ...     transformed_native_space = segmentation.apply_inverse_transform()
+    ...     transformed_native_space = segmentation.apply_inverse_transform(image_interpolation='linear')
     ...     segmentations.append(transformed_native_space)
     ...
 
@@ -147,7 +151,7 @@ invertibility:
 - Impossible: transforms that cannot be inverted, such as
   :class:`~torchio.transforms.RandomBlur`.
 
-Non-invertible transforms will be ignored by the :meth:`apply_inverse_transform`
+Non-invertible transforms will be ignored by the :meth:`~torchio.Subject.apply_inverse_transform`
 method of :class:`~torchio.Subject`.
 
 
@@ -176,9 +180,9 @@ optimal resampling results during offline data preprocessing.
 
 Visit the
 `ITK docs <https://itk.org/Doxygen/html/group__ImageInterpolators.html>`_
-for more information and see
-`this SimpleITK example <https://simpleitk-prototype.readthedocs.io/en/latest/user_guide/transforms/plot_interpolation.html>`_
-for some interpolation results on test images.
+for technical documentation and
+`Cambridge in Colour <https://www.cambridgeincolour.com/tutorials/image-interpolation.htm>`_
+for some further generalexplanations of digital image interpolation.
 
 .. currentmodule:: torchio.transforms.interpolation
 

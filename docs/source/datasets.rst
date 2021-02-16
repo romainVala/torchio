@@ -1,3 +1,16 @@
+Medical image datasets
+======================
+
+TorchIO offers tools to easily download publicly available datasets from
+different institutions and modalities.
+
+The interface is similar to :mod:`torchvision.datasets`.
+
+If you use any of them, please visit the corresponding website (linked in each
+description) and make sure you comply with any data usage agreement and you
+acknowledge the authors by citing the necessary citations.
+
+
 IXI
 ---
 
@@ -16,6 +29,19 @@ IXI
 ~~~~~~~~~~~~~~~~~
 
 .. autoclass:: IXITiny
+    :members:
+    :show-inheritance:
+
+
+EPISURG
+-------
+
+.. currentmodule:: torchio.datasets.episurg
+
+:class:`EPISURG`
+~~~~~~~~~~~~~~~~
+
+.. autoclass:: EPISURG
     :members:
     :show-inheritance:
 
@@ -77,6 +103,16 @@ MNI
     :show-inheritance:
 
 
+.. currentmodule:: torchio.datasets.bite
+
+:class:`BITE3`
+~~~~~~~~~~~~~~
+
+.. autoclass:: BITE3
+    :members:
+    :show-inheritance:
+
+
 ITK-SNAP
 --------
 
@@ -86,12 +122,6 @@ ITK-SNAP
 
 :class:`BrainTumor`
 ~~~~~~~~~~~~~~~~~~~
-
-.. plot::
-
-    import torchio as tio
-    subject = tio.datasets.BrainTumor()
-    subject.plot()
 
 .. autoclass:: BrainTumor
     :members:

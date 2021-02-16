@@ -11,7 +11,6 @@ import nibabel as nib
 import SimpleITK as sitk
 from tqdm import trange
 
-from .constants import INTENSITY
 from .typing import TypeNumber, TypePath
 
 
@@ -114,11 +113,12 @@ def apply_transform_to_file(
         input_path: TypePath,
         transform,  # : Transform seems to create a circular import
         output_path: TypePath,
-        type: str = INTENSITY,  # noqa: A002
+        class_: str = 'ScalarImage',
         verbose: bool = False,
         ):
-    from . import Image, Subject
-    subject = Subject(image=Image(input_path, type=type))
+    from . import data
+    image = getattr(data, class_)(input_path)
+    subject = data.Subject(image=image)
     transformed = transform(subject)
     transformed.image.save(output_path)
     if verbose and transformed.history:
@@ -150,27 +150,6 @@ def guess_type(string: str) -> Any:
 
 def get_torchio_cache_dir():
     return Path('~/.cache/torchio').expanduser()
-
-
-def round_up(value: float) -> int:
-    """Round half towards infinity.
-
-    Args:
-        value: The value to round.
-
-    Example:
-
-        >>> round(2.5)
-        2
-        >>> round(3.5)
-        4
-        >>> round_up(2.5)
-        3
-        >>> round_up(3.5)
-        4
-
-    """
-    return int(np.floor(value + 0.5))
 
 
 def compress(input_path, output_path):

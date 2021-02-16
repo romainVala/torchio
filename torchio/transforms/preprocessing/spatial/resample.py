@@ -36,19 +36,22 @@ class Resample(SpatialTransform):
             transform. See usage in the example below.
         image_interpolation: See :ref:`Interpolation`.
         scalars_only: Apply only to instances of :class:`~torchio.ScalarImage`.
+            See :class:`~torchio.transforms.RandomAnisotropy`.
         **kwargs: See :class:`~torchio.transforms.Transform` for additional
             keyword arguments.
 
     Example:
+        >>> import torch
         >>> import torchio as tio
         >>> transform = tio.Resample(1)                     # resample all images to 1mm iso
         >>> transform = tio.Resample((2, 2, 2))             # resample all images to 2mm iso
         >>> transform = tio.Resample('t1')                  # resample all images to 't1' image space
-        >>> colin = tio.datasets.Colin27()  # this images are in the MNI space
-        >>> fpg = tio.datasets.FPG()  # matrices to the MNI space are included here
-        >>> # Resample all images into the MNI space
-        >>> transform = tio.Resample(colin.t1.path, pre_affine_name='affine_matrix')
-        >>> transformed = transform(fpg)  # images in fpg are now in MNI space
+        >>> # Example: using a precomputed transform to MNI space
+        >>> ref_path = tio.datasets.Colin27().t1.path  # this image is in the MNI space, so we can use it as reference/target
+        >>> affine_matrix = tio.io.read_matrix('transform_to_mni.txt')  # from a NiftyReg registration. Would also work with e.g. .tfm from SimpleITK
+        >>> image = tio.ScalarImage(tensor=torch.rand(1, 256, 256, 180), to_mni=affine_matrix)  # 'to_mni' is an arbitrary name
+        >>> transform = tio.Resample(colin.t1.path, pre_affine_name='to_mni')
+        >>> transformed = transform(image)  # "image" is now in the MNI space
     """  # noqa: E501
     def __init__(
             self,
@@ -72,10 +75,7 @@ class Resample(SpatialTransform):
             'scalars_only',
         )
 
-    def parse_target(
-            self,
-            target: Union[TypeSpacing, str],
-            ) -> TypeTarget:
+    def parse_target(self, target: Union[TypeSpacing, str]) -> TypeTarget:
         """
         If target is an existing path, return a torchio.ScalarImage
         If it does not exist, return the string
@@ -174,15 +174,17 @@ class Resample(SpatialTransform):
 
             floating_itk = image.as_sitk(force_3d=True)
 
-            # Resample
+            # Get reference image
             if isinstance(self.reference_image, str):
                 try:
                     reference_image = subject[self.reference_image]
                     reference_image_sitk = reference_image.as_sitk()
                 except KeyError as error:
                     message = (
-                        f'Reference name "{self.reference_image}"'
-                        ' not found in subject'
+                        f'Image name "{self.reference_image}"'
+                        f' not found in subject. If "{self.reference_image}"'
+                        ' is a path, it does not exist or permission has been'
+                        ' denied'
                     )
                     raise ValueError(message) from error
             elif isinstance(self.reference_image, Image):
@@ -193,18 +195,18 @@ class Resample(SpatialTransform):
                     floating_itk,
                     self.target_spacing,
                 )
-
             num_dims_ref = reference_image_sitk.GetDimension()
             num_dims_flo = floating_itk.GetDimension()
             assert num_dims_ref == num_dims_flo
 
+            # Resample
             resampler = sitk.ResampleImageFilter()
             resampler.SetInterpolator(interpolator)
             resampler.SetReferenceImage(reference_image_sitk)
             resampled = resampler.Execute(floating_itk)
 
             array, affine = sitk_to_nib(resampled)
-            image.set_data(torch.from_numpy(array))
+            image.set_data(torch.as_tensor(array))
             image.affine = affine
         return subject
 

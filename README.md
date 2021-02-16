@@ -99,7 +99,13 @@ at [OpenAI](https://openai.com/) ([link](https://jack-clark.net/2020/03/17/)).
 
 <p align="center">
   <a href="https://torchio.readthedocs.io/transforms/augmentation.html">
-    <img style="width: 360px; height: 360px; overflow: hidden;" src="docs/images/augmentation.gif" alt="Augmentation">
+    <img style="width: 600px; overflow: hidden;" src="https://raw.githubusercontent.com/fepegar/torchio/master/docs/images/fpg_progressive.gif" alt="Progressive artifacts">
+  </a>
+</p>
+
+<p align="center">
+  <a href="https://torchio.readthedocs.io/transforms/augmentation.html">
+    <img style="width: 360px; height: 360px; overflow: hidden;" src="https://raw.githubusercontent.com/fepegar/torchio/master/docs/images/augmentation.gif" alt="Augmentation">
   </a>
 </p>
 
@@ -288,34 +294,43 @@ Thanks goes to all these people ([emoji key](https://allcontributors.org/docs/en
 <!-- markdownlint-disable -->
 <table>
   <tr>
-    <td align="center"><a href="https://github.com/fepegar"><img src="https://avatars1.githubusercontent.com/u/12688084?v=4" width="100px;" alt=""/><br /><sub><b>Fernando Pérez-García</b></sub></a><br /><a href="https://github.com/fepegar/torchio/commits?author=fepegar" title="Code">💻</a> <a href="https://github.com/fepegar/torchio/commits?author=fepegar" title="Documentation">📖</a></td>
-    <td align="center"><a href="https://github.com/romainVala"><img src="https://avatars1.githubusercontent.com/u/5611962?v=4" width="100px;" alt=""/><br /><sub><b>valabregue</b></sub></a><br /><a href="#ideas-romainVala" title="Ideas, Planning, & Feedback">🤔</a> <a href="https://github.com/fepegar/torchio/pulls?q=is%3Apr+reviewed-by%3AromainVala" title="Reviewed Pull Requests">👀</a> <a href="https://github.com/fepegar/torchio/commits?author=romainVala" title="Code">💻</a></td>
-    <td align="center"><a href="https://github.com/GFabien"><img src="https://avatars1.githubusercontent.com/u/39873986?v=4" width="100px;" alt=""/><br /><sub><b>GFabien</b></sub></a><br /><a href="https://github.com/fepegar/torchio/commits?author=GFabien" title="Code">💻</a> <a href="https://github.com/fepegar/torchio/pulls?q=is%3Apr+reviewed-by%3AGFabien" title="Reviewed Pull Requests">👀</a> <a href="#ideas-GFabien" title="Ideas, Planning, & Feedback">🤔</a></td>
-    <td align="center"><a href="https://github.com/GReguig"><img src="https://avatars1.githubusercontent.com/u/11228281?v=4" width="100px;" alt=""/><br /><sub><b>G.Reguig</b></sub></a><br /><a href="https://github.com/fepegar/torchio/commits?author=GReguig" title="Code">💻</a></td>
-    <td align="center"><a href="https://github.com/nwschurink"><img src="https://avatars3.githubusercontent.com/u/12720130?v=4" width="100px;" alt=""/><br /><sub><b>Niels Schurink</b></sub></a><br /><a href="https://github.com/fepegar/torchio/commits?author=nwschurink" title="Code">💻</a></td>
-    <td align="center"><a href="https://www.linkedin.com/in/ibrhad/ "><img src="https://avatars3.githubusercontent.com/u/18015788?v=4" width="100px;" alt=""/><br /><sub><b>Ibrahim Hadzic</b></sub></a><br /><a href="https://github.com/fepegar/torchio/issues?q=author%3Aibro45" title="Bug reports">🐛</a></td>
-    <td align="center"><a href="https://github.com/ReubenDo"><img src="https://avatars1.githubusercontent.com/u/17268715?v=4" width="100px;" alt=""/><br /><sub><b>ReubenDo</b></sub></a><br /><a href="#ideas-ReubenDo" title="Ideas, Planning, & Feedback">🤔</a></td>
+    <td align="center"><a href="https://github.com/fepegar"><img src="https://avatars1.githubusercontent.com/u/12688084?v=4?s=100" width="100px;" alt=""/><br /><sub><b>Fernando Pérez-García</b></sub></a><br /><a href="https://github.com/fepegar/torchio/commits?author=fepegar" title="Code">💻</a> <a href="https://github.com/fepegar/torchio/commits?author=fepegar" title="Documentation">📖</a></td>
+    <td align="center"><a href="https://github.com/romainVala"><img src="https://avatars1.githubusercontent.com/u/5611962?v=4?s=100" width="100px;" alt=""/><br /><sub><b>valabregue</b></sub></a><br /><a href="#ideas-romainVala" title="Ideas, Planning, & Feedback">🤔</a> <a href="https://github.com/fepegar/torchio/pulls?q=is%3Apr+reviewed-by%3AromainVala" title="Reviewed Pull Requests">👀</a> <a href="https://github.com/fepegar/torchio/commits?author=romainVala" title="Code">💻</a></td>
+    <td align="center"><a href="https://github.com/GFabien"><img src="https://avatars1.githubusercontent.com/u/39873986?v=4?s=100" width="100px;" alt=""/><br /><sub><b>GFabien</b></sub></a><br /><a href="https://github.com/fepegar/torchio/commits?author=GFabien" title="Code">💻</a> <a href="https://github.com/fepegar/torchio/pulls?q=is%3Apr+reviewed-by%3AGFabien" title="Reviewed Pull Requests">👀</a> <a href="#ideas-GFabien" title="Ideas, Planning, & Feedback">🤔</a></td>
+    <td align="center"><a href="https://github.com/GReguig"><img src="https://avatars1.githubusercontent.com/u/11228281?v=4?s=100" width="100px;" alt=""/><br /><sub><b>G.Reguig</b></sub></a><br /><a href="https://github.com/fepegar/torchio/commits?author=GReguig" title="Code">💻</a></td>
+    <td align="center"><a href="https://github.com/nwschurink"><img src="https://avatars3.githubusercontent.com/u/12720130?v=4?s=100" width="100px;" alt=""/><br /><sub><b>Niels Schurink</b></sub></a><br /><a href="https://github.com/fepegar/torchio/commits?author=nwschurink" title="Code">💻</a></td>
+    <td align="center"><a href="https://www.linkedin.com/in/ibrhad/ "><img src="https://avatars3.githubusercontent.com/u/18015788?v=4?s=100" width="100px;" alt=""/><br /><sub><b>Ibrahim Hadzic</b></sub></a><br /><a href="https://github.com/fepegar/torchio/issues?q=author%3Aibro45" title="Bug reports">🐛</a></td>
+    <td align="center"><a href="https://github.com/ReubenDo"><img src="https://avatars1.githubusercontent.com/u/17268715?v=4?s=100" width="100px;" alt=""/><br /><sub><b>ReubenDo</b></sub></a><br /><a href="#ideas-ReubenDo" title="Ideas, Planning, & Feedback">🤔</a></td>
   </tr>
   <tr>
-    <td align="center"><a href="http://julianklug.com"><img src="https://avatars0.githubusercontent.com/u/8020367?v=4" width="100px;" alt=""/><br /><sub><b>Julian Klug</b></sub></a><br /><a href="#ideas-MonsieurWave" title="Ideas, Planning, & Feedback">🤔</a></td>
-    <td align="center"><a href="https://github.com/dvolgyes"><img src="https://avatars1.githubusercontent.com/u/425560?v=4" width="100px;" alt=""/><br /><sub><b>David Völgyes</b></sub></a><br /><a href="#ideas-dvolgyes" title="Ideas, Planning, & Feedback">🤔</a> <a href="https://github.com/fepegar/torchio/commits?author=dvolgyes" title="Code">💻</a></td>
-    <td align="center"><a href="https://www.linkedin.com/in/jfillionr/"><img src="https://avatars0.githubusercontent.com/u/219043?v=4" width="100px;" alt=""/><br /><sub><b>Jean-Christophe Fillion-Robin</b></sub></a><br /><a href="https://github.com/fepegar/torchio/commits?author=jcfr" title="Documentation">📖</a></td>
-    <td align="center"><a href="http://surajpai.tech"><img src="https://avatars1.githubusercontent.com/u/10467804?v=4" width="100px;" alt=""/><br /><sub><b>Suraj Pai</b></sub></a><br /><a href="#ideas-surajpaib" title="Ideas, Planning, & Feedback">🤔</a></td>
-    <td align="center"><a href="https://github.com/bcdarwin"><img src="https://avatars2.githubusercontent.com/u/164148?v=4" width="100px;" alt=""/><br /><sub><b>Ben Darwin</b></sub></a><br /><a href="#ideas-bcdarwin" title="Ideas, Planning, & Feedback">🤔</a></td>
-    <td align="center"><a href="https://github.com/OeslleLucena"><img src="https://avatars0.githubusercontent.com/u/19919194?v=4" width="100px;" alt=""/><br /><sub><b>Oeslle Lucena</b></sub></a><br /><a href="https://github.com/fepegar/torchio/issues?q=author%3AOeslleLucena" title="Bug reports">🐛</a></td>
-    <td align="center"><a href="http://www.soumick.com"><img src="https://avatars0.githubusercontent.com/u/20525305?v=4" width="100px;" alt=""/><br /><sub><b>Soumick Chatterjee</b></sub></a><br /><a href="https://github.com/fepegar/torchio/commits?author=soumickmj" title="Code">💻</a></td>
+    <td align="center"><a href="http://julianklug.com"><img src="https://avatars0.githubusercontent.com/u/8020367?v=4?s=100" width="100px;" alt=""/><br /><sub><b>Julian Klug</b></sub></a><br /><a href="#ideas-MonsieurWave" title="Ideas, Planning, & Feedback">🤔</a></td>
+    <td align="center"><a href="https://github.com/dvolgyes"><img src="https://avatars1.githubusercontent.com/u/425560?v=4?s=100" width="100px;" alt=""/><br /><sub><b>David Völgyes</b></sub></a><br /><a href="#ideas-dvolgyes" title="Ideas, Planning, & Feedback">🤔</a> <a href="https://github.com/fepegar/torchio/commits?author=dvolgyes" title="Code">💻</a></td>
+    <td align="center"><a href="https://www.linkedin.com/in/jfillionr/"><img src="https://avatars0.githubusercontent.com/u/219043?v=4?s=100" width="100px;" alt=""/><br /><sub><b>Jean-Christophe Fillion-Robin</b></sub></a><br /><a href="https://github.com/fepegar/torchio/commits?author=jcfr" title="Documentation">📖</a></td>
+    <td align="center"><a href="http://surajpai.tech"><img src="https://avatars1.githubusercontent.com/u/10467804?v=4?s=100" width="100px;" alt=""/><br /><sub><b>Suraj Pai</b></sub></a><br /><a href="#ideas-surajpaib" title="Ideas, Planning, & Feedback">🤔</a></td>
+    <td align="center"><a href="https://github.com/bcdarwin"><img src="https://avatars2.githubusercontent.com/u/164148?v=4?s=100" width="100px;" alt=""/><br /><sub><b>Ben Darwin</b></sub></a><br /><a href="#ideas-bcdarwin" title="Ideas, Planning, & Feedback">🤔</a></td>
+    <td align="center"><a href="https://github.com/OeslleLucena"><img src="https://avatars0.githubusercontent.com/u/19919194?v=4?s=100" width="100px;" alt=""/><br /><sub><b>Oeslle Lucena</b></sub></a><br /><a href="https://github.com/fepegar/torchio/issues?q=author%3AOeslleLucena" title="Bug reports">🐛</a></td>
+    <td align="center"><a href="http://www.soumick.com"><img src="https://avatars0.githubusercontent.com/u/20525305?v=4?s=100" width="100px;" alt=""/><br /><sub><b>Soumick Chatterjee</b></sub></a><br /><a href="https://github.com/fepegar/torchio/commits?author=soumickmj" title="Code">💻</a></td>
   </tr>
   <tr>
-    <td align="center"><a href="https://github.com/neuronflow"><img src="https://avatars1.githubusercontent.com/u/7048826?v=4" width="100px;" alt=""/><br /><sub><b>neuronflow</b></sub></a><br /><a href="https://github.com/fepegar/torchio/commits?author=neuronflow" title="Documentation">📖</a></td>
-    <td align="center"><a href="https://github.com/jwitos"><img src="https://avatars2.githubusercontent.com/u/948674?v=4" width="100px;" alt=""/><br /><sub><b>Jan Witowski</b></sub></a><br /><a href="https://github.com/fepegar/torchio/commits?author=jwitos" title="Documentation">📖</a></td>
-    <td align="center"><a href="https://github.com/dmus"><img src="https://avatars1.githubusercontent.com/u/464378?v=4" width="100px;" alt=""/><br /><sub><b>Derk Mus</b></sub></a><br /><a href="https://github.com/fepegar/torchio/commits?author=dmus" title="Documentation">📖</a> <a href="https://github.com/fepegar/torchio/commits?author=dmus" title="Code">💻</a></td>
-    <td align="center"><a href="http://www.linkedin.com/in/che85"><img src="https://avatars2.githubusercontent.com/u/10195822?v=4" width="100px;" alt=""/><br /><sub><b>Christian Herz</b></sub></a><br /><a href="https://github.com/fepegar/torchio/issues?q=author%3Ache85" title="Bug reports">🐛</a></td>
-    <td align="center"><a href="https://github.com/efirdc"><img src="https://avatars3.githubusercontent.com/u/5416313?v=4" width="100px;" alt=""/><br /><sub><b>Cory Efird</b></sub></a><br /><a href="https://github.com/fepegar/torchio/commits?author=efirdc" title="Code">💻</a></td>
+    <td align="center"><a href="https://github.com/neuronflow"><img src="https://avatars1.githubusercontent.com/u/7048826?v=4?s=100" width="100px;" alt=""/><br /><sub><b>neuronflow</b></sub></a><br /><a href="https://github.com/fepegar/torchio/commits?author=neuronflow" title="Documentation">📖</a></td>
+    <td align="center"><a href="https://github.com/jwitos"><img src="https://avatars2.githubusercontent.com/u/948674?v=4?s=100" width="100px;" alt=""/><br /><sub><b>Jan Witowski</b></sub></a><br /><a href="https://github.com/fepegar/torchio/commits?author=jwitos" title="Documentation">📖</a></td>
+    <td align="center"><a href="https://github.com/dmus"><img src="https://avatars1.githubusercontent.com/u/464378?v=4?s=100" width="100px;" alt=""/><br /><sub><b>Derk Mus</b></sub></a><br /><a href="https://github.com/fepegar/torchio/commits?author=dmus" title="Documentation">📖</a> <a href="https://github.com/fepegar/torchio/commits?author=dmus" title="Code">💻</a></td>
+    <td align="center"><a href="http://www.linkedin.com/in/che85"><img src="https://avatars2.githubusercontent.com/u/10195822?v=4?s=100" width="100px;" alt=""/><br /><sub><b>Christian Herz</b></sub></a><br /><a href="https://github.com/fepegar/torchio/issues?q=author%3Ache85" title="Bug reports">🐛</a></td>
+    <td align="center"><a href="https://github.com/efirdc"><img src="https://avatars3.githubusercontent.com/u/5416313?v=4?s=100" width="100px;" alt=""/><br /><sub><b>Cory Efird</b></sub></a><br /><a href="https://github.com/fepegar/torchio/commits?author=efirdc" title="Code">💻</a></td>
+    <td align="center"><a href="https://github.com/estebvac"><img src="https://avatars.githubusercontent.com/u/21016728?v=4?s=100" width="100px;" alt=""/><br /><sub><b>Esteban Vaca C.</b></sub></a><br /><a href="https://github.com/fepegar/torchio/issues?q=author%3Aestebvac" title="Bug reports">🐛</a></td>
+    <td align="center"><a href="https://stackoverflow.com/users/3250829/rayryeng?tab=profile"><img src="https://avatars.githubusercontent.com/u/765375?v=4?s=100" width="100px;" alt=""/><br /><sub><b>Ray Phan</b></sub></a><br /><a href="https://github.com/fepegar/torchio/issues?q=author%3Arayryeng" title="Bug reports">🐛</a></td>
+  </tr>
+  <tr>
+    <td align="center"><a href="https://github.com/Linardos"><img src="https://avatars.githubusercontent.com/u/26694607?v=4?s=100" width="100px;" alt=""/><br /><sub><b>Akis Linardos</b></sub></a><br /><a href="https://github.com/fepegar/torchio/issues?q=author%3ALinardos" title="Bug reports">🐛</a> <a href="https://github.com/fepegar/torchio/commits?author=Linardos" title="Code">💻</a></td>
+    <td align="center"><a href="http://nina.brown.15@ucl.ac.uk"><img src="https://avatars.githubusercontent.com/u/56116848?v=4?s=100" width="100px;" alt=""/><br /><sub><b>Nina Montana-Brown</b></sub></a><br /><a href="https://github.com/fepegar/torchio/commits?author=NMontanaBrown" title="Documentation">📖</a></td>
+    <td align="center"><a href="https://github.com/fabien-brulport"><img src="https://avatars.githubusercontent.com/u/32873392?v=4?s=100" width="100px;" alt=""/><br /><sub><b>fabien-brulport</b></sub></a><br /><a href="https://github.com/fepegar/torchio/issues?q=author%3Afabien-brulport" title="Bug reports">🐛</a></td>
+    <td align="center"><a href="https://github.com/malteekj"><img src="https://avatars.githubusercontent.com/u/44469884?v=4?s=100" width="100px;" alt=""/><br /><sub><b>malteekj</b></sub></a><br /><a href="https://github.com/fepegar/torchio/issues?q=author%3Amalteekj" title="Bug reports">🐛</a></td>
   </tr>
 </table>
 
-<!-- markdownlint-enable -->
+<!-- markdownlint-restore -->
 <!-- prettier-ignore-end -->
+
 <!-- ALL-CONTRIBUTORS-LIST:END -->
 
 This project follows the

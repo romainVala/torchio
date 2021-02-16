@@ -182,6 +182,61 @@
       "contributions": [
         "code"
       ]
+    },
+    {
+      "login": "estebvac",
+      "name": "Esteban Vaca C.",
+      "avatar_url": "https://avatars.githubusercontent.com/u/21016728?v=4",
+      "profile": "https://github.com/estebvac",
+      "contributions": [
+        "bug"
+      ]
+    },
+    {
+      "login": "rayryeng",
+      "name": "Ray Phan",
+      "avatar_url": "https://avatars.githubusercontent.com/u/765375?v=4",
+      "profile": "https://stackoverflow.com/users/3250829/rayryeng?tab=profile",
+      "contributions": [
+        "bug"
+      ]
+    },
+    {
+      "login": "Linardos",
+      "name": "Akis Linardos",
+      "avatar_url": "https://avatars.githubusercontent.com/u/26694607?v=4",
+      "profile": "https://github.com/Linardos",
+      "contributions": [
+        "bug",
+        "code"
+      ]
+    },
+    {
+      "login": "NMontanaBrown",
+      "name": "Nina Montana-Brown",
+      "avatar_url": "https://avatars.githubusercontent.com/u/56116848?v=4",
+      "profile": "http://nina.brown.15@ucl.ac.uk",
+      "contributions": [
+        "doc"
+      ]
+    },
+    {
+      "login": "fabien-brulport",
+      "name": "fabien-brulport",
+      "avatar_url": "https://avatars.githubusercontent.com/u/32873392?v=4",
+      "profile": "https://github.com/fabien-brulport",
+      "contributions": [
+        "bug"
+      ]
+    },
+    {
+      "login": "malteekj",
+      "name": "malteekj",
+      "avatar_url": "https://avatars.githubusercontent.com/u/44469884?v=4",
+      "profile": "https://github.com/malteekj",
+      "contributions": [
+        "bug"
+      ]
     }
   ],
   "contributorsPerLine": 7,
