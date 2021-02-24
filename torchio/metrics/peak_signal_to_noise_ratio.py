@@ -86,9 +86,9 @@ def _entropy(x):
     #simple definition from autofocusing literature
     x = x.ravel()
     x = abs(x) #log need positiv number !
-    x = x[abs(x)>1e-6]  #avoid 0 values
+    x = x[x>1e-6]  #avoid 0 values
     bmax = np.square(np.sum(x**2)) #np.sum(x**2) #change le 9 02 2021
-    proba = x / bmax
+    x = x / bmax # proba = x / bmax change le 22 02 2021, normalisation by bmax was not used
     return - np.sum( np.log(x)*x )
 
 def nmi(x, y, **kwargs):
@@ -225,7 +225,9 @@ def _grad_ratio(input,target, do_scat=False, do_nmi=True, do_entropy=True, do_au
     res_dict['ratio'] = grad_mean_i/grad_mean_t
     res_dict['ratio_bin'] = grad_mean_edge_i/grad_mean_edge_t
 
+    #print(f'do_scat is {do_scat}')
     if do_scat:
+        #print('DO SCATTERING')
         from kymatio import HarmonicScattering3D
         import time
         data =  dd= torch.stack([input,target])
@@ -248,8 +250,9 @@ def _grad_ratio(input,target, do_scat=False, do_nmi=True, do_entropy=True, do_au
         res_dict['Emot']   = _entropy(target.numpy())
         # res_dict['Emot2'] = nmi(target.numpy(), target.numpy()) #faudrait une version non normalise ...
         res_dict['Eratio'] = res_dict['Eorig'] / res_dict['Emot']
-        entro_grad1 = np.sum([ _entropy(np.abs(gg)) for gg in grad_i])
-        entro_grad2 = np.sum([ _entropy(np.abs(gg)) for gg in grad_t])
+        entro_grad1 = np.sum([ _entropy(gg) for gg in grad_i])
+        entro_grad2 = np.sum([ _entropy(gg) for gg in grad_t])
+        res_dict['EGorig'] = entro_grad1
         res_dict['EGratio'] = entro_grad1 / entro_grad2
     if do_autocorr:
         c1, c2, c3, cdiff = _get_autocor(input, nb_off_center=3)
@@ -301,7 +304,8 @@ class GradRatio(MapMetricWrapper):
             computed_metrics_res[sample_key] = dict()
             data1 = sample1[sample_key][DATA]
             data2 = sample2[sample_key][DATA]
-            computed_metrics = self.metric_func(data1, data2)
+            computed_metrics = self.metric_func(data1, data2, **self.metric_kwargs) if self.metric_kwargs \
+                else self.metric_func(data1, data2)
 
             for m_name, m_map in computed_metrics.items():
                 #metric_dict = self._apply_masks_and_averaging(sample=sample2, metric_map=m_map)
