@@ -19,6 +19,7 @@ class MapMetricWrapper(MapMetric):
     def apply_metric(self, sample1: Subject, sample2: Subject):
         common_keys = self.get_common_intensity_keys(sample1=sample1, sample2=sample2)
         computed_metrics = dict()
+        #print(f'Computing {self.metric_name} : met kwarg is {self.metric_kwargs}')
         for sample_key in common_keys:
             if sample_key in self.mask_keys:
                 continue
