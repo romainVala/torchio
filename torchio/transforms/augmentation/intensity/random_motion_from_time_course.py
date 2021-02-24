@@ -277,22 +277,6 @@ class RandomMotionFromTimeCourse(RandomTransform, IntensityTransform):
                                                     nb_saved, volume_name)
         np.savetxt(fname + '_mvt.csv', self.fitpars, delimiter=',')
 
-    def do_correct_motion(self, image):
-        im_freq_domain = self._fft_im(image)
-        # print('translation')
-        translated_im_freq_domain = self._translate_freq_domain(freq_domain=im_freq_domain, inv_transfo=True)
-        # print('rotaion')
-        # iNufft for rotations
-        if self.nufft:
-            corrected_im = self._nufft(translated_im_freq_domain, inv_transfo=True)
-            corrected_im = corrected_im / corrected_im.size  # normalize
-        else:
-            corrected_im = self._ifft_im(translated_im_freq_domain)
-        # magnitude
-        corrected_im = abs(corrected_im)
-
-        return corrected_im
-
     def _rand_uniform(self, min=0.0, max=1.0, shape=1):
         rand = torch.FloatTensor(shape).uniform_(min, max)
         if shape == 1:
@@ -514,6 +498,7 @@ class MotionFromTimeCourse(IntensityTransform):
         oversampling_pct = self.oversampling_pct
         tr = self.tr
         es = self.es
+        correct_motion = self.correct_motion
         for image_name, image_dict in self.get_images_dict(sample).items():
             if self.arguments_are_dict():
                 fitpars = self.fitpars[image_name]
@@ -550,7 +535,7 @@ class MotionFromTimeCourse(IntensityTransform):
             im_freq_domain = self._fft_im(original_image)
             translated_im_freq_domain = _translate_freq_domain(freq_domain=im_freq_domain,
                                                                translations=translations)
-            apply_rotation = np.sum(np.abs(fitpars_interp[3:,:].flatten())) > 0
+            apply_rotation = np.sum(np.abs(rotations.flatten())) > 0
             # iNufft for rotations
             if _finufft and apply_rotation:
                 corrupted_im = _nufft(freq_domain_data=translated_im_freq_domain, rotations=rotations,
@@ -562,7 +547,7 @@ class MotionFromTimeCourse(IntensityTransform):
                 corrupted_im = self._ifft_im(translated_im_freq_domain)
 
             if correct_motion:
-                corrected_im = self.do_correct_motion(corrupted_im)
+                corrected_im = self.do_correct_motion(corrupted_im.copy(), fitpars_interp, frequency_encoding_dim, self.phase_encoding_shape)
                 image_dict["data_cor"] = corrected_im[np.newaxis, ...]
                 image_dict['data_cor'] = torch.from_numpy(image_dict['data_cor']).float()
 
@@ -631,6 +616,60 @@ class MotionFromTimeCourse(IntensityTransform):
         self._metrics['wTF_absDisp_r'] = np.mean(disp_mean[3:])
         self._metrics['wTF_absDisp_a'] = np.mean(disp_mean)
 
+    def do_correct_motion(self, image, fitpars_interp, frequency_encoding_dim, phase_encoding_shape ):
+        #works only if pure rotation or pure translation
+        im_freq_domain = self._fft_im(image)
+        # print('translation')
+        fitpars_vox = fitpars_interp.reshape((6, -1))
+        translations, rotations = fitpars_vox[:3], np.radians(fitpars_vox[3:])
+
+        #arg fftshift is needed, for translation only
+        im_freq_domain = np.fft.fftshift(im_freq_domain)
+        translated_im_freq_domain = _translate_freq_domain(im_freq_domain, translations, inv_transfo=True)
+        translated_im_freq_domain = np.fft.fftshift(translated_im_freq_domain)
+
+        # iNufft for rotations
+        apply_rotation = np.sum(np.abs(fitpars_interp[3:,:].flatten())) > 0
+        # iNufft for rotations
+        if _finufft and apply_rotation:
+
+            corrected_im = _nufft(freq_domain_data=translated_im_freq_domain, rotations=rotations,
+                                  im_shape=image.shape, frequency_encoding_dim=frequency_encoding_dim,
+                                  phase_encoding_shape=phase_encoding_shape, inv_transfo=True)
+            corrected_im = corrected_im / corrected_im.size  # normalize
+        else:
+            corrected_im = self._ifft_im(translated_im_freq_domain)
+        # magnitude
+        corrected_im = abs(corrected_im)
+
+        return corrected_im
+
+    def do_correct_motion_inv(self, image, fitpars_interp, frequency_encoding_dim, phase_encoding_shape ):
+        #does not work either
+        im_freq_domain = self._fft_im(image)
+
+        # print('translation')
+        fitpars_vox = fitpars_interp.reshape((6, -1))
+        translations, rotations = fitpars_vox[:3], np.radians(fitpars_vox[3:])
+        apply_rotation = np.sum(np.abs(fitpars_interp[3:,:].flatten())) > 0
+        # iNufft for rotations
+        if _finufft and apply_rotation:
+            corrected_im = _nufft(freq_domain_data=im_freq_domain, rotations=rotations,
+                                  im_shape=image.shape, frequency_encoding_dim=frequency_encoding_dim,
+                                  phase_encoding_shape=phase_encoding_shape, inv_transfo=True)
+            corrected_im = corrected_im / corrected_im.size  # normalize
+
+            im_freq_domain = self._fft_im(corrected_im)
+
+        im_freq_domain = np.fft.fftshift(im_freq_domain)
+        translated_im_freq_domain = _translate_freq_domain(im_freq_domain, translations, inv_transfo=True)
+
+        corrected_im = self._ifft_im(translated_im_freq_domain)
+
+        corrected_im = abs(corrected_im)
+
+        return corrected_im
+
 
 def _interpolate_space_timing_1D(fitpars, nT, phase_encoding_shape, frequency_encoding_dim, phase_encoding_dims):
     n_phase = phase_encoding_shape[0]
@@ -697,7 +736,7 @@ def _interpolate_space_timing(fitpars, es, tr, phase_encoding_shape, frequency_e
     return fitpars_interp
 
 
-def _rotate_coordinates(rotations, im_shape, frequency_encoding_dim, phase_encoding_shape, inv_transfo):
+def _rotate_coordinates(rotations, im_shape, frequency_encoding_dim, phase_encoding_shape, inv_transfo=False):
     """
     :return: grid_coordinates after applying self.rotations
     """
