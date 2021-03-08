@@ -157,6 +157,34 @@ def mutual_information_2d(x, y, sigma=1, normalized=True):
 
     return 2*mi
 
+def _get_histo_metrics(h1,h2, prefix=''):
+    res_dict = dict()
+    res_dict[prefix + "H_camb"] = ( np.abs(h1-h2) / (h1+h2) ).sum()
+    res_dict[prefix + "H_nL2"] = ( (h1-h2)**2 / (h1+h2) ).sum()
+    res_dict[prefix + "H_dice"] = ((h1-h2)**2).sum() / ((h1**2).sum() + (h2**2).sum())
+    res_dict[prefix + "H_kl"] = (h1 * np.log(h1/h2)).sum()
+    res_dict[prefix + "H_jensen"] = ( h1*np.log(h1)/2 + h2*np.log(h2)/2 - (h1+h2)/2 * np.log((h1+h2)/2) ).sum()
+    res_dict[prefix + "H_topsoe"] = ( h1*np.log(2*h1/(h1+h2)) + h2*np.log(2*h2/(h1+h2))).sum()
+
+    return res_dict
+
+def get_histogram_metrics(x,y, nbins=256, mask_keys=None):
+
+    h1,_ = np.histogram(x,bins=nbins, density=True)
+    h2,_ = np.histogram(y, bins=nbins, density=True)
+    res_dict = _get_histo_metrics(h1,h2)
+
+    if mask_keys is not None:
+        for mask_key in mask_keys_in_sample:
+            mask_data = sample[mask_key][DATA]
+
+            h1, _ = np.histogram(x[mask_data>0], bins=nbins, density=True)
+            h2, _ = np.histogram(y[mask_data>0], bins=nbins, density=True)
+            res_dict2 = _get_histo_metrics(h1, h2, prefix=mask_key)
+            res_dict = dict(res_dict, **res_dict2)
+
+    return res_dict
+
 
 def _get_autocor(data, nb_off_center = 3):
     data = (data - torch.mean(data))
@@ -195,7 +223,8 @@ def _get_autocor(data, nb_off_center = 3):
     corelation3 = cor_coef[unique_dist==3][0]
     return corelation1, corelation2, corelation3, correlation_slope
 
-def _grad_ratio(input,target, do_scat=False, do_nmi=True, do_entropy=True, do_autocorr=True):
+def _grad_ratio(input,target, do_scat=False, do_nmi=True, do_entropy=True, do_autocorr=True,
+                do_histo=True, mask_keys=None):
     #print(f' i shape {input.shape}')
      #not sure how to handel batch size (first dim) TODO
     input = input[0]
@@ -265,6 +294,10 @@ def _grad_ratio(input,target, do_scat=False, do_nmi=True, do_entropy=True, do_au
         res_dict['cor2_orig'] = c2
         res_dict['cor3_orig'] = c3
         res_dict['cor_diff_orig'] = cdiff
+    if do_histo:
+        histo_metric = get_histogram_metrics(input, target, mask_keys=mask_keys)
+        #print(f"histo is {histo_metric}")
+        res_dict = dict(res_dict, **histo_metric)
 
     return res_dict
 
