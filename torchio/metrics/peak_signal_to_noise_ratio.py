@@ -161,27 +161,32 @@ def _get_histo_metrics(h1,h2, prefix=''):
     res_dict = dict()
     res_dict[prefix + "H_camb"] = ( np.abs(h1-h2) / (h1+h2) ).sum()
     res_dict[prefix + "H_nL2"] = ( (h1-h2)**2 / (h1+h2) ).sum()
+    res_dict[prefix + "H_corr"] = np.sum( (h1-np.mean(h1)) * (h2 - np.mean(h2)) ) / np.std(h1) / np.std(h2)
     res_dict[prefix + "H_dice"] = ((h1-h2)**2).sum() / ((h1**2).sum() + (h2**2).sum())
     res_dict[prefix + "H_kl"] = (h1 * np.log(h1/h2)).sum()
     res_dict[prefix + "H_jensen"] = ( h1*np.log(h1)/2 + h2*np.log(h2)/2 - (h1+h2)/2 * np.log((h1+h2)/2) ).sum()
     res_dict[prefix + "H_topsoe"] = ( h1*np.log(2*h1/(h1+h2)) + h2*np.log(2*h2/(h1+h2))).sum()
-
+    res_dict[prefix + "H_inter"] =np.sum(np.minimum(h1,h2)) / np.sum(h1) #both h1 and h2 should have a sum of 256 -if density is True, summ = nbins
     return res_dict
 
 def get_histogram_metrics(x,y, nbins=256, mask_keys=None):
 
-    h1,_ = np.histogram(x,bins=nbins, density=True)
-    h2,_ = np.histogram(y, bins=nbins, density=True)
-    res_dict = _get_histo_metrics(h1,h2)
+    ranges = [0, 1]
+    #h1 = cv.calcHist(x, [0], mask, histSize, ranges[, hist[, accumulate]])
+
 
     if mask_keys is not None:
         for mask_key in mask_keys_in_sample:
             mask_data = sample[mask_key][DATA]
 
-            h1, _ = np.histogram(x[mask_data>0], bins=nbins, density=True)
-            h2, _ = np.histogram(y[mask_data>0], bins=nbins, density=True)
+            h1, _ = np.histogram(x[mask_data>0], bins=nbins, range=ranges, density=True)
+            h2, _ = np.histogram(y[mask_data>0], bins=nbins, range=ranges, density=True)
             res_dict2 = _get_histo_metrics(h1, h2, prefix=mask_key)
             res_dict = dict(res_dict, **res_dict2)
+    else: #to much zero if all histogram is taken ... prefer mask for now
+        h1, _ = np.histogram(x, bins=nbins, range=ranges, density=True)
+        h2, _ = np.histogram(y, bins=nbins, range=ranges, density=True)
+        res_dict = _get_histo_metrics(h1, h2)
 
     return res_dict
 
