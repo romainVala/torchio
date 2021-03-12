@@ -300,9 +300,9 @@ def create_rotation_matrix_3d(angles):
                      [0., -math.sin(angles[0]), math.cos(angles[0])]],
                     dtype='float')
 
-    mat2 = np.array([[math.cos(angles[1]), 0., -math.sin(angles[1])],
+    mat2 = np.array([[math.cos(angles[1]), 0., math.sin(angles[1])],
                      [0., 1., 0.],
-                     [math.sin(angles[1]), 0., math.cos(angles[1])]],
+                     [-math.sin(angles[1]), 0., math.cos(angles[1])]],
                     dtype='float')
 
     mat3 = np.array([[math.cos(angles[2]), math.sin(angles[2]), 0.],
