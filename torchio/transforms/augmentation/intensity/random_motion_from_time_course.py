@@ -602,9 +602,8 @@ class MotionFromTimeCourse(IntensityTransform):
         #ff_interp, to_substract = self.demean_fitpar(fitpars_interp, original_image)
         #self.rmse_DispTF = calculate_mean_RMSE_displacment(ff_interp, original_image)
 
-        #compute meand disp as we
+        #compute meand disp as weighted mean (weigths beeing TF coef)
         ff = fitpars_interp
-        to_substract = np.zeros(6)
         disp_mean=[]
         for i in range(0, 6):
             ffi = ff[i].reshape(-1)
