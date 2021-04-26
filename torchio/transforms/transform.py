@@ -431,6 +431,7 @@ class Transform(ABC):
     def _ifft_im(freq_domain):
         output = np.fft.ifftshift(np.fft.ifftn(freq_domain))
         return output
+        #fi_image = np.fft.ifftshift(np.fft.ifft(np.fft.fftshift(fi_phase), axis=1))
 
     @staticmethod
     def _oversample(data, perc_oversampling=.10, padding_mode='constant', padding_normal=None):
