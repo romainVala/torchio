@@ -246,6 +246,24 @@
       "contributions": [
         "bug"
       ]
+    },
+    {
+      "login": "sarthakpati",
+      "name": "Sarthak Pati",
+      "avatar_url": "https://avatars.githubusercontent.com/u/11719673?v=4",
+      "profile": "http://www.cbica.upenn.edu/spati",
+      "contributions": [
+        "platform"
+      ]
+    },
+    {
+      "login": "GabriellaKamlish",
+      "name": "GabriellaKamlish",
+      "avatar_url": "https://avatars.githubusercontent.com/u/26881445?v=4",
+      "profile": "https://github.com/GabriellaKamlish",
+      "contributions": [
+        "bug"
+      ]
     }
   ],
   "contributorsPerLine": 7,

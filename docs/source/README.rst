@@ -20,9 +20,35 @@ simulation of intensity artifacts due to
 or `k-space motion artifacts <http://proceedings.mlr.press/v102/shaw19a.html>`_.
 
 The code is available on `GitHub <https://github.com/fepegar/torchio>`_.
+If you like TorchIO, please give the repo a star!
+
+.. raw:: html
+
+   <a class="github-button" href="https://github.com/fepegar/torchio" data-icon="octicon-star" data-show-count="true" aria-label="Star fepegar/torchio on GitHub">Star</a>
+   <script async defer src="https://buttons.github.io/buttons.js"></script>
 
 See :doc:`Getting started <quickstart>` for installation instructions and a
 usage overview.
+
+Contributions are more than welcome.
+Please check our `contributing guide <https://github.com/fepegar/torchio/blob/master/CONTRIBUTING.rst>`_
+if you would like to contribute.
+
+If you have questions, feel free to ask in the discussions tab:
+
+.. raw:: html
+
+   <a class="github-button" href="https://github.com/fepegar/torchio/discussions" data-icon="octicon-comment-discussion" aria-label="Discuss fepegar/torchio on GitHub">Discuss</a>
+   <script async defer src="https://buttons.github.io/buttons.js"></script>
+
+If you found a bug or have a feature request, please open an issue:
+
+.. raw:: html
+
+   <!-- Place this tag where you want the button to render. -->
+   <a class="github-button" href="https://github.com/fepegar/torchio/issues" data-icon="octicon-issue-opened" data-show-count="true" aria-label="Issue fepegar/torchio on GitHub">Issue</a>
+   <!-- Place this tag in your head or just before your close body tag. -->
+   <script async defer src="https://buttons.github.io/buttons.js"></script>
 
 
 Credits
@@ -87,7 +113,7 @@ This package has been greatly inspired by `NiftyNet <https://niftynet.io/>`_.
    :alt: PyPI version
 
 .. |Google-Colab-notebook| image:: https://colab.research.google.com/assets/colab-badge.svg
-   :target: https://github.com/fepegar/torchio/blob/master/examples/README.md
+   :target: https://github.com/fepegar/torchio/blob/master/notebooks/README.md
    :alt: Google Colab notebooks
 
 .. |Docs-status| image:: https://img.shields.io/readthedocs/torchio?label=Docs&logo=Read%20the%20Docs

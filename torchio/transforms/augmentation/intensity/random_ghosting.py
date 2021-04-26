@@ -184,8 +184,6 @@ class Ghosting(IntensityTransform, FourierTransform):
         array = tensor.numpy()
         spectrum = self.fourier_transform(array)
 
-        shape = np.array(array.shape)
-        ri, rj, rk = np.round(restore_center * shape).astype(np.uint16)
         mi, mj, mk = np.array(array.shape) // 2
 
         # Variable "planes" is the part of the spectrum that will be modified
@@ -216,8 +214,10 @@ class Ghosting(IntensityTransform, FourierTransform):
 
 
 def _parse_restore(restore):
-    if not isinstance(restore, float):
-        raise TypeError(f'Restore must be a float, not {restore}')
+    try:
+        restore = float(restore)
+    except Exception as e:
+        raise TypeError(f'Restore must be a float, not "{restore}"') from e
     if not 0 <= restore <= 1:
         message = (
             f'Restore must be a number between 0 and 1, not {restore}')

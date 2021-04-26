@@ -1,6 +1,5 @@
 import copy
 import tempfile
-import pytest
 import torch
 import numpy as np
 import torchio as tio
@@ -28,7 +27,7 @@ class TestSubject(TorchioTestCase):
                 tio.RandomFlip()(subject)
 
     def test_history(self):
-        transformed = tio.RandomFlip()(self.sample_subject)
+        transformed = tio.RandomGamma()(self.sample_subject)
         self.assertIs(len(transformed.history), 1)
 
     def test_inconsistent_shape(self):

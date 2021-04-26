@@ -141,7 +141,7 @@ class Transform(ABC):
 
             #self.exclude = [new_key] if self.exclude is None else self.exclude.append(new_key)
 
-        with np.errstate(all='warn'):
+        with np.errstate(all='raise', under='ignore'):
             transformed = self.apply_transform(subject)
 
         if self.keep_before: #also add diff
@@ -598,7 +598,6 @@ class Transform(ABC):
             mask[:, :, :, :depth // 2] = True
         return mask
 
-    @staticmethod
     def get_mask_from_bounds(
             self,
             bounds_parameters: TypeBounds,

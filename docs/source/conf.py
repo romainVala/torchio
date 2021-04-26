@@ -25,7 +25,7 @@ author = 'Fernando Pérez-García'
 
 # version is the short X.Y version
 # release is the full version, including alpha/beta/rc tags
-version = release = '0.18.29'
+version = release = '0.18.34'
 
 
 # -- General configuration ---------------------------------------------------
@@ -45,6 +45,7 @@ extensions = [
     'sphinx.ext.napoleon',
     'sphinx.ext.intersphinx',
     'matplotlib.sphinxext.plot_directive',
+    'sphinx_gallery.gen_gallery',
 ]
 
 # Add mappings
@@ -98,15 +99,18 @@ pygments_style = None
 #
 html_theme = 'furo'
 
+html_favicon = 'favicon_io/favicon.ico'
+html_logo = 'favicon_io/torchio_logo_2048x2048.png'
+
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
 #
-arxiv_url = 'https://arxiv.org/abs/2003.04696'
-link = f'<a href="{arxiv_url}">arXiv preprint</a>'
+arxiv_url = 'https://pytorchecosystemday.fbreg.com/'
+link = f'<a href="{arxiv_url}">PyTorch Ecosystem Day</a>'
+message = f'TorchIO was featured at the {link}! (21 April 2021)'
 html_theme_options = {
-    # 'navigation_depth': 3,  # for sphinx theme
-    'announcement': f'Check out our new, extended {link} (12 Jan 2021)',
+    'announcement': message,
 }
 
 # Add any paths that contain custom static files (such as style sheets) here,
@@ -208,3 +212,19 @@ copybutton_prompt_is_regexp = True
 
 
 # -- Extension configuration -------------------------------------------------
+
+sphinx_gallery_conf = {
+    'examples_dirs': '../examples',   # example scripts
+    'gallery_dirs': 'auto_examples',  # where to save gallery generated output
+    'matplotlib_animations': True,
+    'binder': {
+        # Required keys
+        'org': 'fepegar',
+        'repo': 'torchio',
+        'branch': 'master',
+        'binderhub_url': 'https://mybinder.org',
+        'dependencies': '../requirements.txt',
+        # Optional keys
+        'use_jupyter_lab': False,
+    }
+}

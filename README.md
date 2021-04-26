@@ -1,4 +1,9 @@
-# [TorchIO](http://torchio.rtfd.io/)
+<p align="center">
+  <a href="http://torchio.rtfd.io/">
+    <img src="https://raw.githubusercontent.com/fepegar/torchio/master/docs/source/favicon_io/for_readme_2000x462.png" alt="TorchIO logo">
+  </a>
+</p>
+
 
 > *Tools like TorchIO are a symptom of the maturation of medical AI research using deep learning techniques*.
 
@@ -19,8 +24,11 @@ at [OpenAI](https://openai.com/) ([link](https://jack-clark.net/2020/03/17/)).
             <a href="https://pypi.org/project/torchio/">
                 <img src="https://img.shields.io/pypi/v/torchio?label=PyPI%20version&logo=python&logoColor=white" alt="PyPI version">
             </a>
-            <a href="https://github.com/fepegar/torchio#contributors-">
-                <img src="https://img.shields.io/badge/All_contributors-12-orange.svg" alt="All Contributors">
+            <a href="https://anaconda.org/conda-forge/torchio">
+                <img src="https://anaconda.org/conda-forge/torchio/badges/installer/conda.svg" alt="Conda version">
+            </a>
+            <a href="https://github.com/fepegar/torchio#contributors">
+                <img src="https://img.shields.io/badge/Contributors-27-orange.svg" alt="Contributors">
             </a>
         </td>
     </tr>
@@ -78,7 +86,7 @@ at [OpenAI](https://openai.com/) ([link](https://jack-clark.net/2020/03/17/)).
             <b>Notebooks</b>
         </td>
         <td align="center">
-            <a href="https://github.com/fepegar/torchio/blob/master/examples/README.md">
+            <a href="https://github.com/fepegar/torchio/blob/master/notebooks/README.md">
                 <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Google Colab">
             </a>
         </td>
@@ -275,7 +283,7 @@ and a [Hello, World!](https://torchio.readthedocs.io/quickstart.html#hello-world
 example.
 
 Longer usage examples can be found in the
-[notebooks](https://github.com/fepegar/torchio/blob/master/examples/README.md).
+[notebooks](https://github.com/fepegar/torchio/blob/master/notebooks/README.md).
 
 All the documentation is hosted on
 [Read the Docs](http://torchio.rtfd.io/).
@@ -326,6 +334,8 @@ Thanks goes to all these people ([emoji key](https://allcontributors.org/docs/en
     <td align="center"><a href="https://github.com/fabien-brulport"><img src="https://avatars.githubusercontent.com/u/32873392?v=4?s=100" width="100px;" alt=""/><br /><sub><b>fabien-brulport</b></sub></a><br /><a href="https://github.com/fepegar/torchio/issues?q=author%3Afabien-brulport" title="Bug reports">🐛</a></td>
     <td align="center"><a href="https://github.com/malteekj"><img src="https://avatars.githubusercontent.com/u/44469884?v=4?s=100" width="100px;" alt=""/><br /><sub><b>malteekj</b></sub></a><br /><a href="https://github.com/fepegar/torchio/issues?q=author%3Amalteekj" title="Bug reports">🐛</a></td>
     <td align="center"><a href="https://github.com/diazandr3s"><img src="https://avatars.githubusercontent.com/u/11991079?v=4?s=100" width="100px;" alt=""/><br /><sub><b>Andres Diaz-Pinto</b></sub></a><br /><a href="https://github.com/fepegar/torchio/issues?q=author%3Adiazandr3s" title="Bug reports">🐛</a></td>
+    <td align="center"><a href="http://www.cbica.upenn.edu/spati"><img src="https://avatars.githubusercontent.com/u/11719673?v=4?s=100" width="100px;" alt=""/><br /><sub><b>Sarthak Pati</b></sub></a><br /><a href="#platform-sarthakpati" title="Packaging/porting to new platform">📦</a></td>
+    <td align="center"><a href="https://github.com/GabriellaKamlish"><img src="https://avatars.githubusercontent.com/u/26881445?v=4?s=100" width="100px;" alt=""/><br /><sub><b>GabriellaKamlish</b></sub></a><br /><a href="https://github.com/fepegar/torchio/issues?q=author%3AGabriellaKamlish" title="Bug reports">🐛</a></td>
   </tr>
 </table>
 

@@ -16,7 +16,7 @@ def import_mpl_plt():
 
 def rotate(image, radiological=True):
     # Rotate for visualization purposes
-    image = np.rot90(image)
+    image = np.rot90(image, -1)
     if radiological:
         image = np.fliplr(image)
     return image
@@ -35,13 +35,15 @@ def plot_volume(
     fig = None
     if axes is None:
         fig, axes = plt.subplots(1, 3)
+    sag_axis, cor_axis, axi_axis = axes
+
     image = ToCanonical()(image)
     data = image.data[channel]
     indices = np.array(data.shape) // 2
     i, j, k = indices
-    slice_x = rotate(data[i, :, :])
-    slice_y = rotate(data[:, j, :])
-    slice_z = rotate(data[:, :, k])
+    slice_x = rotate(data[i, :, :], radiological=radiological)
+    slice_y = rotate(data[:, j, :], radiological=radiological)
+    slice_z = rotate(data[:, :, k], radiological=radiological)
     kwargs = {}
     is_label = isinstance(image, LabelMap)
     if isinstance(cmap, dict):
@@ -53,31 +55,31 @@ def plot_volume(
         kwargs['cmap'] = cmap
     if is_label:
         kwargs['interpolation'] = 'none'
-    lr_extent, pa_extent, is_extent = [tuple(b) for b in image.bounds.T]
 
-    # Use radiological convention
-    rl_extent = tuple(reversed(lr_extent))
-    ap_extent = tuple(reversed(pa_extent))
+    sr, sa, ss = image.spacing
+    kwargs['origin'] = 'lower'
 
-    sag_axis, cor_axis, axi_axis = axes
-    if radiological:
-        sag_extent = ap_extent + is_extent
-        cor_extent = rl_extent + is_extent
-        axi_extent = rl_extent + pa_extent
-    else:
-        sag_extent = pa_extent + is_extent
-        cor_extent = lr_extent + is_extent
-        axi_extent = lr_extent + pa_extent
-
-    sag_axis.imshow(slice_x, extent=sag_extent, **kwargs)
+    sag_aspect = ss / sa
+    sag_axis.imshow(slice_x, aspect=sag_aspect, **kwargs)
     sag_axis.set_xlabel('A')
     sag_axis.set_ylabel('S')
-    cor_axis.imshow(slice_y, extent=cor_extent, **kwargs)
+    sag_axis.invert_xaxis()
+    sag_axis.set_title('Sagittal')
+
+    cor_aspect = ss / sr
+    cor_axis.imshow(slice_y, aspect=cor_aspect, **kwargs)
     cor_axis.set_xlabel('R')
     cor_axis.set_ylabel('S')
-    axi_axis.imshow(slice_z, extent=axi_extent, **kwargs)
+    cor_axis.invert_xaxis()
+    cor_axis.set_title('Coronal')
+
+    axi_aspect = sa / sr
+    axi_axis.imshow(slice_z, aspect=axi_aspect, **kwargs)
     axi_axis.set_xlabel('R')
     axi_axis.set_ylabel('A')
+    axi_axis.invert_xaxis()
+    axi_axis.set_title('Axial')
+
     plt.tight_layout()
     if output_path is not None and fig is not None:
         fig.savefig(output_path)
