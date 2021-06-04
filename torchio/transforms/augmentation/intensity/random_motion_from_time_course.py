@@ -327,7 +327,7 @@ def calculate_mean_FD_P(motion_params):
     return np.mean(fd)
 
 
-def calculate_mean_Disp_P(motion_params, weights=None):
+def calculate_mean_Disp_P_old(motion_params, weights=None):
     """
     Same as previous, but without taking the diff between frame
     """
@@ -353,33 +353,68 @@ def calculate_mean_Disp_P(motion_params, weights=None):
 
         return np.sum(fd) / np.sum(weights)
 
-
-def calculate_mean_FD_J(motion_params):
+def calculate_mean_Disp_P(motion_params, weights=None, rmax=80):
     """
-    Method to calculate framewise displacement as per Jenkinson et al. 2002
+    :param motion_params: supose of size 6 * nbt
+    :param weights: size nbt
+    :param rmax:
+    :return:
     """
-    pm = np.zeros((motion_params.shape[1],16))
-    for tt in range(motion_params.shape[1]):
-        P = np.hstack((motion_params[:, tt], np.array([1, 1, 1, 0, 0, 0])))
-        pm[tt,:] = spm_matrix(P, order=0).reshape(-1)
+    nbt = motion_params.shape[1]
+    if weights is None:
+        weights = np.ones(nbt)
+    motion_params = motion_params - np.sum( motion_params * weights, axis=1, keepdims=True) / np.sum(weights)
+    fd = np.zeros(nbt)
+    #compute Frame displacement of each frame
+    for tt in range(nbt):
+        fp = motion_params[:,tt]
+        fd[tt] = np.sum(np.abs(fp[:3])) + (rmax * np.pi/180) * np.sum(np.abs(fp[3:6]))
+    return np.sum(fd * weights) / np.sum(weights)
 
-    # The default radius (as in FSL) of a sphere represents the brain
-    rmax = 80.0
+def calculate_mean_Disp_J(motion_params, rmax=80, center_of_mass=np.array([0,0,0]), weights=None ):
+    """
+    Method to calculate mean displacement as per Jenkinson et al. 2002
+    motion_params, 6 euler params, of shape [6 nbt]
+    rmax radius of the sphere
+    center_of_mass of the sphere
+    we remove the weighted mean to the motion_param (by analogie with RMSE computation, which is minimum when the weigthed mean is substracted=
+    """
+    #transform euler fitpar to affine
+    nbt = motion_params.shape[1]
+    if weights is None:
+        weights = np.ones(nbt)
 
-    T_rb_prev = pm[0].reshape(4, 4)
+    motion_params = motion_params - np.sum( motion_params * weights, axis=1, keepdims=True) / np.sum(weights)
 
-    fd = np.zeros(pm.shape[0])
+    # T_rb_prev = pm[0].reshape(4, 4)   # for Frame displacement
+    fd = np.zeros(nbt)
+    for i in range(1, nbt):
+        P = np.hstack((motion_params[:, i], np.array([1, 1, 1, 0, 0, 0])))
+        T_rb =  spm_matrix(P, order=0)
+        #M = np.dot(T_rb, np.linalg.inv(T_rb_prev)) - np.eye(4)  #for Frame displacmeent
+        Ma = T_rb - np.eye(4)  #for Frame displacmeent
+        A = Ma[0:3, 0:3]
+        bt = Ma[0:3, 3]
+        bt = bt + np.dot(A,center_of_mass)
+        fd[i] = np.sqrt( (rmax * rmax / 5) * np.trace(np.dot(A.T, A)) + np.dot(bt.T, bt) )
+        #T_rb_prev = T_rb
 
-    for i in range(1, pm.shape[0]):
-        T_rb = pm[i].reshape(4, 4)
-        M = np.dot(T_rb, np.linalg.inv(T_rb_prev)) - np.eye(4)
-        A = M[0:3, 0:3]
-        b = M[0:3, 3]
-        fd[i] = np.sqrt( (rmax * rmax / 5) * np.trace(np.dot(A.T, A)) + np.dot(b.T, b) )
-        T_rb_prev = T_rb
+    return np.sum(fd * weights) / np.sum(weights)
 
-    return np.mean(fd)
+def calculate_mean_RMSE_trans_rot(fit_pars, weights=None):
+    #Minimum RMSE when fit_pars have a weighted mean to zero
+    nbt = fit_pars.shape[1]
+    if weights is None:
+        weights = np.ones(nbt)
+    #remove weighted mean
+    fit_pars = fit_pars - np.sum( fit_pars * weights, axis=1, keepdims=True) / np.sum(weights)
 
+    r1 = np.sum(fit_pars[0:3] * fit_pars[0:3], axis=0)
+    r2 = np.sum(fit_pars[3:6] * fit_pars[3:6], axis=0)
+
+    resT = np.sqrt( np.sum(r1*weights) / np.sum(weights) )
+    resR = np.sqrt( np.sum(r2*weights) / np.sum(weights) )
+    return  resT, resR
 
 def calculate_mean_RMSE_displacment(fit_pars, coef=None):
     """
@@ -504,6 +539,7 @@ class MotionFromTimeCourse(IntensityTransform):
                 fitpars = self.fitpars[image_name]
                 displacement_shift_strategy = self.displacement_shift_strategy[image_name]
                 frequency_encoding_dim = self.frequency_encoding_dim[image_name]
+                self.frequency_encoding_dim = frequency_encoding_dim
                 oversampling_pct = self.oversampling_pct[image_name]
                 tr = self.tr[image_name]
                 es = self.es[image_name]
@@ -585,24 +621,31 @@ class MotionFromTimeCourse(IntensityTransform):
     def _compute_motion_metrics(self, fitpars, fitpars_interp, img_fft):
         self._metrics = dict()
         self._metrics["mean_DispP"] = calculate_mean_Disp_P(fitpars)
-        self._metrics["rmse_Disp"] = calculate_mean_RMSE_displacment(fitpars)
+        self._metrics["mean_DispJ"] = calculate_mean_Disp_J(fitpars)
+        #self._metrics["rmse_Disp"] = calculate_mean_RMSE_displacment(fitpars)
+        self._metrics["rmse_Trans"], self._metrics["rmse_Rot"] = calculate_mean_RMSE_trans_rot(fitpars)
 
-        w_coef = np.abs(img_fft)
+        dim_to_average = (self.frequency_encoding_dim,self.phase_encoding_dims[1] ) # warning, why slowest dim the phase_encoding_dims[0]
 
-        self._metrics["meanDispP_wTF"] = calculate_mean_Disp_P(fitpars_interp,  w_coef)
-        self._metrics["rmse_Disp_wTF"] = calculate_mean_RMSE_displacment(fitpars_interp,  w_coef)
+        coef_TF = np.sum(abs(img_fft), axis=(0,2)) ;
+        coef_shaw = np.sqrt( np.sum(abs(img_fft**2), axis=(0,2)) ) ;
+        print(f'averagin TF coef on dim {dim_to_average} shape coef {coef_TF.shape}')
+        if fitpars.shape[1] != coef_TF.shape[0] :
+            #just interpolate end to end. at image slowest dimention size
+            fitpars = _interpolate_fitpars(fitpars, len_output=coef_TF.shape[0])
+            print(f'interp fitpar for wcoef new shape {fitpars.shape}')
 
-        self._metrics["meanDispP_wTF2"] = calculate_mean_Disp_P(fitpars_interp,  w_coef**2)
-        self._metrics["rmse_Disp_wTF2"] = calculate_mean_RMSE_displacment(fitpars_interp,  w_coef**2)
+        self._metrics["meanDispJ_wTF"]  = calculate_mean_Disp_J(fitpars,  weights=coef_TF)
+        self._metrics["meanDispJ_wSH"]  = calculate_mean_Disp_J(fitpars,  weights=coef_shaw)
+        self._metrics["meanDispJ_wTF2"] = calculate_mean_Disp_J(fitpars,  weights=coef_TF**2)
+        self._metrics["meanDispJ_wSH2"] = calculate_mean_Disp_J(fitpars,  weights=coef_shaw**2)
 
-
-        #self.mean_DispP_iterp = calculate_mean_Disp_P(fitpars_interp) #not usefule, same as computed on fitpars
-        #self.rmse_Disp_iterp = calculate_mean_RMSE_displacment(fitpars_interp) #not usefule, same as computed on fitpars
-
-        #ff_interp, to_substract = self.demean_fitpar(fitpars_interp, original_image)
-        #self.rmse_DispTF = calculate_mean_RMSE_displacment(ff_interp, original_image)
+        self._metrics["meanDispP_wSH"] = calculate_mean_Disp_P(fitpars,  weights=coef_shaw)
+        self._metrics["rmse_Trans_wSH"], self._metrics["rmse_Rot_wSH"] = calculate_mean_RMSE_trans_rot(fitpars, weights=coef_shaw)
+        self._metrics["rmse_Trans_wTF2"], self._metrics["rmse_Rot_wTF2"] = calculate_mean_RMSE_trans_rot(fitpars, weights=coef_TF**2)
 
         #compute meand disp as weighted mean (weigths beeing TF coef)
+        w_coef = np.abs(img_fft)
         ff = fitpars_interp
         disp_mean=[]
         for i in range(0, 6):
@@ -614,6 +657,14 @@ class MotionFromTimeCourse(IntensityTransform):
         self._metrics['wTF_absDisp_t'] = np.mean(disp_mean[:3])
         self._metrics['wTF_absDisp_r'] = np.mean(disp_mean[3:])
         self._metrics['wTF_absDisp_a'] = np.mean(disp_mean)
+        ff = fitpars
+        for i in range(0, 6):
+            ffi = ff[i].reshape(-1)
+            self._metrics[f'wTFshort_Disp_{i}'] = np.sum(ffi * coef_TF) / np.sum(coef_TF)
+            self._metrics[f'wTFshort2_Disp_{i}'] = np.sum(ffi * coef_TF**2) / np.sum(coef_TF**2)
+            self._metrics[f'wSH_Disp_{i}'] = np.sum(ffi * coef_shaw) / np.sum(coef_shaw)
+            self._metrics[f'wSH2_Disp_{i}'] = np.sum(ffi * coef_shaw**2) / np.sum(coef_shaw**2)
+
 
     def do_correct_motion(self, image, fitpars_interp, frequency_encoding_dim, phase_encoding_shape ):
         #works only if pure rotation or pure translation
@@ -733,6 +784,21 @@ def _interpolate_space_timing(fitpars, es, tr, phase_encoding_shape, frequency_e
     # Add missing dimension
     fitpars_interp = np.expand_dims(fitpars_interp, axis=frequency_encoding_dim + 1)
     return fitpars_interp
+
+def _interpolate_fitpars(fpars, tr_fpars=None, tr_to_interpolate=2.4, len_output=250):
+    fpars_length = fpars.shape[1]
+    if tr_fpars is None: #case where fitpart where give as it in random motion (the all timecourse is fitted to kspace
+        xp = np.linspace(0,1,fpars_length)
+        x  = np.linspace(0,1,len_output)
+    else:
+        xp = np.asarray(range(fpars_length))*tr_fpars
+        x = np.asarray(range(len_output))*tr_to_interpolate
+    interpolated_fpars = np.asarray([np.interp(x, xp, fp) for fp in fpars])
+    if xp[-1]<x[-1]:
+        diff = x[-1] - xp[-1]
+        npt_added = diff/tr_to_interpolate
+        print(f'adding {npt_added:.1f}')
+    return interpolated_fpars
 
 
 def _rotate_coordinates(rotations, im_shape, frequency_encoding_dim, phase_encoding_shape, inv_transfo=False):
