@@ -252,14 +252,15 @@ class RandomMotionFromTimeCourse(RandomTransform, IntensityTransform):
             nbpts = np.int(np.floor(fitpars.shape[1] * self.preserve_center_frequency_pct / 2))
             fitpars[:, center - nbpts:center + nbpts] = 0
 
-        # rescale to global max if needed
-        max_wanted = maxGlobalDisp
-        for i in range(6):
-            if i == 3:
-                max_wanted = maxGlobalRot
-            mm = np.max(np.abs(fitpars[i, :]))
-            if mm > max_wanted:
-                fitpars[i, :] = fitpars[i, :] * max_wanted / mm
+        # rescale to global max if asked
+        # max is compute for all trans (or rot) diff
+        if self.maxGlobalRot is not None :
+            trans_diff = fitpars.T[:,None,:3] - fitpars.T[None,:,:3]  #numpy broadcating rule !
+            ddtrans = np.linalg.norm(trans_diff, axis=2)
+            ddrot = np.linalg.norm(fitpars.T[:,None,3:] - fitpars.T[None,:,3:] , axis=-1)
+            print(f'max trans {ddtrans.max()} rot {ddrot.max()} setting to {maxGlobalDisp} {maxGlobalRot }')
+            fitpars[:3, :] = fitpars[:3, :] * maxGlobalDisp / ddtrans.max()
+            fitpars[3:, :] = fitpars[3:, :] * maxGlobalRot / ddrot.max()
 
         self.fitpars = fitpars
 
@@ -664,6 +665,8 @@ class MotionFromTimeCourse(IntensityTransform):
             self._metrics[f'wTFshort2_Disp_{i}'] = np.sum(ffi * coef_TF**2) / np.sum(coef_TF**2)
             self._metrics[f'wSH_Disp_{i}'] = np.sum(ffi * coef_shaw) / np.sum(coef_shaw)
             self._metrics[f'wSH2_Disp_{i}'] = np.sum(ffi * coef_shaw**2) / np.sum(coef_shaw**2)
+            self._metrics[f'mean_Disp_{i}'] = np.mean(ffi)
+            self._metrics[f'center_Disp_{i}'] = ffi[ffi.shape[0]//2]
 
 
     def do_correct_motion(self, image, fitpars_interp, frequency_encoding_dim, phase_encoding_shape ):
