@@ -627,7 +627,7 @@ class MotionFromTimeCourse(IntensityTransform):
 
         frequency_encoding_dim = self.frequency_encoding_dim
         if isinstance(frequency_encoding_dim,dict):
-            for k in frequency_encoding_dim.keys: #kind of weird, but we use with only one dict ... (if not probabely same value)
+            for k in frequency_encoding_dim.keys(): #kind of weird, but we use with only one dict ... (if not probabely same value)
                 val = frequency_encoding_dim[k]
             frequency_encoding_dim=val
         dim_to_average = (frequency_encoding_dim, self.phase_encoding_dims[1] ) # warning, why slowest dim the phase_encoding_dims[0]
