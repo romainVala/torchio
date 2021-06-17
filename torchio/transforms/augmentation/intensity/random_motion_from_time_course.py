@@ -540,7 +540,6 @@ class MotionFromTimeCourse(IntensityTransform):
                 fitpars = self.fitpars[image_name]
                 displacement_shift_strategy = self.displacement_shift_strategy[image_name]
                 frequency_encoding_dim = self.frequency_encoding_dim[image_name]
-                self.frequency_encoding_dim = frequency_encoding_dim
                 oversampling_pct = self.oversampling_pct[image_name]
                 tr = self.tr[image_name]
                 es = self.es[image_name]
@@ -626,7 +625,12 @@ class MotionFromTimeCourse(IntensityTransform):
         #self._metrics["rmse_Disp"] = calculate_mean_RMSE_displacment(fitpars)
         self._metrics["rmse_Trans"], self._metrics["rmse_Rot"] = calculate_mean_RMSE_trans_rot(fitpars)
 
-        dim_to_average = (self.frequency_encoding_dim,self.phase_encoding_dims[1] ) # warning, why slowest dim the phase_encoding_dims[0]
+        frequency_encoding_dim = self.frequency_encoding_dim
+        if isinstance(frequency_encoding_dim,dict):
+            for k in frequency_encoding_dim.keys: #kind of weird, but we use with only one dict ... (if not probabely same value)
+                val = frequency_encoding_dim[k]
+            frequency_encoding_dim=val
+        dim_to_average = (frequency_encoding_dim, self.phase_encoding_dims[1] ) # warning, why slowest dim the phase_encoding_dims[0]
 
         coef_TF = np.sum(abs(img_fft), axis=(0,2)) ;
         coef_shaw = np.sqrt( np.sum(abs(img_fft**2), axis=(0,2)) ) ;
@@ -655,9 +659,9 @@ class MotionFromTimeCourse(IntensityTransform):
             self._metrics[f'wTF_Disp_{i}'] = np.sum(ffi * w_coef_flat) / np.sum(w_coef_flat)
             self._metrics[f'wTF2_Disp_{i}'] = np.sum(ffi * w_coef_flat**2) / np.sum(w_coef_flat**2)
             disp_mean.append(  np.sum(np.abs(ffi) * w_coef_flat) / np.sum(w_coef_flat) )
-        self._metrics['wTF_absDisp_t'] = np.mean(disp_mean[:3])
-        self._metrics['wTF_absDisp_r'] = np.mean(disp_mean[3:])
-        self._metrics['wTF_absDisp_a'] = np.mean(disp_mean)
+        #self._metrics['wTF_absDisp_t'] = np.mean(disp_mean[:3])
+        #self._metrics['wTF_absDisp_r'] = np.mean(disp_mean[3:])
+        #self._metrics['wTF_absDisp_a'] = np.mean(disp_mean)
         ff = fitpars
         for i in range(0, 6):
             ffi = ff[i].reshape(-1)
