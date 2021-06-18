@@ -463,23 +463,24 @@ def spm_matrix(P, order=0):
         P = P.numpy()
         convert_to_torch=True
 
-    [P[3], P[4], P[5]] = [P[3]*180/np.pi, P[4]*180/np.pi, P[5]*180/np.pi] #degre to radian
+    #[P[3], P[4], P[5]] = [P[3] * 180 / np.pi, P[4] * 180 / np.pi, P[5] * 180 / np.pi]  # degre to radian
+    P[3], P[4], P[5] = P[3]*np.pi/180, P[4]*np.pi/180, P[5]*np.pi/180 #degre to radian
 
     T = np.array([[1,0,0,P[0]],[0,1,0,P[1]],[0,0,1,P[2]],[0,0,0,1]])
     R1 =  np.array([[1,0,0,0],
                     [0,np.cos(P[3]),np.sin(P[3]),0],#sing change compare to spm because neuro versus radio ?
                     [0,-np.sin(P[3]),np.cos(P[3]),0],
                     [0,0,0,1]])
-    R2 =  np.array([[np.cos(P[4]),0,-np.sin(P[4]),0],
+    R2 =  np.array([[np.cos(P[4]),0,np.sin(P[4]),0],
                     [0,1,0,0],
-                    [np.sin(P[4]),0,np.cos(P[4]),0],
+                    [-np.sin(P[4]),0,np.cos(P[4]),0],
                     [0,0,0,1]])
     R3 =  np.array([[np.cos(P[5]),np.sin(P[5]),0,0],  #sing change compare to spm because neuro versus radio ?
                     [-np.sin(P[5]),np.cos(P[5]),0,0],
                     [0,0,1,0],
                     [0,0,0,1]])
 
-    #R = R1.dot(R2.dot(R3))
+    #R = R3.dot(R2.dot(R1)) #fsl convention (with a sign difference)
     R = (R1.dot(R2)).dot(R3)
 
     Z = np.array([[P[6],0,0,0],[0,P[7],0,0],[0,0,P[8],0],[0,0,0,1]])
