@@ -3,6 +3,7 @@ from typing import Optional, Tuple, Generator
 import torch
 import numpy as np
 
+from ...constants import MIN_FLOAT_32
 from ...typing import TypePatchSize
 from ..image import Image
 from ..subject import Subject
@@ -36,7 +37,7 @@ class WeightedSampler(RandomSampler):
         >>> patch_size = 64
         >>> sampler = tio.data.WeightedSampler(patch_size, 'sampling_map')
         >>> for patch in sampler(subject):
-        ...     print(patch['index_ini'])
+        ...     print(patch[tio.LOCATION])
 
     .. note:: The index of the center of a patch with even size :math:`s` is
         arbitrarily set to :math:`s/2`. This is an implementation detail that
@@ -56,18 +57,11 @@ class WeightedSampler(RandomSampler):
         self.probability_map_name = probability_map
         self.cdf = None
 
-    def __call__(
+    def _generate_patches(
             self,
             subject: Subject,
             num_patches: Optional[int] = None,
             ) -> Generator[Subject, None, None]:
-        subject.check_consistent_space()
-        if np.any(self.patch_size > subject.spatial_shape):
-            message = (
-                f'Patch size {tuple(self.patch_size)} cannot be'
-                f' larger than image size {tuple(subject.spatial_shape)}'
-            )
-            raise RuntimeError(message)
         probability_map = self.get_probability_map(subject)
         probability_map = self.process_probability_map(
             probability_map, subject)
@@ -185,7 +179,6 @@ class WeightedSampler(RandomSampler):
             ) -> Subject:
         index_ini = self.get_random_index_ini(probability_map, cdf)
         cropped_subject = self.crop(subject, index_ini, self.patch_size)
-        cropped_subject['index_ini'] = index_ini.astype(int)
         return cropped_subject
 
     def get_random_index_ini(
@@ -224,23 +217,24 @@ class WeightedSampler(RandomSampler):
                    [ 6808,  6804,  6942,  6809,  6946,  6988,  7002,  6826,  7041]])
 
         """  # noqa: E501
-        # Get first value larger than random number
-        random_number = torch.rand(1).item()
-        # If probability map is float32, cdf.max() can be far from 1, e.g. 0.92
-        if random_number > cdf.max():
-            cdf_index = -1
-        else:  # proceed as usual
-            cdf_index = np.searchsorted(cdf, random_number)
+        # Get first value larger than random number ensuring the random number
+        # is not exactly 0 (see https://github.com/fepegar/torchio/issues/510)
+        random_number = max(MIN_FLOAT_32, torch.rand(1).item()) * cdf[-1]
 
-        random_location_index = cdf_index
+        random_location_index = np.searchsorted(cdf, random_number)
+
         center = np.unravel_index(
             random_location_index,
             probability_map.shape
         )
 
-        i, j, k = center
-        probability = probability_map[i, j, k]
-        assert probability > 0
+        probability = probability_map[center]
+        if probability <= 0:
+            message = (
+                'Error retrieving probability in weighted sampler.'
+                ' Please report this issue at'
+                ' https://github.com/fepegar/torchio/issues/new?labels=bug&template=bug_report.md'  # noqa: E501
+            )
+            raise RuntimeError(message)
 
-        center = np.array(center).astype(int)
-        return center
+        return np.array(center)

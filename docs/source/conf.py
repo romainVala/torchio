@@ -25,7 +25,7 @@ author = 'Fernando Pérez-García'
 
 # version is the short X.Y version
 # release is the full version, including alpha/beta/rc tags
-version = release = '0.18.34'
+version = release = '0.18.40'
 
 
 # -- General configuration ---------------------------------------------------
@@ -106,9 +106,9 @@ html_logo = 'favicon_io/torchio_logo_2048x2048.png'
 # further.  For a list of options available for each theme, see the
 # documentation.
 #
-arxiv_url = 'https://pytorchecosystemday.fbreg.com/'
-link = f'<a href="{arxiv_url}">PyTorch Ecosystem Day</a>'
-message = f'TorchIO was featured at the {link}! (21 April 2021)'
+url = 'https://doi.org/10.1016/j.cmpb.2021.106236'
+html_href = f'<a href="{url}">paper</a>'
+message = f'The new peer-reviewed TorchIO {html_href} is out!'
 html_theme_options = {
     'announcement': message,
 }

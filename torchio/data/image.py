@@ -1,5 +1,6 @@
 import warnings
 from pathlib import Path
+from collections.abc import Iterable
 from typing import Any, Dict, Tuple, Optional, Union, Sequence, List, Callable
 
 import torch
@@ -60,12 +61,16 @@ class Image(dict):
         tensor: If :attr:`path` is not given, :attr:`tensor` must be a 4D
             :class:`torch.Tensor` or NumPy array with dimensions
             :math:`(C, W, H, D)`.
-        affine: If :attr:`path` is not given, :attr:`affine` must be a
-            :math:`4 \times 4` NumPy array. If ``None``, :attr:`affine` is an
-            identity matrix.
+        affine: :math:`4 \times 4` matrix to convert voxel coordinates to world
+            coordinates. If ``None``, an identity matrix will be used. See the
+            `NiBabel docs on coordinates`_ for more information.
         check_nans: If ``True``, issues a warning if NaNs are found
             in the image. If ``False``, images will not be checked for the
             presence of NaNs.
+        channels_last: If ``True``, the read tensor will be permuted so the
+            last dimension becomes the first. This is useful, e.g., when
+            NIfTI images have been saved with the channels dimension being the
+            fourth instead of the fifth.
         reader: Callable object that takes a path and returns a 4D tensor and a
             2D, :math:`4 \times 4` affine matrix. This can be used if your data
             is saved in a custom format, such as ``.npy`` (see example below).
@@ -93,6 +98,7 @@ class Image(dict):
     .. _preprocessing: https://torchio.readthedocs.io/transforms/preprocessing.html#intensity
     .. _augmentation: https://torchio.readthedocs.io/transforms/augmentation.html#intensity
     .. _NiBabel docs: https://nipy.org/nibabel/image_orientation.html
+    .. _NiBabel docs on coordinates: https://nipy.org/nibabel/coordinate_systems.html#the-affine-matrix-as-a-transformation-between-spaces
     .. _3D Slicer wiki: https://www.slicer.org/wiki/Coordinate_systems
     .. _FSL docs: https://fsl.fmrib.ox.ac.uk/fsl/fslwiki/Orientation%20Explained
     .. _SimpleITK docs: https://simpleitk.readthedocs.io/en/master/fundamentalConcepts.html
@@ -117,7 +123,7 @@ class Image(dict):
             warnings.warn(
                 'Not specifying the image type is deprecated and will be'
                 ' mandatory in the future. You can probably use tio.ScalarImage'
-                ' or tio.LabelMap instead', DeprecationWarning,
+                ' or tio.LabelMap instead',
             )
             type = INTENSITY
 
@@ -274,6 +280,11 @@ class Image(dict):
         point_fin = nib.affines.apply_affine(self.affine, fin)
         return np.array((point_ini, point_fin))
 
+    @property
+    def num_channels(self) -> int:
+        """Get the number of channels in the associated 4D tensor."""
+        return len(self.data)
+
     def axis_name_to_index(self, axis: str) -> int:
         """Convert an axis name to an axis index.
 
@@ -371,10 +382,10 @@ class Image(dict):
             ) -> Optional[Union[Path, List[Path]]]:
         if path is None:
             return None
-        if isinstance(path, (str, Path)):
-            return self._parse_single_path(path)
-        else:
+        if isinstance(path, Iterable) and not isinstance(path, str):
             return [self._parse_single_path(p) for p in path]
+        else:
+            return self._parse_single_path(path)
 
     def _parse_tensor(
             self,
@@ -414,7 +425,7 @@ class Image(dict):
             raise TypeError(f'Affine must be a NumPy array, not {type(affine)}')
         if affine.shape != (4, 4):
             raise ValueError(f'Affine shape must be (4, 4), not {affine.shape}')
-        return affine
+        return affine.astype(np.float64)
 
     def load(self) -> None:
         r"""Load the image from disk.
@@ -578,8 +589,6 @@ class ScalarImage(Image):
 class LabelMap(Image):
     """Image whose pixel values represent categorical labels.
 
-    Intensity transforms are not applied to these images.
-
     Example:
         >>> import torch
         >>> import torchio as tio
@@ -590,6 +599,12 @@ class LabelMap(Image):
         ...     'white_matter.nii.gz',
         ...     'csf.nii.gz',
         ... )
+
+    Intensity transforms are not applied to these images.
+
+    Nearest neighbor interpolation is always used to resample label maps,
+    independently of the specified interpolation type in the transform
+    instantiation.
 
     See :class:`~torchio.Image` for more information.
     """

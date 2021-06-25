@@ -34,34 +34,17 @@ at [OpenAI](https://openai.com/) ([link](https://jack-clark.net/2020/03/17/)).
     </tr>
     <tr>
         <td align="left">
-            <b>Docs</b>
-        </td>
-        <td align="center">
-            <a href="http://torchio.rtfd.io/?badge=latest">
-                <img src="https://img.shields.io/readthedocs/torchio?label=Docs&logo=Read%20the%20Docs" alt="Documentation status">
-            </a>
-        </td>
-    </tr>
-    <tr>
-        <td align="left">
-            <b>Build</b>
+            <b>CI</b>
         </td>
         <td align="center">
             <a href="https://travis-ci.org/fepegar/torchio">
                 <img src="https://img.shields.io/travis/fepegar/torchio/master.svg?label=Travis%20CI%20build&logo=travis" alt="Build status">
             </a>
-        </td>
-    </tr>
-    <tr>
-        <td align="left">
-            <b>Coverage</b>
-        </td>
-        <td align="center">
+            <a href="http://torchio.rtfd.io/?badge=latest">
+                <img src="https://img.shields.io/readthedocs/torchio?label=Docs&logo=Read%20the%20Docs" alt="Documentation status">
+            </a>
             <a href="https://codecov.io/github/fepegar/torchio">
                 <img src="https://codecov.io/gh/fepegar/torchio/branch/master/graphs/badge.svg" alt="Coverage status">
-            </a>
-            <a href='https://coveralls.io/github/fepegar/torchio?branch=master'>
-                <img src='https://coveralls.io/repos/github/fepegar/torchio/badge.svg?branch=master' alt='Coverage Status' />
             </a>
         </td>
     </tr>
@@ -250,29 +233,30 @@ If you like this repository, please click on Star!
 
 If you use this package for your research, please cite the paper:
 
-> [Pérez-García, F., Sparks, R., Ourselin, S.: TorchIO: a Python library for efficient
-loading, preprocessing, augmentation and patch-based sampling of medical images
-in deep learning. arXiv:2003.04696 [cs, eess, stat] (Mar 2020), http://arxiv.org/abs/2003.04696, arXiv: 2003.04696](http://arxiv.org/abs/2003.04696)
+[F. Pérez-García, R. Sparks, and S. Ourselin. *TorchIO: a Python library for efficient loading, preprocessing, augmentation and patch-based sampling of medical images in deep learning*. Computer Methods and Programs in Biomedicine (June 2021), p. 106236. ISSN: 0169-2607.doi:10.1016/j.cmpb.2021.106236.](https://doi.org/10.1016/j.cmpb.2021.106236)
 
 BibTeX entry:
 
 ```bibtex
-@article{perez-garcia_torchio_2020,
-    title = {{TorchIO}: a {Python} library for efficient loading, preprocessing, augmentation and patch-based sampling of medical images in deep learning},
-    shorttitle = {{TorchIO}},
-    url = {http://arxiv.org/abs/2003.04696},
-    urldate = {2020-03-11},
-    journal = {arXiv:2003.04696 [cs, eess, stat]},
-    author = {P{\'e}rez-Garc{\'i}a, Fernando and Sparks, Rachel and Ourselin, Sebastien},
-    month = mar,
-    year = {2020},
-    note = {arXiv: 2003.04696},
-    keywords = {Computer Science - Computer Vision and Pattern Recognition, Electrical Engineering and Systems Science - Image and Video Processing, Computer Science - Machine Learning, Computer Science - Artificial Intelligence, Statistics - Machine Learning},
+@article{perez-garcia_torchio_2021,
+    title = {TorchIO: a Python library for efficient loading, preprocessing, augmentation and patch-based sampling of medical images in deep learning},
+    journal = {Computer Methods and Programs in Biomedicine},
+    pages = {106236},
+    year = {2021},
+    issn = {0169-2607},
+    doi = {https://doi.org/10.1016/j.cmpb.2021.106236},
+    url = {https://www.sciencedirect.com/science/article/pii/S0169260721003102},
+    author = {P{\'e}rez-Garc{\'i}a, Fernando and Sparks, Rachel and Ourselin, S{\'e}bastien},
+    keywords = {Medical image computing, Deep learning, Data augmentation, Preprocessing},
 }
 ```
 
-This project is supported by the [Wellcome / EPSRC Centre for Interventional and Surgical Sciences (WEISS)](https://www.ucl.ac.uk/interventional-surgical-sciences/) (University College London) and the [School of Biomedical Engineering & Imaging Sciences (BMEIS)](https://www.kcl.ac.uk/bmeis) (King's College London).
+This project is supported by the following institutions:
 
+- [Engineering and Physical Sciences Research Council (EPSRC) & UK Research and Innovation (UKRI)](https://epsrc.ukri.org/)
+- [EPSRC Centre for Doctoral Training in Intelligent, Integrated Imaging In Healthcare (i4health)](https://www.ucl.ac.uk/intelligent-imaging-healthcare/) (University College London)
+- [Wellcome / EPSRC Centre for Interventional and Surgical Sciences (WEISS)](https://www.ucl.ac.uk/interventional-surgical-sciences/) (University College London)
+- [School of Biomedical Engineering & Imaging Sciences (BMEIS)](https://www.kcl.ac.uk/bmeis) (King's College London)
 
 ## Getting started
 
@@ -336,6 +320,13 @@ Thanks goes to all these people ([emoji key](https://allcontributors.org/docs/en
     <td align="center"><a href="https://github.com/diazandr3s"><img src="https://avatars.githubusercontent.com/u/11991079?v=4?s=100" width="100px;" alt=""/><br /><sub><b>Andres Diaz-Pinto</b></sub></a><br /><a href="https://github.com/fepegar/torchio/issues?q=author%3Adiazandr3s" title="Bug reports">🐛</a></td>
     <td align="center"><a href="http://www.cbica.upenn.edu/spati"><img src="https://avatars.githubusercontent.com/u/11719673?v=4?s=100" width="100px;" alt=""/><br /><sub><b>Sarthak Pati</b></sub></a><br /><a href="#platform-sarthakpati" title="Packaging/porting to new platform">📦</a></td>
     <td align="center"><a href="https://github.com/GabriellaKamlish"><img src="https://avatars.githubusercontent.com/u/26881445?v=4?s=100" width="100px;" alt=""/><br /><sub><b>GabriellaKamlish</b></sub></a><br /><a href="https://github.com/fepegar/torchio/issues?q=author%3AGabriellaKamlish" title="Bug reports">🐛</a></td>
+  </tr>
+  <tr>
+    <td align="center"><a href="https://github.com/TylerSpears"><img src="https://avatars.githubusercontent.com/u/7096950?v=4?s=100" width="100px;" alt=""/><br /><sub><b>Tyler Spears</b></sub></a><br /><a href="https://github.com/fepegar/torchio/issues?q=author%3ATylerSpears" title="Bug reports">🐛</a></td>
+    <td align="center"><a href="http://dagut.ru"><img src="https://avatars.githubusercontent.com/u/7759336?v=4?s=100" width="100px;" alt=""/><br /><sub><b>DaGuT</b></sub></a><br /><a href="https://github.com/fepegar/torchio/commits?author=DaGuT" title="Documentation">📖</a></td>
+    <td align="center"><a href="https://github.com/hsiangyuzhao"><img src="https://avatars.githubusercontent.com/u/53631393?v=4?s=100" width="100px;" alt=""/><br /><sub><b>Xiangyu Zhao</b></sub></a><br /><a href="https://github.com/fepegar/torchio/issues?q=author%3Ahsiangyuzhao" title="Bug reports">🐛</a></td>
+    <td align="center"><a href="https://siahuat0727.github.io"><img src="https://avatars.githubusercontent.com/u/17688111?v=4?s=100" width="100px;" alt=""/><br /><sub><b>siahuat0727</b></sub></a><br /><a href="https://github.com/fepegar/torchio/commits?author=siahuat0727" title="Documentation">📖</a> <a href="https://github.com/fepegar/torchio/issues?q=author%3Asiahuat0727" title="Bug reports">🐛</a></td>
+    <td align="center"><a href="https://github.com/Svdvoort"><img src="https://avatars.githubusercontent.com/u/23049683?v=4?s=100" width="100px;" alt=""/><br /><sub><b>Svdvoort</b></sub></a><br /><a href="https://github.com/fepegar/torchio/commits?author=Svdvoort" title="Code">💻</a></td>
   </tr>
 </table>
 

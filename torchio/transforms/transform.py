@@ -31,23 +31,28 @@ TypeBounds = Union[
     TypeSixBounds,
 ]
 TypeMaskingMethod = Union[str, TypeCallable, TypeBounds, None]
-anat_axes = 'Left', 'Right', 'Anterior', 'Posterior', 'Inferior', 'Superior'
+ANATOMICAL_AXES = (
+    'Left', 'Right',
+    'Posterior', 'Anterior',
+    'Inferior', 'Superior',
+)
 
 
 class Transform(ABC):
     """Abstract class for all TorchIO transforms.
 
-    All subclasses must overwrite
-    :meth:`~torchio.transforms.Transform.apply_transform`,
-    which takes some input, applies a transformation and returns the result.
-
-    The input can be an instance of
+    When called, the input can be an instance of
     :class:`torchio.Subject`,
     :class:`torchio.Image`,
     :class:`numpy.ndarray`,
     :class:`torch.Tensor`,
     :class:`SimpleITK.Image`,
-    or :class:`dict`.
+    or :class:`dict` containing 4D tensors as values.
+
+    All subclasses must overwrite
+    :meth:`~torchio.transforms.Transform.apply_transform`,
+    which takes an instance of :class:`~torchio.Subject`,
+    modifies it and returns the result.
 
     Args:
         p: Probability that this transform will be applied.
@@ -89,7 +94,7 @@ class Transform(ABC):
                 'The "keys" argument is deprecated and will be removed in the'
                 ' future. Use "include" instead.'
             )
-            warnings.warn(message, DeprecationWarning)
+            warnings.warn(message)
             include = keys
         self.include, self.exclude = self.parse_include_and_exclude(
             include, exclude)
@@ -547,6 +552,7 @@ class Transform(ABC):
             masking_method: TypeMaskingMethod,
             subject: Subject,
             tensor: torch.Tensor,
+            labels: list = None,
             ) -> torch.Tensor:
         if masking_method is None:
             return self.ones(tensor)
@@ -555,18 +561,29 @@ class Transform(ABC):
         elif type(masking_method) is str:
             in_subject = masking_method in subject
             if in_subject and isinstance(subject[masking_method], LabelMap):
-                return subject[masking_method].data.bool()
-            masking_method = masking_method.capitalize()
-            if masking_method in anat_axes:
+                if labels is None:
+                    return subject[masking_method].data.bool()
+                else:
+                    mask_data = subject[masking_method].data
+                    volumes = [mask_data == label for label in labels]
+                    return torch.stack(volumes).sum(0).bool()
+            possible_axis = masking_method.capitalize()
+            if possible_axis in ANATOMICAL_AXES:
                 return self.get_mask_from_anatomical_label(
-                    masking_method, tensor)
+                    possible_axis, tensor)
         elif type(masking_method) in (tuple, list, int):
             return self.get_mask_from_bounds(masking_method, tensor)
+        first_anat_axes = tuple(s[0] for s in ANATOMICAL_AXES)
         message = (
-            'Masking method parameter must be a function, a label map name,'
-            f' an anatomical label: {anat_axes}, or a bounds parameter'
-            ' (an int, tuple of 3 ints, or tuple of 6 ints),'
-            f' not "{masking_method}" of type "{type(masking_method)}"'
+            'Masking method must be one of:\n'
+            ' 1) A callable object, such as a function\n'
+            ' 2) The name of a label map in the subject'
+            f' ({subject.get_images_names()})\n'
+            f' 3) An anatomical label {ANATOMICAL_AXES + first_anat_axes}\n'
+            ' 4) A bounds parameter'
+            ' (int, tuple of 3 ints, or tuple of 6 ints)\n'
+            f' The passed value, "{masking_method}",'
+            f' of type "{type(masking_method)}", is not valid'
         )
         raise ValueError(message)
 
@@ -575,10 +592,11 @@ class Transform(ABC):
             anatomical_label: str,
             tensor: torch.Tensor,
             ) -> torch.Tensor:
-        anatomical_label = anatomical_label.title()
-        if anatomical_label.title() not in anat_axes:
+        # Assume the image is in RAS orientation
+        anatomical_label = anatomical_label.capitalize()
+        if anatomical_label not in ANATOMICAL_AXES:
             message = (
-                f'Anatomical label must be one of {anat_axes}'
+                f'Anatomical label must be one of {ANATOMICAL_AXES}'
                 f' not {anatomical_label}'
             )
             raise ValueError(message)
