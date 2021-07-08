@@ -2,6 +2,7 @@ from typing import Dict
 
 from ...transform import TypeMaskingMethod
 from .label_transform import LabelTransform
+from ....data.image import ScalarImage, LabelMap
 
 
 class RemapLabels(LabelTransform):
@@ -52,12 +53,14 @@ class RemapLabels(LabelTransform):
             self,
             remapping: Dict[int, int],
             masking_method: TypeMaskingMethod = None,
+            new_key=None,
             **kwargs
             ):
         super().__init__(**kwargs)
         self.kwargs = kwargs
         self.remapping = remapping
         self.masking_method = masking_method
+        self.new_key = new_key
         self.args_names = ('remapping', 'masking_method',)
 
     def apply_transform(self, subject):
@@ -68,9 +71,23 @@ class RemapLabels(LabelTransform):
                 subject,
                 new_data,
             )
-            for old_id, new_id in self.remapping.items():
-                new_data[mask & (image.data == old_id)] = new_id
-            image.set_data(new_data)
+            if image.data.shape[0] > 1 : #4d label, either one hot, or Partial Volume
+                import torch
+                remap_list = [(int(k), v) for k, v in self.remapping.items()] # int because with json, dict keys must be a string
+                remap_list.sort(key=lambda x:x[1]) #sort with increasing new_id
+                max_new_id = torch.tensor(remap_list)[:,1].max() + 1
+                new_data = torch.zeros([max_new_id]+list(image.data.shape[1:]))
+                for old_id, new_id in remap_list:
+                    new_data[new_id] += image.data[old_id]
+                if self.new_key is None:
+                    image.set_data(new_data)
+                else:
+                    new_image = LabelMap(affine=image.affine, tensor=new_data)
+                    subject.add_image(new_image, self.new_key)
+            else:
+                for old_id, new_id in self.remapping.items():
+                    new_data[mask & (image.data == old_id)] = new_id
+                image.set_data(new_data)
 
         return subject
 
