@@ -635,11 +635,11 @@ class MotionFromTimeCourse(IntensityTransform):
 
         coef_TF = np.sum(abs(img_fft), axis=(0,2)) ;
         coef_shaw = np.sqrt( np.sum(abs(img_fft**2), axis=(0,2)) ) ;
-        print(f'averagin TF coef on dim {dim_to_average} shape coef {coef_TF.shape}')
+        #print(f'averagin TF coef on dim {dim_to_average} shape coef {coef_TF.shape}')
         if fitpars.shape[1] != coef_TF.shape[0] :
             #just interpolate end to end. at image slowest dimention size
             fitpars = _interpolate_fitpars(fitpars, len_output=coef_TF.shape[0])
-            print(f'interp fitpar for wcoef new shape {fitpars.shape}')
+            #print(f'interp fitpar for wcoef new shape {fitpars.shape}')
 
         self._metrics["meanDispJ_wTF"]  = calculate_mean_Disp_J(fitpars,  weights=coef_TF)
         self._metrics["meanDispJ_wSH"]  = calculate_mean_Disp_J(fitpars,  weights=coef_shaw)
