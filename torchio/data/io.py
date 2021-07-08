@@ -79,9 +79,9 @@ def write_image(
         ) -> None:
     args = tensor, affine, path
     try:
-        _write_sitk(*args)
-    except RuntimeError:  # try with NiBabel
         _write_nibabel(*args, squeeze=squeeze)
+    except RuntimeError:  # try with NiBabel
+        _write_sitk(*args)
 
 
 def _write_nibabel(
