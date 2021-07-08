@@ -66,11 +66,11 @@ Credits
 If you use this library for your research,
 please cite our preprint:
 
-|paper-url|_
-
-.. _paper-url: https://doi.org/10.1016/j.cmpb.2021.106236
-
-.. |paper-url| replace:: F. Pérez-García, R. Sparks, and S. Ourselin. TorchIO: a Python library for efficient loading, preprocessing, augmentation and patch-based sampling of medical images in deep learning. Computer Methods and Programs in Biomedicine (June 2021), p. 106236. ISSN: 0169-2607.doi:10.1016/j.cmpb.2021.106236.
+`F. Pérez-García, R. Sparks, and S. Ourselin. TorchIO: a Python library for
+efficient loading, preprocessing, augmentation and patch-based sampling of
+medical images in deep learning. Computer Methods and Programs in Biomedicine
+(June 2021), p. 106236. ISSN:
+0169-2607.doi:10.1016/j.cmpb.2021.106236. <https://doi.org/10.1016/j.cmpb.2021.106236>`_
 
 
 BibTeX:
@@ -117,7 +117,7 @@ which is no longer maintained.
    :alt: Documentation status
 
 .. |Build-status| image:: https://img.shields.io/travis/fepegar/torchio/master.svg?label=Travis%20CI%20build&logo=travis
-   :target: https://travis-ci.org/fepegar/torchio
+   :target: https://travis-ci.com/fepegar/torchio
    :alt: Build status
 
 .. |Coverage-codecov| image:: https://codecov.io/gh/fepegar/torchio/branch/master/graphs/badge.svg

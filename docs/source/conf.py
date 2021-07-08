@@ -25,7 +25,7 @@ author = 'Fernando Pérez-García'
 
 # version is the short X.Y version
 # release is the full version, including alpha/beta/rc tags
-version = release = '0.18.40'
+version = release = '0.18.44'
 
 
 # -- General configuration ---------------------------------------------------
@@ -46,6 +46,7 @@ extensions = [
     'sphinx.ext.intersphinx',
     'matplotlib.sphinxext.plot_directive',
     'sphinx_gallery.gen_gallery',
+    'notfound.extension',
 ]
 
 # Add mappings
@@ -85,6 +86,18 @@ exclude_patterns: List[str] = []
 
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = None
+
+# sphinx-notfound-page
+# https://github.com/readthedocs/sphinx-notfound-page
+notfound_context = {
+    'title': 'Page not found',
+    'body': (
+        '<h1>Page not found</h1>'
+        "<p>Sorry, we couldn't find that page.</p>"
+        '<p>Try using the search box or go to the'
+        ' <a href="http://torchio.rtfd.io/">homepage</a>.</p>'
+    ),
+}
 
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#confval-nitpicky
 # This generates a lot of warnings because of the broken internal links, which

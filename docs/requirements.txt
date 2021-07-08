@@ -1,6 +1,6 @@
-Click
 Deprecated
-SimpleITK<2
+SimpleITK!=2.0.*
+click
 furo
 humanize
 matplotlib
@@ -9,6 +9,7 @@ numpy>=1.15
 scipy
 sphinx-copybutton
 sphinx-gallery
+sphinx-notfound-page
 sphinx>=3.4.3
 torch>=1.1
 tqdm
