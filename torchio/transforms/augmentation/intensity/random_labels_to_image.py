@@ -377,7 +377,10 @@ class LabelsToImage(IntensityTransform):
             new_mask = torch.zeros_like(tissues).float()
             for lab_idx, index in enumerate(self.create_mask_index):
                 if index:
-                    new_mask += label_map[lab_idx]
+                    if is_discretized:
+                        new_mask[label_map == lab_idx] = 1
+                    else:
+                        new_mask += label_map[lab_idx]
             mask_image = LabelMap(affine=affine, tensor=new_mask)
             subject.add_image(mask_image, self.create_mask_name)
 
