@@ -243,13 +243,13 @@ class RandomMotionFromTimeCourse(RandomTransform, IntensityTransform):
             fitpars += suddenTrace
 
         if self.preserve_center_frequency_pct:
-            center = np.int(np.floor(fitpars.shape[1] / 2))
+            center = np.int32(np.floor(fitpars.shape[1] / 2))
             if self.displacement_shift_strategy == "center_zero":  # added here to remove global motion outside center
                 to_substract = fitpars[:, center]
                 to_substract_tile = np.tile(to_substract[..., np.newaxis], (1, fitpars.shape[1]))
                 fitpars = fitpars - to_substract_tile
 
-            nbpts = np.int(np.floor(fitpars.shape[1] * self.preserve_center_frequency_pct / 2))
+            nbpts = np.int32(np.floor(fitpars.shape[1] * self.preserve_center_frequency_pct / 2))
             fitpars[:, center - nbpts:center + nbpts] = 0
 
         # rescale to global max if asked
