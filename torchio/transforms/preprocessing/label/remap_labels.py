@@ -78,7 +78,7 @@ class RemapLabels(LabelTransform):
                 max_new_id = torch.tensor(remap_list)[:,1].max() + 1
                 new_data = torch.zeros([max_new_id]+list(image.data.shape[1:]))
                 for old_id, new_id in remap_list:
-                    new_data[new_id] += image.data[old_id]
+                    new_data[new_id,::] += image.data[old_id,::]
                 if self.new_key is None:
                     image.set_data(new_data)
                 else:
