@@ -18,6 +18,7 @@ from .io import (
     read_image,
     write_image,
     nib_to_sitk,
+    sitk_to_nib,
     check_uint_to_int,
     get_rotation_and_spacing_from_affine,
 )
@@ -502,6 +503,23 @@ class Image(dict):
     def as_sitk(self, **kwargs) -> sitk.Image:
         """Get the image as an instance of :class:`sitk.Image`."""
         return nib_to_sitk(self.data, self.affine, **kwargs)
+
+    @classmethod
+    def from_sitk(cls, sitk_image):
+        """Instantiate a new TorchIO image from a :class:`sitk.Image`.
+
+        Example:
+            >>> import torchio as tio
+            >>> import SimpleITK as sitk
+            >>> sitk_image = sitk.Image(20, 30, 40, sitk.sitkUInt16)
+            >>> tio.LabelMap.from_sitk(sitk_image)
+            LabelMap(shape: (1, 20, 30, 40); spacing: (1.00, 1.00, 1.00); orientation: LPS+; memory: 93.8 KiB; dtype: torch.IntTensor)
+            >>> sitk_image = sitk.Image((224, 224), sitk.sitkVectorFloat32, 3)
+            >>> tio.ScalarImage.from_sitk(sitk_image)
+            ScalarImage(shape: (3, 224, 224, 1); spacing: (1.00, 1.00, 1.00); orientation: LPS+; memory: 588.0 KiB; dtype: torch.FloatTensor)
+        """
+        tensor, affine = sitk_to_nib(sitk_image)
+        return cls(tensor=tensor, affine=affine)
 
     def as_pil(self, transpose=True):
         """Get the image as an instance of :class:`PIL.Image`.

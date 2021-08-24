@@ -64,7 +64,7 @@ Credits
   From https://stackoverflow.com/a/10766650/3956024
 
 If you use this library for your research,
-please cite our preprint:
+please cite our paper:
 
 `F. Pérez-García, R. Sparks, and S. Ourselin. TorchIO: a Python library for
 efficient loading, preprocessing, augmentation and patch-based sampling of
@@ -131,6 +131,10 @@ which is no longer maintained.
 .. |Slack| image:: https://img.shields.io/badge/TorchIO-Join%20on%20Slack-blueviolet?style=flat&logo=slack
    :target: https://join.slack.com/t/torchioworkspace/shared_invite/zt-exgpd5rm-BTpxg2MazwiiMDw7X9xMFg
    :alt: Slack
+
+.. |Twitter| image:: https://img.shields.io/twitter/url/https/twitter.com/TorchIOLib.svg?style=social&label=Follow%20%40TorchIOLib
+   :target: https://twitter.com/TorchIOLib
+   :alt: Twitter
 
 .. |Code-Maintainability| image:: https://api.codeclimate.com/v1/badges/518673e49a472dd5714d/maintainability
    :target: https://codeclimate.com/github/fepegar/torchio/maintainability

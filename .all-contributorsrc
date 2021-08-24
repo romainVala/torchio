@@ -319,6 +319,24 @@
       "contributions": [
         "code"
       ]
+    },
+    {
+      "login": "mattwarkentin",
+      "name": "Matthew T. Warkentin",
+      "avatar_url": "https://avatars.githubusercontent.com/u/27825069?v=4",
+      "profile": "https://mattwarkentin.github.io/",
+      "contributions": [
+        "code"
+      ]
+    },
+    {
+      "login": "glupol",
+      "name": "glupol",
+      "avatar_url": "https://avatars.githubusercontent.com/u/57905234?v=4",
+      "profile": "https://github.com/glupol",
+      "contributions": [
+        "bug"
+      ]
     }
   ],
   "contributorsPerLine": 7,

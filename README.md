@@ -25,7 +25,7 @@ at [OpenAI](https://openai.com/) ([link](https://jack-clark.net/2020/03/17/)).
                 <img src="https://img.shields.io/pypi/v/torchio?label=PyPI%20version&logo=python&logoColor=white" alt="PyPI version">
             </a>
             <a href="https://anaconda.org/conda-forge/torchio">
-                <img src="https://anaconda.org/conda-forge/torchio/badges/installer/conda.svg" alt="Conda version">
+                <img src="https://img.shields.io/conda/vn/conda-forge/torchio" alt="Conda version">
             </a>
             <a href="https://github.com/fepegar/torchio#contributors">
                 <img src="https://img.shields.io/badge/Contributors-27-orange.svg" alt="Contributors">
@@ -81,6 +81,9 @@ at [OpenAI](https://openai.com/) ([link](https://jack-clark.net/2020/03/17/)).
         <td align="center">
             <a href="https://join.slack.com/t/torchioworkspace/shared_invite/zt-exgpd5rm-BTpxg2MazwiiMDw7X9xMFg">
                 <img src="https://img.shields.io/badge/TorchIO-Join%20on%20Slack-blueviolet?style=flat&logo=slack" alt="Slack">
+            </a>
+            <a href="https://twitter.com/TorchIOLib">
+                <img src="https://img.shields.io/twitter/url/https/twitter.com/TorchIOLib.svg?style=social&label=Follow%20%40TorchIOLib" alt="Slack">
             </a>
         </td>
     </tr>
@@ -328,6 +331,10 @@ Thanks goes to all these people ([emoji key](https://allcontributors.org/docs/en
     <td align="center"><a href="https://siahuat0727.github.io"><img src="https://avatars.githubusercontent.com/u/17688111?v=4?s=100" width="100px;" alt=""/><br /><sub><b>siahuat0727</b></sub></a><br /><a href="https://github.com/fepegar/torchio/commits?author=siahuat0727" title="Documentation">📖</a> <a href="https://github.com/fepegar/torchio/issues?q=author%3Asiahuat0727" title="Bug reports">🐛</a></td>
     <td align="center"><a href="https://github.com/Svdvoort"><img src="https://avatars.githubusercontent.com/u/23049683?v=4?s=100" width="100px;" alt=""/><br /><sub><b>Svdvoort</b></sub></a><br /><a href="https://github.com/fepegar/torchio/commits?author=Svdvoort" title="Code">💻</a></td>
     <td align="center"><a href="https://www.linkedin.com/in/alban-steff-260ab715b/"><img src="https://avatars.githubusercontent.com/u/59876036?v=4?s=100" width="100px;" alt=""/><br /><sub><b>Albans98</b></sub></a><br /><a href="https://github.com/fepegar/torchio/commits?author=Albans98" title="Code">💻</a></td>
+    <td align="center"><a href="https://mattwarkentin.github.io/"><img src="https://avatars.githubusercontent.com/u/27825069?v=4?s=100" width="100px;" alt=""/><br /><sub><b>Matthew T. Warkentin</b></sub></a><br /><a href="https://github.com/fepegar/torchio/commits?author=mattwarkentin" title="Code">💻</a></td>
+  </tr>
+  <tr>
+    <td align="center"><a href="https://github.com/glupol"><img src="https://avatars.githubusercontent.com/u/57905234?v=4?s=100" width="100px;" alt=""/><br /><sub><b>glupol</b></sub></a><br /><a href="https://github.com/fepegar/torchio/issues?q=author%3Aglupol" title="Bug reports">🐛</a></td>
   </tr>
 </table>
 
