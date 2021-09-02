@@ -110,16 +110,9 @@ def write_image(
         ) -> None:
     args = tensor, affine, path
     try:
-<<<<<<< HEAD
-        _write_nibabel(*args, squeeze=squeeze)
-    except RuntimeError:  # try with NiBabel
-        _write_sitk(*args)
-=======
-        _write_sitk(*args, squeeze=squeeze)
-    except RuntimeError:  # try with NiBabel
         _write_nibabel(*args)
->>>>>>> 8c26feb3604455794fdda500552d12736d5f76e9
-
+    except RuntimeError:  # try with NiBabel
+        _write_sitk(*args, squeeze=squeeze)
 
 def _write_nibabel(
         tensor: TypeData,
