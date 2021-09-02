@@ -25,6 +25,9 @@ class Crop(BoundsTransform):
             = d_{ini} = d_{fin} = n`.
         **kwargs: See :class:`~torchio.transforms.Transform` for additional
             keyword arguments.
+
+    .. seealso:: If you want to pass the output shape instead, please use
+        :class:`~torchio.transforms.CropOrPad` instead.
     """
     def __init__(
             self,

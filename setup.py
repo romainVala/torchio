@@ -25,7 +25,7 @@ requirements = [
 
 setup(
     author='Fernando Perez-Garcia',
-    author_email='fernando.perezgarcia.17@ucl.ac.uk',
+    author_email='fepegar@gmail.com',
     python_requires='>=3.6',
     classifiers=[
         'Development Status :: 2 - Pre-Alpha',
@@ -63,6 +63,6 @@ setup(
     test_suite='tests',
     tests_require=[],
     url='https://github.com/fepegar/torchio',
-    version='0.18.47',
+    version='0.18.51',
     zip_safe=False,
 )

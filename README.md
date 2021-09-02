@@ -66,10 +66,10 @@ at [OpenAI](https://openai.com/) ([link](https://jack-clark.net/2020/03/17/)).
     </tr>
     <tr>
         <td align="left">
-            <b>Notebooks</b>
+            <b>Tutorials</b>
         </td>
         <td align="center">
-            <a href="https://github.com/fepegar/torchio/blob/master/notebooks/README.md">
+            <a href="https://github.com/fepegar/torchio/blob/master/tutorials/README.md">
                 <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Google Colab">
             </a>
         </td>
@@ -270,7 +270,7 @@ and a [Hello, World!](https://torchio.readthedocs.io/quickstart.html#hello-world
 example.
 
 Longer usage examples can be found in the
-[notebooks](https://github.com/fepegar/torchio/blob/master/notebooks/README.md).
+[tutorials](https://github.com/fepegar/torchio/blob/master/tutorials/README.md).
 
 All the documentation is hosted on
 [Read the Docs](http://torchio.rtfd.io/).
@@ -335,6 +335,8 @@ Thanks goes to all these people ([emoji key](https://allcontributors.org/docs/en
   </tr>
   <tr>
     <td align="center"><a href="https://github.com/glupol"><img src="https://avatars.githubusercontent.com/u/57905234?v=4?s=100" width="100px;" alt=""/><br /><sub><b>glupol</b></sub></a><br /><a href="https://github.com/fepegar/torchio/issues?q=author%3Aglupol" title="Bug reports">🐛</a></td>
+    <td align="center"><a href="https://github.com/ramonemiliani93"><img src="https://avatars.githubusercontent.com/u/14314888?v=4?s=100" width="100px;" alt=""/><br /><sub><b>ramonemiliani93</b></sub></a><br /><a href="https://github.com/fepegar/torchio/commits?author=ramonemiliani93" title="Documentation">📖</a></td>
+    <td align="center"><a href="https://github.com/justusschock"><img src="https://avatars.githubusercontent.com/u/12886177?v=4?s=100" width="100px;" alt=""/><br /><sub><b>Justus Schock</b></sub></a><br /><a href="https://github.com/fepegar/torchio/commits?author=justusschock" title="Code">💻</a></td>
   </tr>
 </table>
 

@@ -1,6 +1,6 @@
 import warnings
 from pathlib import Path
-from typing import Tuple
+from typing import Tuple, Union, Optional
 
 import torch
 import numpy as np
@@ -8,10 +8,16 @@ import nibabel as nib
 import SimpleITK as sitk
 
 from ..constants import REPO_URL
-from ..typing import TypePath, TypeData
+from ..typing import TypePath, TypeData, TypeTripletFloat, TypeDirection
 
 
-FLIPXY = np.diag([-1, -1, 1, 1])
+# Matrices used to switch between LPS and RAS
+FLIPXY_33 = np.diag([-1, -1, 1])
+FLIPXY_44 = np.diag([-1, -1, 1, 1])
+
+# Image formats that are typically 2D
+formats = ['.jpg', '.jpeg', '.bmp', '.png', '.tif', '.tiff']
+IMAGE_2D_FORMATS = formats + [s.upper() for s in formats]
 
 
 def read_image(path: TypePath) -> Tuple[torch.Tensor, np.ndarray]:
@@ -71,24 +77,54 @@ def _read_dicom(directory: TypePath):
     return image
 
 
+def read_shape(path: TypePath) -> Tuple[int, int, int, int]:
+    reader = sitk.ImageFileReader()
+    reader.SetFileName(str(path))
+    reader.ReadImageInformation()
+    num_channels = reader.GetNumberOfComponents()
+    spatial_shape = reader.GetSize()
+    if reader.GetDimension() == 2:
+        spatial_shape = *spatial_shape, 1
+    return (num_channels,) + spatial_shape
+
+
+def read_affine(path: TypePath) -> np.ndarray:
+    reader = get_reader(path)
+    affine = get_ras_affine_from_sitk(reader)
+    return affine
+
+
+def get_reader(path: TypePath, read: bool = True) -> sitk.ImageFileReader:
+    reader = sitk.ImageFileReader()
+    reader.SetFileName(str(path))
+    if read:
+        reader.ReadImageInformation()
+    return reader
+
+
 def write_image(
         tensor: torch.Tensor,
         affine: TypeData,
         path: TypePath,
-        squeeze: bool = True,
+        squeeze: Optional[bool] = None,
         ) -> None:
     args = tensor, affine, path
     try:
+<<<<<<< HEAD
         _write_nibabel(*args, squeeze=squeeze)
     except RuntimeError:  # try with NiBabel
         _write_sitk(*args)
+=======
+        _write_sitk(*args, squeeze=squeeze)
+    except RuntimeError:  # try with NiBabel
+        _write_nibabel(*args)
+>>>>>>> 8c26feb3604455794fdda500552d12736d5f76e9
 
 
 def _write_nibabel(
         tensor: TypeData,
         affine: TypeData,
         path: TypePath,
-        squeeze: bool = False,
         ) -> None:
     """
     Expects a path with an extension that can be used by nibabel.save
@@ -102,7 +138,6 @@ def _write_nibabel(
         tensor = tensor[0]
     else:
         tensor = tensor[np.newaxis].permute(2, 3, 4, 0, 1)
-    tensor = tensor.squeeze() if squeeze else tensor
     suffix = Path(str(path).replace('.gz', '')).suffix
     if '.nii' in suffix:
         img = nib.Nifti1Image(np.asarray(tensor), affine)
@@ -122,16 +157,21 @@ def _write_sitk(
         affine: TypeData,
         path: TypePath,
         use_compression: bool = True,
+        squeeze: Optional[bool] = None,
         ) -> None:
     assert tensor.ndim == 4
     path = Path(path)
-    if path.suffix in ('.png', '.jpg', '.jpeg'):
+    if path.suffix in ('.png', '.jpg', '.jpeg', '.bmp'):
         warnings.warn(
             f'Casting to uint 8 before saving to {path}',
             RuntimeWarning,
         )
         tensor = tensor.numpy().astype(np.uint8)
-    image = nib_to_sitk(tensor, affine)
+    if squeeze is None:
+        force_3d = path.suffix not in IMAGE_2D_FORMATS
+    else:
+        force_3d = not squeeze
+    image = nib_to_sitk(tensor, affine, force_3d=force_3d)
     sitk.WriteImage(image, str(path), use_compression)
 
 
@@ -160,16 +200,16 @@ def write_matrix(matrix: torch.Tensor, path: TypePath):
 
 def _to_itk_convention(matrix):
     """RAS to LPS"""
-    matrix = np.dot(FLIPXY, matrix)
-    matrix = np.dot(matrix, FLIPXY)
+    matrix = np.dot(FLIPXY_44, matrix)
+    matrix = np.dot(matrix, FLIPXY_44)
     matrix = np.linalg.inv(matrix)
     return matrix
 
 
 def _from_itk_convention(matrix):
     """LPS to RAS"""
-    matrix = np.dot(matrix, FLIPXY)
-    matrix = np.dot(FLIPXY, matrix)
+    matrix = np.dot(matrix, FLIPXY_44)
+    matrix = np.dot(FLIPXY_44, matrix)
     matrix = np.linalg.inv(matrix)
     return matrix
 
@@ -252,19 +292,19 @@ def nib_to_sitk(
     array = array.transpose()  # (W, H, D, C) or (W, H, D)
     image = sitk.GetImageFromArray(array, isVector=is_multichannel)
 
-    rotation, spacing = get_rotation_and_spacing_from_affine(affine)
-    flip_xy = np.diag((-1, -1, 1))  # used to switch between LPS and RAS
-    origin = np.dot(flip_xy, affine[:3, 3])
-    direction = np.dot(flip_xy, rotation)
-    if is_2d:  # ignore first dimension if 2D (1, W, H, 1)
-        direction = direction[:2, :2]
+    origin, spacing, direction = get_sitk_metadata_from_ras_affine(
+        affine,
+        is_2d=is_2d,
+    )
     image.SetOrigin(origin)  # should I add a 4th value if force_4d?
     image.SetSpacing(spacing)
-    image.SetDirection(direction.flatten())
+    image.SetDirection(direction)
+
     if data.ndim == 4:
         assert image.GetNumberOfComponentsPerPixel() == data.shape[0]
     num_spatial_dims = 2 if is_2d else 3
-    assert image.GetSize() == data.shape[1: 1 + num_spatial_dims]
+    assert image.GetSize() == data.shape[1:1 + num_spatial_dims]
+
     return image
 
 
@@ -284,27 +324,44 @@ def sitk_to_nib(
         data = ensure_4d(data, num_spatial_dims=input_spatial_dims)
     assert data.shape[0] == num_components
     assert data.shape[1: 1 + input_spatial_dims] == image.GetSize()
-    spacing = np.array(image.GetSpacing())
-    direction = np.array(image.GetDirection())
-    origin = image.GetOrigin()
-    if len(direction) == 9:
-        rotation = direction.reshape(3, 3)
-    elif len(direction) == 4:  # ignore first dimension if 2D (1, W, H, 1)
-        rotation_2d = direction.reshape(2, 2)
-        rotation = np.eye(3)
-        rotation[:2, :2] = rotation_2d
-        spacing = *spacing, 1
-        origin = *origin, 0
-    else:
-        raise RuntimeError(f'Direction not understood: {direction}')
-    flip_xy = np.diag((-1, -1, 1))  # used to switch between LPS and RAS
-    rotation = np.dot(flip_xy, rotation)
-    rotation_zoom = rotation * spacing
-    translation = np.dot(flip_xy, origin)
-    affine = np.eye(4)
-    affine[:3, :3] = rotation_zoom
-    affine[:3, 3] = translation
+    affine = get_ras_affine_from_sitk(image)
     return data, affine
+
+
+def get_ras_affine_from_sitk(
+        sitk_object: Union[sitk.Image, sitk.ImageFileReader],
+        ) -> np.ndarray:
+    spacing = np.array(sitk_object.GetSpacing())
+    direction_lps = np.array(sitk_object.GetDirection())
+    origin_lps = np.array(sitk_object.GetOrigin())
+    if len(direction_lps) == 9:
+        rotation_lps = direction_lps.reshape(3, 3)
+    elif len(direction_lps) == 4:  # ignore last dimension if 2D (1, W, H, 1)
+        rotation_lps_2d = direction_lps.reshape(2, 2)
+        rotation_lps = np.eye(3)
+        rotation_lps[:2, :2] = rotation_lps_2d
+        spacing = *spacing, 1
+        origin_lps = *origin_lps, 0
+    rotation_ras = np.dot(FLIPXY_33, rotation_lps)
+    rotation_ras_zoom = rotation_ras * spacing
+    translation_ras = np.dot(FLIPXY_33, origin_lps)
+    affine = np.eye(4)
+    affine[:3, :3] = rotation_ras_zoom
+    affine[:3, 3] = translation_ras
+    return affine
+
+
+def get_sitk_metadata_from_ras_affine(
+        affine: np.ndarray,
+        is_2d: bool = False,
+        ) -> Tuple[TypeTripletFloat, TypeTripletFloat, TypeDirection]:
+    rotation, spacing = get_rotation_and_spacing_from_affine(affine)
+    origin = np.dot(FLIPXY_33, affine[:3, 3])
+    direction = np.dot(FLIPXY_33, rotation)
+    if is_2d:  # ignore orientation if 2D (1, W, H, 1)
+        direction = np.diag((-1, -1)).astype(np.float64)
+    direction = tuple(direction.flatten())
+    return origin, spacing, direction
 
 
 def ensure_4d(tensor: TypeData, num_spatial_dims=None) -> TypeData:

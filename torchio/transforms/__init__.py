@@ -30,6 +30,7 @@ from .augmentation.intensity import RandomMotionFromTimeCourse, MotionFromTimeCo
 # Preprocessing
 from .preprocessing import Pad
 from .preprocessing import Crop
+from .preprocessing import Resize
 from .preprocessing import Resample
 from .preprocessing import CropOrPad
 from .preprocessing import CopyAffine
@@ -86,6 +87,7 @@ __all__ = [
     'LabelsToImage',
     'Pad',
     'Crop',
+    'Resize',
     'Resample',
     'ToCanonical',
     'ZNormalization',
