@@ -552,7 +552,16 @@ class MotionFromTimeCourse(IntensityTransform):
                 original_image_shape = original_image.shape
                 original_image = self._oversample(original_image, oversampling_pct)
 
+            # fft
+            im_freq_domain = self._fft_im(original_image)
+            print(f'displacement_shift_strategy is {displacement_shift_strategy}')
             self._calc_dimensions(original_image.shape, frequency_encoding_dim=frequency_encoding_dim)
+
+            if displacement_shift_strategy is not None:
+                if '1D' in displacement_shift_strategy: #new strategy to demean, just 1D fft
+                    fitpars, self.to_substract = demean_fitpars(fitpars, im_freq_domain, displacement_shift_strategy,
+                                                                fast_dim = (frequency_encoding_dim, self.phase_encoding_dims[1]))
+                #not sure why is the second phase_encoding_dims
 
             if fitpars.ndim == 4:  # we assume the interpolation has been done on the input
                 fitpars_interp = fitpars
@@ -562,14 +571,13 @@ class MotionFromTimeCourse(IntensityTransform):
                                                            frequency_encoding_dim=frequency_encoding_dim)
                 fitpars_interp = _tile_params_to_volume_dims(params_to_reshape=fitpars_interp,
                                                              im_shape=self.im_shape)
-
-            fitpars_interp, self.to_substract = demean_fitpars(fitpars_interp=fitpars_interp, original_image=original_image,
-                                            displacement_shift_strategy=displacement_shift_strategy)
+            if displacement_shift_strategy is not None:
+                if not '1D' in displacement_shift_strategy:
+                    fitpars_interp, self.to_substract = demean_fitpars(fitpars_interp=fitpars_interp, original_image_fft=im_freq_domain,
+                                                    displacement_shift_strategy=displacement_shift_strategy)
 
             fitpars_vox = fitpars_interp.reshape((6, -1))
             translations, rotations = fitpars_vox[:3], np.radians(fitpars_vox[3:])
-            # fft
-            im_freq_domain = self._fft_im(original_image)
             translated_im_freq_domain = _translate_freq_domain(freq_domain=im_freq_domain,
                                                                translations=translations)
             apply_rotation = np.sum(np.abs(rotations.flatten())) > 0
@@ -635,6 +643,8 @@ class MotionFromTimeCourse(IntensityTransform):
 
         coef_TF = np.sum(abs(img_fft), axis=(0,2)) ;
         coef_shaw = np.sqrt( np.sum(abs(img_fft**2), axis=(0,2)) ) ;
+        # I do not see diff, but may be better to write with complex conjugate, here the fft is done on abs image, so I guess the
+        # phase does not matter (Cf todd 2015)
         #print(f'averagin TF coef on dim {dim_to_average} shape coef {coef_TF.shape}')
         if fitpars.shape[1] != coef_TF.shape[0] :
             #just interpolate end to end. at image slowest dimention size
@@ -672,8 +682,8 @@ class MotionFromTimeCourse(IntensityTransform):
             self._metrics[f'wSH2_Disp_{i}'] = np.sum(ffi * coef_shaw**2) / np.sum(coef_shaw**2)
             self._metrics[f'mean_Disp_{i}'] = np.mean(ffi)
             self._metrics[f'center_Disp_{i}'] = ffi[ffi.shape[0]//2]
-
-
+        #at the end only SH and SH2 seems ok
+        # TF2 == SH2  but TFshort==TF and TFshort2 < TF2 !
     def do_correct_motion(self, image, fitpars_interp, frequency_encoding_dim, phase_encoding_shape ):
         #works only if pure rotation or pure translation
         im_freq_domain = self._fft_im(image)
@@ -893,10 +903,38 @@ def _nufft(freq_domain_data, rotations, frequency_encoding_dim, phase_encoding_s
     return im_out
 
 
-def demean_fitpars(fitpars_interp, original_image, displacement_shift_strategy):
+def demean_fitpars(fitpars_interp, original_image_fft, displacement_shift_strategy,
+                   fast_dim=(0,2)):
+
+    to_substract = np.array([0, 0, 0, 0, 0, 0])
+
+    if '1D' in displacement_shift_strategy:
+        fitpars = fitpars_interp
+        #ok only 1D fftp
+        print(f'averaging TF coeficient on dim {fast_dim} for disp corection {displacement_shift_strategy} ')
+        #coef_shaw = np.sqrt( np.sum(abs(original_image_fft**2), axis=(0,2)) ) ;
+        #should be equivalent if fft is done from real image, but not if the phase is acquired, CF Todd 2015 "Prospective motion correction of 3D echo-planar imaging data for functional MRI using optical tracking"
+        if displacement_shift_strategy == '1D_wTF':
+            coef_shaw = np.abs( np.sqrt(np.sum( original_image_fft * np.conjugate(original_image_fft), axis=fast_dim )));
+        if displacement_shift_strategy == '1D_wTF2':
+            coef_shaw = np.abs( np.sum( original_image_fft * np.conjugate(original_image_fft), axis=fast_dim ));
+
+
+        if fitpars.shape[1] != coef_shaw.shape[0] :
+            #just interpolate end to end. at image slowest dimention size
+            fitpars = _interpolate_fitpars(fitpars, len_output=coef_shaw.shape[0])
+            #print(f'interp fitpar for wcoef new shape {fitpars.shape}')
+
+        to_substract = np.zeros(6)
+        for i in range(0,6):
+            to_substract[i] = np.sum(fitpars[i,:] * coef_shaw) / np.sum(coef_shaw)
+            fitpars[i,:] = fitpars[i,:] - to_substract[i]
+
+        return fitpars, to_substract  #note the 1D fitpar, may have been interpolated to phase dim but should not matter for the rest
+
     if displacement_shift_strategy == "demean":
-        o_shape = original_image.shape
-        tfi = np.abs(np.fft.fftshift(np.fft.fftn(np.fft.ifftshift(original_image))).astype(np.complex128))
+        o_shape = original_image_fft.shape
+        tfi = np.abs(original_image_fft) #np.fft.fftshift(np.fft.fftn(np.fft.ifftshift(original_image))).astype(np.complex128))
         ss = tfi
         # Almost identical   ss = np.sqrt(tfi * np.conjugate(tfi))
         ff = fitpars_interp
@@ -914,8 +952,8 @@ def demean_fitpars(fitpars_interp, original_image, displacement_shift_strategy):
         nb_pts_around = 31
         print('RR demean_center around {}'.format(nb_pts_around))
         # let's take the weight from the tf, but only in the center (+- 11 pts)
-        o_shape = original_image.shape
-        tfi = np.abs(np.fft.fftshift(np.fft.fftn(np.fft.ifftshift(original_image))).astype(np.complex128))
+        o_shape = original_image_fft.shape
+        tfi = np.abs(original_image_fft) #np.fft.fftshift(np.fft.fftn(np.fft.ifftshift(original_image))).astype(np.complex128))
         ss = tfi
         center = [int(round(dd / 2)) for dd in o_shape]
         center_half = [int(round(dd / 2)) for dd in center]
@@ -949,9 +987,6 @@ def demean_fitpars(fitpars_interp, original_image, displacement_shift_strategy):
         to_substract = fitpars_interp[:, center[1], center[2], center[3]]
         to_substract_tile = np.tile(to_substract[..., np.newaxis, np.newaxis, np.newaxis], (1, dim[1], dim[2], dim[3]))
         fitpars_interp = fitpars_interp - to_substract_tile
-
-    else:
-        to_substract = np.array([0, 0, 0, 0, 0, 0])
 
     return fitpars_interp, to_substract
 
