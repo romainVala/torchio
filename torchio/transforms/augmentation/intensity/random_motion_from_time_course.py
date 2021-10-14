@@ -561,6 +561,10 @@ class MotionFromTimeCourse(IntensityTransform):
                 if '1D' in displacement_shift_strategy: #new strategy to demean, just 1D fft
                     fitpars, self.to_substract = demean_fitpars(fitpars, im_freq_domain, displacement_shift_strategy,
                                                                 fast_dim = (frequency_encoding_dim, self.phase_encoding_dims[1]))
+                    if self.arguments_are_dict():
+                        self.fitpars[image_name] = fitpars
+                    else:
+                        self.fitpars = fitpars #important to save to get the correct fitpar in history
                 #not sure why is the second phase_encoding_dims
 
             if fitpars.ndim == 4:  # we assume the interpolation has been done on the input
@@ -642,7 +646,7 @@ class MotionFromTimeCourse(IntensityTransform):
         dim_to_average = (frequency_encoding_dim, self.phase_encoding_dims[1] ) # warning, why slowest dim the phase_encoding_dims[0]
 
         coef_TF = np.sum(abs(img_fft), axis=(0,2)) ;
-        coef_shaw = np.sqrt( np.sum(abs(img_fft**2), axis=(0,2)) ) ;
+        coef_shaw = np.sqrt( np.sum(abs(img_fft)**2, axis=(0,2)) ) ;
         # I do not see diff, but may be better to write with complex conjugate, here the fft is done on abs image, so I guess the
         # phase does not matter (Cf todd 2015)
         #print(f'averagin TF coef on dim {dim_to_average} shape coef {coef_TF.shape}')
@@ -917,7 +921,9 @@ def demean_fitpars(fitpars_interp, original_image_fft, displacement_shift_strate
         if displacement_shift_strategy == '1D_wTF':
             coef_shaw = np.abs( np.sqrt(np.sum( original_image_fft * np.conjugate(original_image_fft), axis=fast_dim )));
         if displacement_shift_strategy == '1D_wTF2':
-            coef_shaw = np.abs( np.sum( original_image_fft * np.conjugate(original_image_fft), axis=fast_dim ));
+            #coef_shaw = np.abs( np.sum( original_image_fft * np.conjugate(original_image_fft), axis=fast_dim ));
+            coef_shaw = np.abs( np.sum( original_image_fft **2, axis=fast_dim ))
+            coef_shaw = coef_shaw / np.sum(coef_shaw)
 
 
         if fitpars.shape[1] != coef_shaw.shape[0] :
