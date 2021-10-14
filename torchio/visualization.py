@@ -1,8 +1,13 @@
+import warnings
+
+import torch
 import numpy as np
 
-from .data.image import Image, LabelMap
+from .typing import TypePath
 from .data.subject import Subject
+from .data.image import Image, LabelMap
 from .transforms.preprocessing.spatial.to_canonical import ToCanonical
+from .transforms.preprocessing.intensity.rescale import RescaleIntensity
 
 
 def import_mpl_plt():
@@ -14,9 +19,9 @@ def import_mpl_plt():
     return mpl, plt
 
 
-def rotate(image, radiological=True):
+def rotate(image, radiological=True, n=-1):
     # Rotate for visualization purposes
-    image = np.rot90(image, -1)
+    image = np.rot90(image, n)
     if radiological:
         image = np.fliplr(image)
     return image
@@ -33,6 +38,8 @@ def plot_volume(
         xlabels=True,
         percentiles=(0.5, 99.5),
         figsize=None,
+        reorient=True,
+        indices=None,
         ):
     _, plt = import_mpl_plt()
     fig = None
@@ -40,9 +47,11 @@ def plot_volume(
         fig, axes = plt.subplots(1, 3, figsize=figsize)
     sag_axis, cor_axis, axi_axis = axes
 
-    image = ToCanonical()(image)
+    if reorient:
+        image = ToCanonical()(image)
     data = image.data[channel]
-    indices = np.array(data.shape) // 2
+    if indices is None:
+        indices = np.array(data.shape) // 2
     i, j, k = indices
     slice_x = rotate(data[i, :, :], radiological=radiological)
     slice_y = rotate(data[:, j, :], radiological=radiological)
@@ -108,41 +117,45 @@ def plot_subject(
         **kwargs,
         ):
     _, plt = import_mpl_plt()
+    num_images = len(subject)
+    many_images = num_images > 2
     subplots_kwargs = {'figsize': figsize}
     try:
         if clear_axes:
             subject.check_consistent_spatial_shape()
-            subplots_kwargs['sharex'] = 'col'
-            subplots_kwargs['sharey'] = 'col'
+            subplots_kwargs['sharex'] = 'row' if many_images else 'col'
+            subplots_kwargs['sharey'] = 'row' if many_images else 'col'
     except RuntimeError:  # different shapes in subject
         pass
-    fig, axes = plt.subplots(len(subject), 3, **subplots_kwargs)
+    args = (3, num_images) if many_images else (num_images, 3)
+    fig, axes = plt.subplots(*args, **subplots_kwargs)
     # The array of axes must be 2D so that it can be indexed correctly within
     # the plot_volume() function
-    axes = axes.reshape(-1, 3)
+    axes = axes.T if many_images else axes.reshape(-1, 3)
     iterable = enumerate(subject.get_images_dict(intensity_only=False).items())
     axes_names = 'sagittal', 'coronal', 'axial'
-    for row_index, (name, image) in iterable:
-        row_axes = axes[row_index]
+    for image_index, (name, image) in iterable:
+        image_axes = axes[image_index]
         cmap = None
         if cmap_dict is not None and name in cmap_dict:
             cmap = cmap_dict[name]
-        last_row = row_index == len(axes) - 1
+        last_row = image_index == len(axes) - 1
         plot_volume(
             image,
-            axes=row_axes,
+            axes=image_axes,
             show=False,
             cmap=cmap,
             xlabels=last_row,
             **kwargs,
         )
-        for axis, axis_name in zip(row_axes, axes_names):
+        for axis, axis_name in zip(image_axes, axes_names):
             axis.set_title(f'{name} ({axis_name})')
     plt.tight_layout()
     if output_path is not None:
         fig.savefig(output_path)
     if show:
         plt.show()
+    plt.close(fig) 
 
 
 def color_labels(arrays, cmap_dict):
@@ -158,3 +171,60 @@ def color_labels(arrays, cmap_dict):
             rgb[array == label] = color
         results.append(rgb)
     return results
+
+
+def make_gif(
+        tensor: torch.Tensor,
+        axis: int,
+        duration: float,  # of full gif
+        output_path: TypePath,
+        loop: int = 0,
+        optimize: bool = True,
+        rescale: bool = True,
+        reverse: bool = False,
+        ) -> None:
+    try:
+        from PIL import Image as ImagePIL
+    except ModuleNotFoundError as e:
+        message = (
+            'Please install Pillow to use Image.to_gif():'
+            ' pip install Pillow'
+        )
+        raise RuntimeError(message) from e
+    tensor = RescaleIntensity((0, 255))(tensor) if rescale else tensor
+    single_channel = len(tensor) == 1
+
+    # Move channels dimension to the end and bring selected axis to 0
+    axes = np.roll(range(1, 4), -axis)
+    tensor = tensor.permute(*axes, 0)
+
+    if single_channel:
+        mode = 'P'
+        tensor = tensor[..., 0]
+    else:
+        mode = 'RGB'
+    array = tensor.byte().numpy()
+    n = 2 if axis == 1 else 1
+    images = [ImagePIL.fromarray(rotate(i, n=n)).convert(mode) for i in array]
+    num_images = len(images)
+    images = list(reversed(images)) if reverse else images
+    frame_duration_ms = duration / num_images * 1000
+    if frame_duration_ms < 10:
+        fps = round(1000 / frame_duration_ms)
+        frame_duration_ms = 10
+        new_duration = frame_duration_ms * num_images / 1000
+        message = (
+            'The computed frame rate from the given duration is too high'
+            f' ({fps} fps). The highest possible frame rate in the GIF'
+            ' file format specification is 100 fps. The duration has been set'
+            f' to {new_duration:.1f} seconds, instead of {duration:.1f}'
+        )
+        warnings.warn(message)
+    images[0].save(
+        output_path,
+        save_all=True,
+        append_images=images[1:],
+        optimize=optimize,
+        duration=frame_duration_ms,
+        loop=loop,
+    )

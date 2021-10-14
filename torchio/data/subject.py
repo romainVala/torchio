@@ -297,7 +297,7 @@ class Subject(dict):
             num_unique_values = len(set(values_dict.values()))
             if num_unique_values > 1:
                 message = message.format(pprint.pformat(values_dict))
-                raise RuntimeError(message)
+                raise RuntimeError(message) from None
 
     def check_consistent_spatial_shape(self) -> None:
         self.check_consistent_attribute('spatial_shape')
@@ -305,12 +305,23 @@ class Subject(dict):
     def check_consistent_orientation(self) -> None:
         self.check_consistent_attribute('orientation')
 
-    def check_consistent_affine(self):
+    def check_consistent_affine(self) -> None:
         self.check_consistent_attribute('affine')
 
-    def check_consistent_space(self):
-        self.check_consistent_spatial_shape()
-        self.check_consistent_affine()
+    def check_consistent_space(self) -> None:
+        try:
+            self.check_consistent_attribute('spacing')
+            self.check_consistent_attribute('direction')
+            self.check_consistent_attribute('origin')
+            self.check_consistent_spatial_shape()
+        except RuntimeError as e:
+            message = (
+                'As described above, some images in the subject are not in the'
+                ' same space. You probably can use the transforms ToCanonical'
+                ' and Resample to fix this, as explained at'
+                ' https://github.com/fepegar/torchio/issues/647#issuecomment-913025695'
+            )
+            raise RuntimeError(message) from e
 
     def get_images_names(self) -> List[str]:
         return list(self.get_images_dict(intensity_only=False).keys())

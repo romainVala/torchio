@@ -180,7 +180,8 @@
       "avatar_url": "https://avatars3.githubusercontent.com/u/5416313?v=4",
       "profile": "https://github.com/efirdc",
       "contributions": [
-        "code"
+        "code",
+        "bug"
       ]
     },
     {
@@ -353,7 +354,44 @@
       "avatar_url": "https://avatars.githubusercontent.com/u/12886177?v=4",
       "profile": "https://github.com/justusschock",
       "contributions": [
-        "code"
+        "code",
+        "bug"
+      ]
+    },
+    {
+      "login": "cepa995",
+      "name": "Stefan Milorad Radonjić",
+      "avatar_url": "https://avatars.githubusercontent.com/u/67524891?v=4",
+      "profile": "https://github.com/cepa995",
+      "contributions": [
+        "bug"
+      ]
+    },
+    {
+      "login": "srg9000",
+      "name": "Sajan Gohil",
+      "avatar_url": "https://avatars.githubusercontent.com/u/26834833?v=4",
+      "profile": "https://github.com/srg9000",
+      "contributions": [
+        "bug"
+      ]
+    },
+    {
+      "login": "eltociear",
+      "name": "Ikko Ashimine",
+      "avatar_url": "https://avatars.githubusercontent.com/u/22633385?v=4",
+      "profile": "https://bandism.net/",
+      "contributions": [
+        "doc"
+      ]
+    },
+    {
+      "login": "laynr",
+      "name": "laynr",
+      "avatar_url": "https://avatars.githubusercontent.com/u/775607?v=4",
+      "profile": "https://github.com/laynr",
+      "contributions": [
+        "doc"
       ]
     }
   ],

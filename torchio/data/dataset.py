@@ -127,6 +127,11 @@ class SubjectsDataset(Dataset):
                     subject[add_to_load] = sss['image']
             #print('subject with keys {}'.format(subject.keys()))
         else:
+            try:
+                index = int(index)
+            except (RuntimeError, TypeError):
+                raise ValueError(f'Index "{index}" must be int or compatible dtype, not {type(index)}')
+
             subject = self._subjects[index]
             subject = copy.deepcopy(subject)  # cheap since images not loaded yet
             if self.load_getitem:
