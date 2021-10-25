@@ -23,7 +23,8 @@
       "contributions": [
         "ideas",
         "review",
-        "code"
+        "code",
+        "question"
       ]
     },
     {
@@ -162,7 +163,8 @@
       "profile": "https://github.com/dmus",
       "contributions": [
         "doc",
-        "code"
+        "code",
+        "bug"
       ]
     },
     {
@@ -218,7 +220,8 @@
       "avatar_url": "https://avatars.githubusercontent.com/u/56116848?v=4",
       "profile": "http://nina.brown.15@ucl.ac.uk",
       "contributions": [
-        "doc"
+        "doc",
+        "infra"
       ]
     },
     {
@@ -392,6 +395,33 @@
       "profile": "https://github.com/laynr",
       "contributions": [
         "doc"
+      ]
+    },
+    {
+      "login": "omarespejel",
+      "name": "Omar U. Espejel",
+      "avatar_url": "https://avatars.githubusercontent.com/u/4755430?v=4",
+      "profile": "https://github.com/omarespejel",
+      "contributions": [
+        "audio"
+      ]
+    },
+    {
+      "login": "jamesobutler",
+      "name": "James Butler",
+      "avatar_url": "https://avatars.githubusercontent.com/u/15837524?v=4",
+      "profile": "https://github.com/jamesobutler",
+      "contributions": [
+        "bug"
+      ]
+    },
+    {
+      "login": "res191",
+      "name": "res191",
+      "avatar_url": "https://avatars.githubusercontent.com/u/6549034?v=4",
+      "profile": "https://github.com/res191",
+      "contributions": [
+        "fundingFinding"
       ]
     }
   ],

@@ -71,6 +71,10 @@ class Transform(ABC):
             excluded by default by spatial transforms.
         keep: Dictionary with the names of the images that will be kept in the
             subject and their new names.
+        parse_input: If ``True``, the input will be converted to an instance of
+            :class:`~torchio.Subject`. This is used internally by some special
+            transforms like
+            :class:`~torchio.transforms.augmentation.composition.Compose`.
     """
     def __init__(
             self,
@@ -82,6 +86,7 @@ class Transform(ABC):
             metrics: Dict = None,
             keep_before = None,
             keep: Optional[Dict[str, str]] = None,
+            parse_input: bool = True,
             ):
         self.probability = self.parse_probability(p)
         self.copy = copy
@@ -100,6 +105,7 @@ class Transform(ABC):
         self.include, self.exclude = self.parse_include_and_exclude(
             include, exclude)
         self.keep = keep
+        self.parse_input = parse_input
         # args_names is the sequence of parameters from self that need to be
         # passed to a non-random version of a random transform. They are also
         # used to invert invertible transforms
@@ -129,9 +135,14 @@ class Transform(ABC):
         if self.metrics:
             self._metrics = dict()
 
-        data_parser = DataParser(data, keys=self.include)
-        subject = data_parser.get_subject()
-        orig = subject #todo marche aussi si self.copy is false ?
+        # Some transforms such as Compose should not modify the input data
+        if self.parse_input:
+            data_parser = DataParser(data, keys=self.include)
+            subject = data_parser.get_subject()
+        else:
+            subject = data
+        orig = subject  # todo marche aussi si self.copy is false ?
+
         if self.keep is not None:
             images_to_keep = {}
             for name, new_name in self.keep.items():
@@ -175,13 +186,16 @@ class Transform(ABC):
         if self.keep is not None:
             for name, image in images_to_keep.items():
                 transformed.add_image(image, name)
-        self.add_transform_to_subject_history(transformed)
 
-        for image in transformed.get_images(intensity_only=False):
-            ndim = image.data.ndim
-            assert ndim == 4, f'Output of {self.name} is {ndim}D'
+        if self.parse_input:
+            self.add_transform_to_subject_history(transformed)
+            for image in transformed.get_images(intensity_only=False):
+                ndim = image.data.ndim
+                assert ndim == 4, f'Output of {self.name} is {ndim}D'
+            output = data_parser.get_output(transformed)
+        else:
+            output = transformed
 
-        output = data_parser.get_output(transformed)
         return output
 
     def __repr__(self):
@@ -206,7 +220,7 @@ class Transform(ABC):
     def add_transform_to_subject_history(self, subject):
         from .augmentation import RandomTransform
         from . import Compose, OneOf, CropOrPad, EnsureShapeMultiple
-        from .preprocessing import SequentialLabels
+        from .preprocessing import SequentialLabels, Resize
         call_others = (
             RandomTransform,
             Compose,
@@ -214,6 +228,7 @@ class Transform(ABC):
             CropOrPad,
             EnsureShapeMultiple,
             SequentialLabels,
+            Resize,
         )
         if not isinstance(self, call_others):
             subject.add_transform(self, self._get_reproducing_arguments())

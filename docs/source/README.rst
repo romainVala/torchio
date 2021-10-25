@@ -2,8 +2,8 @@
 TorchIO
 #######
 
-|PyPI-downloads| |PyPI-version| |Google-Colab-notebook| |Docs-status|
-|Build-status| |Coverage-codecov| |Code-Quality|
+|PyPI-downloads| |PyPI-version| |Conda-version| |Google-Colab-notebook| |Docs-status|
+|Tests-status| |Lint-status| |Coverage-codecov| |Code-Quality|
 |Code-Maintainability| |pre-commit| |Slack|
 
 
@@ -86,7 +86,6 @@ BibTeX:
       doi = {https://doi.org/10.1016/j.cmpb.2021.106236},
       url = {https://www.sciencedirect.com/science/article/pii/S0169260721003102},
       author = {P{\'e}rez-Garc{\'i}a, Fernando and Sparks, Rachel and Ourselin, S{\'e}bastien},
-      keywords = {Medical image computing, Deep learning, Data augmentation, Preprocessing},
    }
 
 This project is supported by the following institutions:
@@ -108,6 +107,10 @@ which is no longer maintained.
    :target: https://pypi.org/project/torchio/
    :alt: PyPI version
 
+.. |Conda-version| image:: https://img.shields.io/conda/v/conda-forge/torchio.svg?label=conda-forge&logo=conda-forge
+   :target: https://anaconda.org/conda-forge/torchio
+   :alt: Conda version
+
 .. |Google-Colab-notebook| image:: https://colab.research.google.com/assets/colab-badge.svg
    :target: https://github.com/fepegar/torchio/blob/master/tutorials/README.md
    :alt: Google Colab notebooks
@@ -116,9 +119,13 @@ which is no longer maintained.
    :target: http://torchio.rtfd.io/?badge=latest
    :alt: Documentation status
 
-.. |Build-status| image:: https://img.shields.io/travis/fepegar/torchio/master.svg?label=Travis%20CI%20build&logo=travis
-   :target: https://travis-ci.com/fepegar/torchio
-   :alt: Build status
+.. |Lint-status| image:: https://github.com/fepegar/torchio/actions/workflows/lint.yml/badge.svg
+   :target: https://github.com/fepegar/torchio/actions/workflows/lint.yml
+   :alt: Lint status
+
+.. |Tests-status| image:: https://github.com/fepegar/torchio/actions/workflows/tests.yml/badge.svg
+   :target: https://github.com/fepegar/torchio/actions/workflows/tests.yml
+   :alt: Tests status
 
 .. |Coverage-codecov| image:: https://codecov.io/gh/fepegar/torchio/branch/master/graphs/badge.svg
    :target: https://codecov.io/github/fepegar/torchio
