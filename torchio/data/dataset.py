@@ -6,8 +6,6 @@ from torch.utils.data import Dataset
 from .subject import Subject
 import torch
 
-from utils_file import gfile, get_parent_path
-
 class SubjectsDataset(Dataset):
     """Base TorchIO dataset.
 
@@ -110,6 +108,8 @@ class SubjectsDataset(Dataset):
                     add_to_load = self.add_to_load
 
                 if add_to_load is not None:
+                    from utils_file import gfile, get_parent_path
+
                     image_add = gfile(get_parent_path(image_path), self.add_to_load_regexp)[0]
                     #print('adding image {} to {}'.format(image_add,self.add_to_load))
                     ss = Subject(image = Image(image_add, LABEL))
