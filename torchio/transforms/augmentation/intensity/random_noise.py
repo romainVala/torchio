@@ -96,7 +96,7 @@ class Noise(IntensityTransform):
         mean, std, seed, abs_after_noise = args = self.mean, self.std, self.seed, self.abs_after_noise
         for name, image in self.get_images_dict(subject).items():
             if self.arguments_are_dict():
-                mean, std, seed, abs_after_noise = [arg[name] for arg in args]
+                mean, std, seed, abs_after_noise = (arg[name] for arg in args)
             with self._use_seed(seed):
                 noise = get_noise(image.data, mean, std)
             if self.invert_transform:

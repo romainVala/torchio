@@ -423,6 +423,25 @@
       "contributions": [
         "fundingFinding"
       ]
+    },
+    {
+      "login": "nengwp",
+      "name": "nengwp",
+      "avatar_url": "https://avatars.githubusercontent.com/u/44516353?v=4",
+      "profile": "https://github.com/nengwp",
+      "contributions": [
+        "bug",
+        "doc"
+      ]
+    },
+    {
+      "login": "susanveraclarke",
+      "name": "susanveraclarke",
+      "avatar_url": "https://avatars.githubusercontent.com/u/93313094?v=4",
+      "profile": "https://github.com/susanveraclarke",
+      "contributions": [
+        "design"
+      ]
     }
   ],
   "contributorsPerLine": 7,

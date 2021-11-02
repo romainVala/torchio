@@ -119,7 +119,11 @@ class Queue(Dataset):
     ...     sampler,
     ...     num_workers=4,
     ... )
-    >>> patches_loader = DataLoader(patches_queue, batch_size=16)
+    >>> patches_loader = DataLoader(
+    ...     patches_queue,
+    ...     batch_size=16,
+    ...     num_workers=0,  # this must be 0
+    ... )
     >>> num_epochs = 2
     >>> model = torch.nn.Identity()
     >>> for epoch_index in range(num_epochs):
@@ -241,6 +245,13 @@ class Queue(Dataset):
             self._print('Queue is empty:', exception)
             self._initialize_subjects_iterable()
             subject = next(self.subjects_iterable)
+        except AssertionError as exception:
+            if 'can only test a child process' in str(exception):
+                message = (
+                    'The number of workers for the data loader used to pop'
+                    ' patches from the queue should be 0. Is it?'
+                )
+                raise RuntimeError(message) from exception
         return subject
 
     @staticmethod

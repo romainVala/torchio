@@ -354,7 +354,14 @@ class Affine(SpatialTransform):
                     default_value,
                 )
                 transformed_tensors.append(transformed_tensor)
-            image.set_data(torch.stack(transformed_tensors))
+            if image[TYPE] != INTENSITY and len(transformed_tensor)>1 :
+                #romain quick hask for 4D label, set unknown to last label (suposed bg)
+                im_res = torch.stack(transformed_tensors)
+                indd =  im_res.sum(dim=0) < 0.5
+                im_res[-1,indd] = 1
+                image.set_data(im_res)
+            else:
+                image.set_data(torch.stack(transformed_tensors))
         return subject
 
     def apply_affine_transform(
