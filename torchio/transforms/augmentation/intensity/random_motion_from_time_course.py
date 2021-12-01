@@ -5,6 +5,7 @@ import numpy as np
 from collections import defaultdict
 from typing import Dict, Tuple, List, Union, Optional
 from scipy.interpolate import pchip_interpolate
+from transforms3d.euler import euler2mat
 try:
     import finufft
     _finufft = True
@@ -25,7 +26,7 @@ class RandomMotionFromTimeCourse(RandomTransform, IntensityTransform):
                  seed: int = None, displacement_shift_strategy: str = None, freq_encoding_dim: List = [0],
                  tr: float = 2.3, es: float = 4E-3, oversampling_pct: float = 0.3,
                  preserve_center_frequency_pct: float = 0, correct_motion: bool = False, res_dir: str = None,
-                 **kwargs):
+                 nufft_type: str ='1D_type1', **kwargs):
         """
         parameters to simulate 3 types of displacement random noise swllow or sudden mouvement
         :param nT (int): number of points of the time course
@@ -71,6 +72,7 @@ class RandomMotionFromTimeCourse(RandomTransform, IntensityTransform):
         self.preserve_center_frequency_pct = preserve_center_frequency_pct
         self.freq_encoding_choice = freq_encoding_dim
         self.frequency_encoding_dim = self._rand_choice(self.freq_encoding_choice)
+        self.nufft_type = nufft_type
         self.seed = seed
         if fitpars is None:
             self.fitpars = None
@@ -95,16 +97,6 @@ class RandomMotionFromTimeCourse(RandomTransform, IntensityTransform):
         if self.simulate_displacement:
             self._simulate_random_trajectory()
         for image_name, image_dict in self.get_images_dict(sample).items():
-            """
-            image_data = np.squeeze(image_dict['data'])[..., np.newaxis, np.newaxis]
-            original_image = np.squeeze(image_data[:, :, :, 0, 0])
-
-            if self.oversampling_pct > 0.0:
-                original_image_shape = original_image.shape
-                original_image = self._oversample(original_image, self.oversampling_pct)
-
-            self._calc_dimensions(original_image.shape)
-            """
             arguments["fitpars"][image_name] = self.fitpars
             arguments["displacement_shift_strategy"][image_name] = self.displacement_shift_strategy
             arguments["frequency_encoding_dim"][image_name] = self.frequency_encoding_dim
@@ -112,6 +104,7 @@ class RandomMotionFromTimeCourse(RandomTransform, IntensityTransform):
             arguments["tr"][image_name] = self.tr
             arguments["es"][image_name] = self.es
             arguments["correct_motion"][image_name] = self.correct_motion
+            arguments["nufft_type"][image_name] = self.nufft_type
 
         transform = MotionFromTimeCourse(**self.add_include_exclude(arguments))
         transformed = transform(sample)
@@ -289,32 +282,6 @@ class RandomMotionFromTimeCourse(RandomTransform, IntensityTransform):
         return array[chosen_idx]
 
 
-def create_rotation_matrix_3d(angles):
-    """
-    given a list of 3 angles, create a 3x3 rotation matrix that describes rotation about the origin
-    :param angles (list or numpy array) : rotation angles in 3 dimensions
-    :return (numpy array) : rotation matrix 3x3
-    """
-
-    mat1 = np.array([[1., 0., 0.],
-                     [0., math.cos(angles[0]), math.sin(angles[0])],
-                     [0., -math.sin(angles[0]), math.cos(angles[0])]],
-                    dtype='float')
-
-    mat2 = np.array([[math.cos(angles[1]), 0., math.sin(angles[1])],
-                     [0., 1., 0.],
-                     [-math.sin(angles[1]), 0., math.cos(angles[1])]],
-                    dtype='float')
-
-    mat3 = np.array([[math.cos(angles[2]), math.sin(angles[2]), 0.],
-                     [-math.sin(angles[2]), math.cos(angles[2]), 0.],
-                     [0., 0., 1.]],
-                    dtype='float')
-
-    mat = (mat1 @ mat2) @ mat3
-    return mat
-
-
 def calculate_mean_FD_P(motion_params):
     """
     Method to calculate Framewise Displacement (FD)  as per Power et al., 2012
@@ -391,7 +358,8 @@ def calculate_mean_Disp_J(motion_params, rmax=80, center_of_mass=np.array([0,0,0
     fd = np.zeros(nbt)
     for i in range(1, nbt):
         P = np.hstack((motion_params[:, i], np.array([1, 1, 1, 0, 0, 0])))
-        T_rb =  spm_matrix(P, order=0)
+        #T_rb =  spm_matrix(P, order=0)
+        T_rb = get_matrix_from_euler_and_trans(P)
         #M = np.dot(T_rb, np.linalg.inv(T_rb_prev)) - np.eye(4)  #for Frame displacmeent
         Ma = T_rb - np.eye(4)  #for Frame displacmeent
         A = Ma[0:3, 0:3]
@@ -438,6 +406,51 @@ def calculate_mean_RMSE_displacment(fit_pars, coef=None):
         res = (rms1 + rms2) / 2
 
     return res
+
+def get_matrix_from_euler_and_trans(P, rot_order='yxz', rotation_center=None):
+    # default choosen as the same default as simpleitk
+    rot = np.deg2rad(P[3:6])
+    aff = np.eye(4)
+    aff[:3,3] = P[:3]  #translation
+    if rot_order=='xyz':
+        aff[:3,:3]  = euler2mat(rot[0], rot[1], rot[2], axes='sxyz')
+    elif rot_order=='yxz':
+        aff[:3,:3] = euler2mat(rot[1], rot[0], rot[2], axes='syxz') #strange simpleitk convention of euler ... ?
+    else:
+        raise(f'rotation order {rot_order} not implemented')
+
+    if rotation_center is not None:
+        aff = change_affine_rotation_center(aff, rotation_center)
+    return aff
+
+def create_rotation_matrix_3d(angles, rot_order='yxz'):
+    """
+    given a list of 3 angles, create a 3x3 rotation matrix that describes rotation about the origin
+    :param angles (list or numpy array) : rotation angles in 3 dimensions
+    :return (numpy array) : rotation matrix 3x3
+    use same code as euler2mat from transforms3d
+    """
+    P = np.hstack([[0,0,0], angles])
+    mat_affinne_44 = get_matrix_from_euler_and_trans(P, rot_order=rot_order)
+    return mat_affinne_44[:3,:3]
+
+    mat1 = np.array([[1., 0., 0.],
+                     [0., math.cos(angles[0]), math.sin(angles[0])],
+                     [0., -math.sin(angles[0]), math.cos(angles[0])]],
+                    dtype='float')
+
+    mat2 = np.array([[math.cos(angles[1]), 0., math.sin(angles[1])],
+                     [0., 1., 0.],
+                     [-math.sin(angles[1]), 0., math.cos(angles[1])]],
+                    dtype='float')
+
+    mat3 = np.array([[math.cos(angles[2]), math.sin(angles[2]), 0.],
+                     [-math.sin(angles[2]), math.cos(angles[2]), 0.],
+                     [0., 0., 1.]],
+                    dtype='float')
+
+    mat = (mat1 @ mat2) @ mat3
+    return mat
 
 
 def spm_matrix(P, order=0):
@@ -499,7 +512,7 @@ def spm_matrix(P, order=0):
 class MotionFromTimeCourse(IntensityTransform):
     def __init__(self, fitpars: Union[List, np.ndarray, str], displacement_shift_strategy: str,
                  frequency_encoding_dim: int, tr: float, es: float, oversampling_pct: float,
-                 correct_motion: bool = False, **kwargs):
+                 correct_motion: bool = False, nufft_type: str = '1D_type1', **kwargs):
         """
         parameters to simulate 3 types of displacement random noise swllow or sudden mouvement
         :param nT (int): number of points of the time course
@@ -524,9 +537,10 @@ class MotionFromTimeCourse(IntensityTransform):
             raise ImportError('finufft cannot be imported')
         self.correct_motion = correct_motion
         self.to_substract = None
+        self.nufft_type = nufft_type
         self.nb_saved = 0
         self.args_names = ("fitpars", "displacement_shift_strategy", "frequency_encoding_dim", "tr", "es",
-                           "oversampling_pct", "correct_motion")
+                           "oversampling_pct", "correct_motion", "nufft_type")
 
     def apply_transform(self, sample):
         fitpars = self.fitpars
@@ -536,6 +550,7 @@ class MotionFromTimeCourse(IntensityTransform):
         tr = self.tr
         es = self.es
         correct_motion = self.correct_motion
+        nufft_type = self.nufft_type
         for image_name, image_dict in self.get_images_dict(sample).items():
             if self.arguments_are_dict():
                 fitpars = self.fitpars[image_name]
@@ -544,6 +559,7 @@ class MotionFromTimeCourse(IntensityTransform):
                 oversampling_pct = self.oversampling_pct[image_name]
                 tr = self.tr[image_name]
                 es = self.es[image_name]
+                nufft_type = self.nufft_type[image_name]
                 correct_motion = self.correct_motion[image_name]
 
             image_data = np.squeeze(image_dict['data'])[..., np.newaxis, np.newaxis]
@@ -557,7 +573,7 @@ class MotionFromTimeCourse(IntensityTransform):
             print(f'displacement_shift_strategy is {displacement_shift_strategy}')
             self._calc_dimensions(original_image.shape, frequency_encoding_dim=frequency_encoding_dim)
 
-            if displacement_shift_strategy is not None:
+            if displacement_shift_strategy is not None: #demean before interpolation
                 if '1D' in displacement_shift_strategy: #new strategy to demean, just 1D fft
                     fitpars, self.to_substract = demean_fitpars(fitpars, im_freq_domain, displacement_shift_strategy,
                                                                 fast_dim = (frequency_encoding_dim, self.phase_encoding_dims[1]))
@@ -565,35 +581,46 @@ class MotionFromTimeCourse(IntensityTransform):
                         self.fitpars[image_name] = fitpars
                     else:
                         self.fitpars = fitpars #important to save to get the correct fitpar in history
-                #not sure why is the second phase_encoding_dims
 
-            if fitpars.ndim == 4:  # we assume the interpolation has been done on the input
-                fitpars_interp = fitpars
-            else:
-                fitpars_interp = _interpolate_space_timing(fitpars=fitpars, es=es, tr=tr,
-                                                           phase_encoding_shape=self.phase_encoding_shape,
-                                                           frequency_encoding_dim=frequency_encoding_dim)
-                fitpars_interp = _tile_params_to_volume_dims(params_to_reshape=fitpars_interp,
-                                                             im_shape=self.im_shape)
-            if displacement_shift_strategy is not None:
-                if not '1D' in displacement_shift_strategy:
-                    fitpars_interp, self.to_substract = demean_fitpars(fitpars_interp=fitpars_interp, original_image_fft=im_freq_domain,
-                                                    displacement_shift_strategy=displacement_shift_strategy)
+            if '1D' in nufft_type:
+                if fitpars.shape[1] != self.phase_encoding_shape[0]:
+                    fitpars = _interpolate_fitpars(fitpars, len_output=self.phase_encoding_shape[0])
 
-            fitpars_vox = fitpars_interp.reshape((6, -1))
-            translations, rotations = fitpars_vox[:3], np.radians(fitpars_vox[3:])
-            translated_im_freq_domain = _translate_freq_domain(freq_domain=im_freq_domain,
-                                                               translations=translations)
-            apply_rotation = np.sum(np.abs(rotations.flatten())) > 0
-            # iNufft for rotations
-            if _finufft and apply_rotation:
-                corrupted_im = _nufft(freq_domain_data=translated_im_freq_domain, rotations=rotations,
-                                      im_shape=original_image.shape, frequency_encoding_dim=frequency_encoding_dim,
-                                      phase_encoding_shape=self.phase_encoding_shape)
-                corrupted_im = corrupted_im / corrupted_im.size  # normalize
+                if 'type1' in nufft_type:
+                    print('compution motion image with nufft type1 1D')
+                    corrupted_im = _trans_and_nufft_type1(im_freq_domain, fitpars)
+                else: #nufft_type2
+                    corrupted_im = _trans_and_nufft_type2(original_image, fitpars)
+                fitpars_interp = None #just to skip in _comput_motion_metrics
 
-            else:
-                corrupted_im = self._ifft_im(translated_im_freq_domain)
+            else: #old_way to be removed ...
+                if fitpars.ndim == 4:  # we assume the interpolation has been done on the input
+                    fitpars_interp = fitpars
+                else:
+                    fitpars_interp = _interpolate_space_timing(fitpars=fitpars, es=es, tr=tr,
+                                                               phase_encoding_shape=self.phase_encoding_shape,
+                                                               frequency_encoding_dim=frequency_encoding_dim)
+                    fitpars_interp = _tile_params_to_volume_dims(params_to_reshape=fitpars_interp,
+                                                                 im_shape=self.im_shape)
+                if displacement_shift_strategy is not None:
+                    if not '1D' in displacement_shift_strategy: #demean after interpolation
+                        fitpars_interp, self.to_substract = demean_fitpars(fitpars_interp=fitpars_interp, original_image_fft=im_freq_domain,
+                                                        displacement_shift_strategy=displacement_shift_strategy)
+
+                fitpars_vox = fitpars_interp.reshape((6, -1))
+                translations, rotations = fitpars_vox[:3], np.radians(fitpars_vox[3:])
+                translated_im_freq_domain = _translate_freq_domain(freq_domain=im_freq_domain,
+                                                                   translations=translations)
+                apply_rotation = np.sum(np.abs(rotations.flatten())) > 0
+                # iNufft for rotations
+                if _finufft and apply_rotation:
+                    corrupted_im = _nufft(freq_domain_data=translated_im_freq_domain, rotations=rotations,
+                                          im_shape=original_image.shape, frequency_encoding_dim=frequency_encoding_dim,
+                                          phase_encoding_shape=self.phase_encoding_shape)
+                    corrupted_im = corrupted_im / corrupted_im.size  # normalize
+
+                else:
+                    corrupted_im = self._ifft_im(translated_im_freq_domain)
 
             if correct_motion:
                 corrected_im = self.do_correct_motion(corrupted_im.copy(), fitpars_interp, frequency_encoding_dim, self.phase_encoding_shape)
@@ -608,12 +635,8 @@ class MotionFromTimeCourse(IntensityTransform):
 
             image_dict["data"] = corrupted_im[np.newaxis, ...]
             image_dict['data'] = torch.from_numpy(image_dict['data']).float()
-        """
-        if self.res_dir is not None:
-            self.save_to_dir(image_dict)
-        """
-        self._compute_motion_metrics(fitpars=fitpars, fitpars_interp=fitpars_interp, img_fft=im_freq_domain)
 
+        self._compute_motion_metrics(fitpars=fitpars, fitpars_interp=fitpars_interp, img_fft=im_freq_domain)
         return sample
 
     def _calc_dimensions(self, im_shape, frequency_encoding_dim):
@@ -666,17 +689,18 @@ class MotionFromTimeCourse(IntensityTransform):
 
         #compute meand disp as weighted mean (weigths beeing TF coef)
         w_coef = np.abs(img_fft)
-        ff = fitpars_interp
-        disp_mean=[]
-        for i in range(0, 6):
-            ffi = ff[i].reshape(-1)
-            w_coef_flat = w_coef.reshape(-1)
-            self._metrics[f'wTF_Disp_{i}'] = np.sum(ffi * w_coef_flat) / np.sum(w_coef_flat)
-            self._metrics[f'wTF2_Disp_{i}'] = np.sum(ffi * w_coef_flat**2) / np.sum(w_coef_flat**2)
-            disp_mean.append(  np.sum(np.abs(ffi) * w_coef_flat) / np.sum(w_coef_flat) )
-        #self._metrics['wTF_absDisp_t'] = np.mean(disp_mean[:3])
-        #self._metrics['wTF_absDisp_r'] = np.mean(disp_mean[3:])
-        #self._metrics['wTF_absDisp_a'] = np.mean(disp_mean)
+        if fitpars_interp is not None:
+            ff = fitpars_interp
+            disp_mean=[]
+            for i in range(0, 6):
+                ffi = ff[i].reshape(-1)
+                w_coef_flat = w_coef.reshape(-1)
+                self._metrics[f'wTF_Disp_{i}'] = np.sum(ffi * w_coef_flat) / np.sum(w_coef_flat)
+                self._metrics[f'wTF2_Disp_{i}'] = np.sum(ffi * w_coef_flat**2) / np.sum(w_coef_flat**2)
+                disp_mean.append(  np.sum(np.abs(ffi) * w_coef_flat) / np.sum(w_coef_flat) )
+            #self._metrics['wTF_absDisp_t'] = np.mean(disp_mean[:3])
+            #self._metrics['wTF_absDisp_r'] = np.mean(disp_mean[3:])
+            #self._metrics['wTF_absDisp_a'] = np.mean(disp_mean)
         ff = fitpars
         for i in range(0, 6):
             ffi = ff[i].reshape(-1)
@@ -688,6 +712,7 @@ class MotionFromTimeCourse(IntensityTransform):
             self._metrics[f'center_Disp_{i}'] = ffi[ffi.shape[0]//2]
         #at the end only SH and SH2 seems ok
         # TF2 == SH2  but TFshort==TF and TFshort2 < TF2 !
+
     def do_correct_motion(self, image, fitpars_interp, frequency_encoding_dim, phase_encoding_shape ):
         #works only if pure rotation or pure translation
         im_freq_domain = self._fft_im(image)
@@ -821,6 +846,82 @@ def _interpolate_fitpars(fpars, tr_fpars=None, tr_to_interpolate=2.4, len_output
         npt_added = diff/tr_to_interpolate
         print(f'adding {npt_added:.1f}')
     return interpolated_fpars
+
+def _rotate_coordinates_1D_motion(fitpar, image_shape, Apply_inv_affine=True):
+    # Apply_inv_affinne is True for the nufft_type1 and false
+    # for the nuft2 we also add a 1 voxel translation to fitpar todo check with different resolution
+
+    if Apply_inv_affine is False: #case for nufft_type2 add a one voxel shift
+        off_center = np.array([(x / 2 - x // 2) * 2 for x in image_shape])  # one voxel shift if odd ! todo resolution ?
+        # aff_offenter = np.eye(4); aff_offenter[:3,3] = -off_center
+        fitpar[:3, :] = fitpar[:3, :] - np.repeat(np.expand_dims(off_center, 1), fitpar.shape[1], axis=1)
+
+    lin_spaces = [np.linspace(-0.5, 0.5-1/x, x)*2*math.pi for x in image_shape]  # todo it suposes 1 vox = 1mm
+    #remove 1/x to avoid small scaling
+
+    meshgrids = np.meshgrid(*lin_spaces, indexing='ij')
+    # pour une affine on ajoute de 1, dans les coordone du point, mais pour le augmented kspace on ajoute la phase initial, donc 0 ici
+    meshgrids.append(np.zeros(image_shape))
+
+    grid_coords = np.array([mg for mg in meshgrids]) #grid_coords = np.array([mg.flatten(order='F') for mg in meshgrids])
+    grid_out = grid_coords
+    #applied motion at each phase step (on the kspace grid plan)
+    for nnp in range(fitpar.shape[1]):
+        aff = get_matrix_from_euler_and_trans(fitpar[:,nnp])
+        if Apply_inv_affine:
+            aff = np.linalg.inv(aff)
+        grid_plane = grid_out[:,:,nnp,:]
+        shape_mem = grid_plane.shape
+        grid_plane_moved = np.matmul(aff.T, grid_plane.reshape(4,shape_mem[1]*shape_mem[2])) #equ15 A.T * k0
+        #grid_plane_moved = np.matmul( grid_plane.reshape(4,shape_mem[1]*shape_mem[2]).T, aff.T).T # r0.T * A.T
+        grid_out[:, :, nnp, :] = grid_plane_moved.reshape(shape_mem)
+
+    return grid_out
+
+
+def _trans_and_nufft_type1(freq_domain, fitpar):
+    if not _finufft:
+        raise ImportError('finufft not available')
+    eps = 1E-7
+    f = np.zeros(freq_domain.shape, dtype=np.complex128, order='F')
+
+    grid_out = _rotate_coordinates_1D_motion(fitpar, freq_domain.shape, Apply_inv_affine=True)
+
+    phase_shift = grid_out[3].flatten(order='F')
+    exp_phase_shift = np.exp( 1j * phase_shift)  #+1j -> x z == tio, y inverse
+
+    freq_domain_data_flat = freq_domain.flatten(order='F')* exp_phase_shift # same F order as phase_shift if not inversion x z
+
+    finufft.nufft3d1(grid_out[0].flatten(order='F'), grid_out[1].flatten(order='F'),
+                     grid_out[2].flatten(order='F'), freq_domain_data_flat,
+                     eps=eps, out=f, debug=0, spread_debug=0, spread_sort=2, fftw=0, modeord=0,
+                     chkbnds=0, upsampfac=1.25, isign= 1)  # upsampling at 1.25 saves time at low precisions
+    #im_out = f.reshape(image.shape, order='F')
+    #im_out = f.flatten().reshape(image.shape)
+    im_out = f / f.size
+
+    return im_out
+
+
+def _trans_and_nufft_type2(image, fitpar, trans_last=False):
+    if not _finufft:
+        raise ImportError('finufft not available')
+    eps = 1E-7
+    grid_out = _rotate_coordinates_1D_motion(fitpar, image.shape, Apply_inv_affine=False)
+
+    f = np.zeros(grid_out[0].shape, dtype=np.complex128, order='F').flatten() #(order='F')
+    ip = np.asfortranarray(image.numpy().astype(complex) )
+
+    finufft.nufft3d2(grid_out[0].flatten(order='F'), grid_out[1].flatten(order='F'), grid_out[2].flatten(order='F'), ip,
+                     eps=eps, out=f, debug=0, spread_debug=0, spread_sort=2, fftw=0, modeord=0,
+                     chkbnds=0, upsampfac=1.25, isign=-1)  # upsampling at 1.25 saves time at low precisions
+
+    f = f * np.exp(-1j * grid_out[3].flatten(order='F'))
+    f = f.reshape(ip.shape,order='F')
+    #f = np.ascontiguousarray(f)  #pas l'aire de changer grand chose
+    iout = abs( np.fft.ifftshift(np.fft.ifftn(f)))
+    #iout = abs( np.fft.ifftshift(np.fft.ifftn(np.fft.fftshift(f))))
+    return iout
 
 
 def _rotate_coordinates(rotations, im_shape, frequency_encoding_dim, phase_encoding_shape, inv_transfo=False):
