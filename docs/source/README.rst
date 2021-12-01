@@ -3,12 +3,13 @@ TorchIO
 #######
 
 |PyPI-downloads| |PyPI-version| |Conda-version| |Google-Colab-notebook| |Docs-status|
-|Tests-status| |Lint-status| |Coverage-codecov| |Code-Quality|
-|Code-Maintainability| |pre-commit| |Slack|
+|Tests-status| |Lint-status|
+|Coverage-codecov| |Code-Quality| |Code-Maintainability| |pre-commit|
+|Slack| |Twitter| |Twitter-commits| |YouTube|
 
 
-TorchIO is a Python library for efficient loading, preprocessing, augmentation
-and patch-based sampling of 3D medical images in deep learning,
+TorchIO is an open-source Python library for efficient loading, preprocessing,
+augmentation and patch-based sampling of 3D medical images in deep learning,
 following the design of PyTorch.
 
 It includes multiple intensity and spatial transforms for data augmentation and
@@ -16,17 +17,21 @@ preprocessing.
 These transforms include typical computer vision operations
 such as random affine transformations and also domain-specific ones such as
 simulation of intensity artifacts due to
-`MRI magnetic field inhomogeneity (bias) <http://mriquestions.com/why-homogeneity.html>`_
+`MRI magnetic field inhomogeneity (bias) <https://mriquestions.com/why-homogeneity.html>`_
 or `k-space motion artifacts <http://proceedings.mlr.press/v102/shaw19a.html>`_.
 
 TorchIO is part of the official `PyTorch Ecosystem <https://pytorch.org/ecosystem/>`_,
-and it was featured at the `PyTorch Ecosystem Day 2021 <https://pytorch.org/ecosystem/pted/2021>`_.
+and was featured at
+the `PyTorch Ecosystem Day 2021 <https://pytorch.org/ecosystem/pted/2021>`_ and
+the `PyTorch Developer Day 2021 <https://pytorch.org/blog/pytorch-developer-day-2021>`_.
 
 Many groups have used TorchIO for their research.
-The complete list of citations is available on `Google Scholar <https://scholar.google.co.uk/scholar?cites=8711392719159421861&sciodt=0,5&hl=en>`_.
+The complete list of citations is available on `Google Scholar <https://scholar.google.co.uk/scholar?cites=8711392719159421861&sciodt=0,5&hl=en>`_, and the
+`dependents list <https://github.com/fepegar/torchio/network/dependents>`_ is
+available on GitHub.
 
 The code is available on `GitHub <https://github.com/fepegar/torchio>`_.
-If you like TorchIO, please give the repo a star!
+If you like TorchIO, please go to the repository and star it!
 
 .. raw:: html
 
@@ -57,46 +62,7 @@ If you found a bug or have a feature request, please open an issue:
    <script async defer src="https://buttons.github.io/buttons.js"></script>
 
 
-Credits
-*******
-
-..
-  From https://stackoverflow.com/a/10766650/3956024
-
-If you use this library for your research,
-please cite our paper:
-
-`F. Pérez-García, R. Sparks, and S. Ourselin. TorchIO: a Python library for
-efficient loading, preprocessing, augmentation and patch-based sampling of
-medical images in deep learning. Computer Methods and Programs in Biomedicine
-(June 2021), p. 106236. ISSN:
-0169-2607.doi:10.1016/j.cmpb.2021.106236. <https://doi.org/10.1016/j.cmpb.2021.106236>`_
-
-
-BibTeX:
-
-.. code-block:: latex
-
-   @article{perez-garcia_torchio_2021,
-      title = {TorchIO: a Python library for efficient loading, preprocessing, augmentation and patch-based sampling of medical images in deep learning},
-      journal = {Computer Methods and Programs in Biomedicine},
-      pages = {106236},
-      year = {2021},
-      issn = {0169-2607},
-      doi = {https://doi.org/10.1016/j.cmpb.2021.106236},
-      url = {https://www.sciencedirect.com/science/article/pii/S0169260721003102},
-      author = {P{\'e}rez-Garc{\'i}a, Fernando and Sparks, Rachel and Ourselin, S{\'e}bastien},
-   }
-
-This project is supported by the following institutions:
-
-* `Engineering and Physical Sciences Research Council (EPSRC) & UK Research and Innovation (UKRI) <https://epsrc.ukri.org/>`_
-* `EPSRC Centre for Doctoral Training in Intelligent, Integrated Imaging In Healthcare (i4health) <https://www.ucl.ac.uk/intelligent-imaging-healthcare/>`_ (University College London)
-* `Wellcome / EPSRC Centre for Interventional and Surgical Sciences (WEISS) <https://www.ucl.ac.uk/interventional-surgical-sciences/>`_ (University College London)
-* `School of Biomedical Engineering & Imaging Sciences (BMEIS) <https://www.kcl.ac.uk/bmeis>`_ (King's College London)
-
-This library has been greatly inspired by `NiftyNet <https://niftynet.io/>`_
-which is no longer maintained.
+.. include:: credits.rst
 
 
 .. |PyPI-downloads| image:: https://img.shields.io/pypi/dm/torchio.svg?label=PyPI%20downloads&logo=python&logoColor=white
@@ -116,7 +82,7 @@ which is no longer maintained.
    :alt: Google Colab notebooks
 
 .. |Docs-status| image:: https://img.shields.io/readthedocs/torchio?label=Docs&logo=Read%20the%20Docs
-   :target: http://torchio.rtfd.io/?badge=latest
+   :target: https://torchio.rtfd.io/?badge=latest
    :alt: Documentation status
 
 .. |Lint-status| image:: https://github.com/fepegar/torchio/actions/workflows/lint.yml/badge.svg
@@ -139,9 +105,17 @@ which is no longer maintained.
    :target: https://join.slack.com/t/torchioworkspace/shared_invite/zt-exgpd5rm-BTpxg2MazwiiMDw7X9xMFg
    :alt: Slack
 
+.. |YouTube| image:: https://img.shields.io/youtube/views/UEUVSw5-M9M?label=watch&style=social
+   :target: https://www.youtube.com/watch?v=UEUVSw5-M9M
+   :alt: YouTube
+
 .. |Twitter| image:: https://img.shields.io/twitter/url/https/twitter.com/TorchIOLib.svg?style=social&label=Follow%20%40TorchIOLib
    :target: https://twitter.com/TorchIOLib
    :alt: Twitter
+
+.. |Twitter-commits| image:: https://img.shields.io/twitter/url/https/twitter.com/TorchIO_commits.svg?style=social&label=Follow%20%40TorchIO_commits
+   :target: https://twitter.com/TorchIO_commits
+   :alt: Twitter commits
 
 .. |Code-Maintainability| image:: https://api.codeclimate.com/v1/badges/518673e49a472dd5714d/maintainability
    :target: https://codeclimate.com/github/fepegar/torchio/maintainability

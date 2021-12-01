@@ -42,7 +42,7 @@ at [OpenAI](https://openai.com/) ([link](https://jack-clark.net/2020/03/17/)).
             <a href="https://github.com/fepegar/torchio/actions/workflows/lint.yml">
                 <img src="https://github.com/fepegar/torchio/actions/workflows/lint.yml/badge.svg" alt="Linting status">
             </a>
-            <a href="http://torchio.rtfd.io/?badge=latest">
+            <a href="https://torchio.rtfd.io/?badge=latest">
                 <img src="https://img.shields.io/readthedocs/torchio?label=Docs&logo=Read%20the%20Docs" alt="Documentation status">
             </a>
             <a href="https://codecov.io/github/fepegar/torchio">
@@ -86,6 +86,9 @@ at [OpenAI](https://openai.com/) ([link](https://jack-clark.net/2020/03/17/)).
             </a>
             <a href="https://twitter.com/TorchIOLib">
                 <img src="https://img.shields.io/twitter/url/https/twitter.com/TorchIOLib.svg?style=social&label=Follow%20%40TorchIOLib" alt="Twitter">
+            </a>
+            <a href="https://twitter.com/TorchIO_commits">
+                <img src="https://img.shields.io/twitter/url/https/twitter.com/TorchIO_commits.svg?style=social&label=Follow%20%40TorchIOLib" alt="Twitter">
             </a>
             <a href="https://www.youtube.com/watch?v=UEUVSw5-M9M">
                 <img src="https://img.shields.io/youtube/views/UEUVSw5-M9M?label=watch&style=social" alt="YouTube">
@@ -230,7 +233,7 @@ for data augmentation and preprocessing.
 Transforms include typical computer vision operations
 such as random affine transformations and also domain-specific ones such as
 simulation of intensity artifacts due to
-[MRI magnetic field inhomogeneity](http://mriquestions.com/why-homogeneity.html)
+[MRI magnetic field inhomogeneity](https://mriquestions.com/why-homogeneity.html)
 or [k-space motion artifacts](http://proceedings.mlr.press/v102/shaw19a.html).
 
 This package has been greatly inspired by NiftyNet,
@@ -339,7 +342,7 @@ Thanks goes to all these people ([emoji key](https://allcontributors.org/docs/en
   </tr>
   <tr>
     <td align="center"><a href="https://github.com/glupol"><img src="https://avatars.githubusercontent.com/u/57905234?v=4?s=100" width="100px;" alt=""/><br /><sub><b>glupol</b></sub></a><br /><a href="https://github.com/fepegar/torchio/issues?q=author%3Aglupol" title="Bug reports">🐛</a></td>
-    <td align="center"><a href="https://github.com/ramonemiliani93"><img src="https://avatars.githubusercontent.com/u/14314888?v=4?s=100" width="100px;" alt=""/><br /><sub><b>ramonemiliani93</b></sub></a><br /><a href="https://github.com/fepegar/torchio/commits?author=ramonemiliani93" title="Documentation">📖</a></td>
+    <td align="center"><a href="https://github.com/ramonemiliani93"><img src="https://avatars.githubusercontent.com/u/14314888?v=4?s=100" width="100px;" alt=""/><br /><sub><b>ramonemiliani93</b></sub></a><br /><a href="https://github.com/fepegar/torchio/commits?author=ramonemiliani93" title="Documentation">📖</a> <a href="https://github.com/fepegar/torchio/issues?q=author%3Aramonemiliani93" title="Bug reports">🐛</a></td>
     <td align="center"><a href="https://github.com/justusschock"><img src="https://avatars.githubusercontent.com/u/12886177?v=4?s=100" width="100px;" alt=""/><br /><sub><b>Justus Schock</b></sub></a><br /><a href="https://github.com/fepegar/torchio/commits?author=justusschock" title="Code">💻</a> <a href="https://github.com/fepegar/torchio/issues?q=author%3Ajustusschock" title="Bug reports">🐛</a></td>
     <td align="center"><a href="https://github.com/cepa995"><img src="https://avatars.githubusercontent.com/u/67524891?v=4?s=100" width="100px;" alt=""/><br /><sub><b>Stefan Milorad Radonjić</b></sub></a><br /><a href="https://github.com/fepegar/torchio/issues?q=author%3Acepa995" title="Bug reports">🐛</a></td>
     <td align="center"><a href="https://github.com/srg9000"><img src="https://avatars.githubusercontent.com/u/26834833?v=4?s=100" width="100px;" alt=""/><br /><sub><b>Sajan Gohil</b></sub></a><br /><a href="https://github.com/fepegar/torchio/issues?q=author%3Asrg9000" title="Bug reports">🐛</a></td>
@@ -352,6 +355,11 @@ Thanks goes to all these people ([emoji key](https://allcontributors.org/docs/en
     <td align="center"><a href="https://github.com/res191"><img src="https://avatars.githubusercontent.com/u/6549034?v=4?s=100" width="100px;" alt=""/><br /><sub><b>res191</b></sub></a><br /><a href="#fundingFinding-res191" title="Funding Finding">🔍</a></td>
     <td align="center"><a href="https://github.com/nengwp"><img src="https://avatars.githubusercontent.com/u/44516353?v=4?s=100" width="100px;" alt=""/><br /><sub><b>nengwp</b></sub></a><br /><a href="https://github.com/fepegar/torchio/issues?q=author%3Anengwp" title="Bug reports">🐛</a> <a href="https://github.com/fepegar/torchio/commits?author=nengwp" title="Documentation">📖</a></td>
     <td align="center"><a href="https://github.com/susanveraclarke"><img src="https://avatars.githubusercontent.com/u/93313094?v=4?s=100" width="100px;" alt=""/><br /><sub><b>susanveraclarke</b></sub></a><br /><a href="#design-susanveraclarke" title="Design">🎨</a></td>
+    <td align="center"><a href="http://nepersica.tistory.com"><img src="https://avatars.githubusercontent.com/u/45097022?v=4?s=100" width="100px;" alt=""/><br /><sub><b>nepersica</b></sub></a><br /><a href="https://github.com/fepegar/torchio/issues?q=author%3Anepersica" title="Bug reports">🐛</a></td>
+    <td align="center"><a href="http://spenhouet.com"><img src="https://avatars.githubusercontent.com/u/7819068?v=4?s=100" width="100px;" alt=""/><br /><sub><b>Sebastian Penhouet</b></sub></a><br /><a href="#ideas-Spenhouet" title="Ideas, Planning, & Feedback">🤔</a></td>
+  </tr>
+  <tr>
+    <td align="center"><a href="https://github.com/Bigsealion"><img src="https://avatars.githubusercontent.com/u/23148550?v=4?s=100" width="100px;" alt=""/><br /><sub><b>Bigsealion</b></sub></a><br /><a href="https://github.com/fepegar/torchio/issues?q=author%3ABigsealion" title="Bug reports">🐛</a></td>
   </tr>
 </table>
 

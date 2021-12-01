@@ -348,7 +348,8 @@
       "avatar_url": "https://avatars.githubusercontent.com/u/14314888?v=4",
       "profile": "https://github.com/ramonemiliani93",
       "contributions": [
-        "doc"
+        "doc",
+        "bug"
       ]
     },
     {
@@ -441,6 +442,33 @@
       "profile": "https://github.com/susanveraclarke",
       "contributions": [
         "design"
+      ]
+    },
+    {
+      "login": "nepersica",
+      "name": "nepersica",
+      "avatar_url": "https://avatars.githubusercontent.com/u/45097022?v=4",
+      "profile": "http://nepersica.tistory.com",
+      "contributions": [
+        "bug"
+      ]
+    },
+    {
+      "login": "Spenhouet",
+      "name": "Sebastian Penhouet",
+      "avatar_url": "https://avatars.githubusercontent.com/u/7819068?v=4",
+      "profile": "http://spenhouet.com",
+      "contributions": [
+        "ideas"
+      ]
+    },
+    {
+      "login": "Bigsealion",
+      "name": "Bigsealion",
+      "avatar_url": "https://avatars.githubusercontent.com/u/23148550?v=4",
+      "profile": "https://github.com/Bigsealion",
+      "contributions": [
+        "bug"
       ]
     }
   ],

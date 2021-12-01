@@ -97,13 +97,16 @@ class TestImage(TorchioTestCase):
         with self.assertRaises(FileNotFoundError):
             tio.ScalarImage(path=['nopath', 'error'])
 
-    def test_with_a_list_of_paths(self):
+    def test_with_sequences_of_paths(self):
         shape = (5, 5, 5)
         path1 = self.get_image_path('path1', shape=shape)
         path2 = self.get_image_path('path2', shape=shape)
-        image = tio.ScalarImage(path=[path1, path2])
-        self.assertEqual(image.shape, (2, 5, 5, 5))
-        self.assertEqual(image[tio.STEM], ['path1', 'path2'])
+        paths_tuple = path1, path2
+        paths_list = list(paths_tuple)
+        for sequence in (paths_tuple, paths_list):
+            image = tio.ScalarImage(path=sequence)
+            self.assertEqual(image.shape, (2, 5, 5, 5))
+            self.assertEqual(image[tio.STEM], ['path1', 'path2'])
 
     def test_with_a_list_of_images_with_different_shapes(self):
         path1 = self.get_image_path('path1', shape=(5, 5, 5))
@@ -213,3 +216,25 @@ class TestImage(TorchioTestCase):
     def test_gif_rgb(self):
         with tempfile.NamedTemporaryFile(suffix='.gif', delete=False) as f:
             tio.ScalarImage(tensor=torch.rand(3, 4, 5, 6)).to_gif(0, 1, f.name)
+
+    def test_hist(self):
+        self.sample_subject.t1.hist(density=False, show=False)
+        self.sample_subject.t1.hist(density=True, show=False)
+
+    def test_count(self):
+        image = self.sample_subject.label
+        max_n = image.data.numel()
+        nonzero = image.count_nonzero()
+        assert 0 <= nonzero <= max_n
+        counts = image.count_labels()
+        assert tuple(counts) == (0, 1)
+        assert 0 <= counts[0] <= max_n
+        assert 0 <= counts[1] <= max_n
+
+    def test_affine_multipath(self):
+        # https://github.com/fepegar/torchio/issues/762
+        path1 = self.get_image_path('multi1')
+        path2 = self.get_image_path('multi2')
+        paths = path1, path2
+        image = tio.ScalarImage(paths)
+        self.assertTensorEqual(image.affine, np.eye(4))

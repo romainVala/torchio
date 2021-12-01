@@ -251,11 +251,15 @@ def get_subjects_from_batch(batch: Dict) -> List:
             data = image_dict[constants.DATA][i]
             affine = image_dict[constants.AFFINE][i]
             path = Path(image_dict[constants.PATH][i])
-            is_label = image_dict[constants.TYPE] == constants.LABEL
+            is_label = image_dict[constants.TYPE][i] == constants.LABEL
             klass = LabelMap if is_label else ScalarImage
             image = klass(tensor=data, affine=affine, filename=path.name)
             subject_dict[image_name] = image
         subject = Subject(subject_dict)
+        if constants.HISTORY in batch:
+            applied_transforms = batch[constants.HISTORY][i]
+            for transform in applied_transforms:
+                transform.add_transform_to_subject_history(subject)
         subjects.append(subject)
     return subjects
 
@@ -333,3 +337,21 @@ def guess_external_viewer() -> Optional[Path]:
         slicer_path = shutil.which('Slicer')
         if slicer_path is not None:
             return Path(slicer_path)
+
+
+def parse_spatial_shape(shape):
+    result = to_tuple(shape, length=3)
+    for n in result:
+        if n < 1 or n % 1:
+            message = (
+                'All elements in a spatial shape must be positive integers,'
+                f' but the following shape was passed: {shape}'
+            )
+            raise ValueError(message)
+    if len(result) != 3:
+        message = (
+            'Spatial shapes must have 3 elements, but the following shape'
+            f' was passed: {shape}'
+        )
+        raise ValueError(message)
+    return result

@@ -29,7 +29,6 @@ IXI
 ~~~~~~~~~~~~~
 
 .. autoclass:: IXI
-    :members:
     :show-inheritance:
 
 
@@ -37,7 +36,6 @@ IXI
 ~~~~~~~~~~~~~~~~~
 
 .. autoclass:: IXITiny
-    :members:
     :show-inheritance:
 
 
@@ -63,7 +61,6 @@ RSNAMICCAI
 ~~~~~~~~~~~~~~~~~~~
 
 .. autoclass:: RSNAMICCAI
-    :members:
     :show-inheritance:
 
 
@@ -78,12 +75,14 @@ MNI
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. autoclass:: ICBM2009CNonlinearSymmetric
-    :members:
     :show-inheritance:
 
 
 :class:`Colin27`
 ~~~~~~~~~~~~~~~~
+
+.. autoclass:: Colin27
+    :show-inheritance:
 
 .. plot::
 
@@ -91,13 +90,12 @@ MNI
     subject = tio.datasets.Colin27()
     subject.plot()
 
-.. autoclass:: Colin27
-    :members:
-    :show-inheritance:
-
 
 :class:`Pediatric`
 ~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: Pediatric
+    :show-inheritance:
 
 .. plot::
 
@@ -105,23 +103,18 @@ MNI
     subject = tio.datasets.Pediatric((4.5, 8.5))
     subject.plot()
 
-.. autoclass:: Pediatric
-    :members:
-    :show-inheritance:
-
 
 :class:`Sheep`
 ~~~~~~~~~~~~~~
+
+.. autoclass:: Sheep
+    :show-inheritance:
 
 .. plot::
 
     import torchio as tio
     subject = tio.datasets.Sheep()
     subject.plot()
-
-.. autoclass:: Sheep
-    :members:
-    :show-inheritance:
 
 
 .. currentmodule:: torchio.datasets.bite
@@ -130,7 +123,6 @@ MNI
 ~~~~~~~~~~~~~~
 
 .. autoclass:: BITE3
-    :members:
     :show-inheritance:
 
 
@@ -151,27 +143,25 @@ photographed and digitized (from `Wikipedia <https://en.wikipedia.org/wiki/Visib
 :class:`VisibleMale`
 ~~~~~~~~~~~~~~~~~~~~
 
+.. autoclass:: VisibleMale
+    :show-inheritance:
+
 .. plot::
 
     import torchio as tio
     tio.datasets.VisibleMale('Shoulder').plot()
 
-.. autoclass:: VisibleMale
-    :members:
-    :show-inheritance:
-
 
 :class:`VisibleFemale`
 ~~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: VisibleFemale
+    :show-inheritance:
 
 .. plot::
 
     import torchio as tio
     tio.datasets.VisibleFemale('Shoulder').plot()
-
-.. autoclass:: VisibleFemale
-    :members:
-    :show-inheritance:
 
 
 ITK-SNAP
@@ -184,18 +174,20 @@ ITK-SNAP
 :class:`BrainTumor`
 ~~~~~~~~~~~~~~~~~~~
 
+.. autoclass:: BrainTumor
+    :show-inheritance:
+
 .. plot::
 
     import torchio as tio
     tio.datasets.BrainTumor().plot()
 
-.. autoclass:: BrainTumor
-    :members:
-    :show-inheritance:
-
 
 :class:`T1T2`
 ~~~~~~~~~~~~~
+
+.. autoclass:: T1T2
+    :show-inheritance:
 
 .. plot::
 
@@ -203,23 +195,18 @@ ITK-SNAP
     subject = tio.datasets.T1T2()
     subject.plot()
 
-.. autoclass:: T1T2
-    :members:
-    :show-inheritance:
-
 
 :class:`AorticValve`
 ~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: AorticValve
+    :show-inheritance:
 
 .. plot::
 
     import torchio as tio
     subject = tio.datasets.AorticValve()
     subject.plot()
-
-.. autoclass:: AorticValve
-    :members:
-    :show-inheritance:
 
 
 3D Slicer
@@ -231,19 +218,23 @@ ITK-SNAP
 :class:`Slicer`
 ~~~~~~~~~~~~~~~
 
+.. autoclass:: Slicer
+    :show-inheritance:
+
 .. plot::
 
     import torchio as tio
     subject = tio.datasets.Slicer()
     subject.plot()
 
-.. autoclass:: Slicer
-    :members:
-    :show-inheritance:
-
 
 FPG
 ---
+
+.. currentmodule:: torchio.datasets.fpg
+
+.. autoclass:: FPG
+    :show-inheritance:
 
 .. plot::
 
@@ -251,8 +242,122 @@ FPG
     subject = tio.datasets.FPG()
     subject.plot()
 
-.. currentmodule:: torchio.datasets.fpg
+.. plot::
 
-.. autoclass:: FPG
-    :members:
-    :show-inheritance:
+    import torchio as tio
+    subject = tio.datasets.FPG(load_all=True)
+    subject.plot()
+
+
+MedMNIST
+--------
+
+.. currentmodule:: torchio.datasets.medmnist
+
+
+.. autoclass:: OrganMNIST3D
+
+.. plot::
+
+    import torch
+    import torchio as tio
+    from einops import rearrange
+    rows, cols = 16, 28
+    dataset = tio.datasets.OrganMNIST3D('train')
+    loader = torch.utils.data.DataLoader(dataset, batch_size=rows * cols)
+    batch = tio.utils.get_first_item(loader)
+    tensor = batch['image'][tio.DATA]
+    pattern = '(b1 b2) c x y z -> c x (b1 y) (b2 z)'
+    tensor = rearrange(tensor, pattern, b1=rows, b2=cols)
+    sx = tensor.shape[1]
+    plt.imshow(tensor[0, sx // 2], cmap='gray')
+
+
+.. autoclass:: NoduleMNIST3D
+
+.. plot::
+
+    import torch
+    import torchio as tio
+    from einops import rearrange
+    rows, cols = 16, 28
+    dataset = tio.datasets.NoduleMNIST3D('train')
+    loader = torch.utils.data.DataLoader(dataset, batch_size=rows * cols)
+    batch = tio.utils.get_first_item(loader)
+    tensor = batch['image'][tio.DATA]
+    pattern = '(b1 b2) c x y z -> c x (b1 y) (b2 z)'
+    tensor = rearrange(tensor, pattern, b1=rows, b2=cols)
+    sx = tensor.shape[1]
+    plt.imshow(tensor[0, sx // 2], cmap='gray')
+
+
+.. autoclass:: AdrenalMNIST3D
+
+.. plot::
+
+    import torch
+    import torchio as tio
+    from einops import rearrange
+    rows, cols = 16, 28
+    dataset = tio.datasets.AdrenalMNIST3D('train')
+    loader = torch.utils.data.DataLoader(dataset, batch_size=rows * cols)
+    batch = tio.utils.get_first_item(loader)
+    tensor = batch['image'][tio.DATA]
+    pattern = '(b1 b2) c x y z -> c x (b1 y) (b2 z)'
+    tensor = rearrange(tensor, pattern, b1=rows, b2=cols)
+    sx = tensor.shape[1]
+    plt.imshow(tensor[0, sx // 2], cmap='gray')
+
+
+.. autoclass:: FractureMNIST3D
+
+.. plot::
+
+    import torch
+    import torchio as tio
+    from einops import rearrange
+    rows, cols = 16, 28
+    dataset = tio.datasets.FractureMNIST3D('train')
+    loader = torch.utils.data.DataLoader(dataset, batch_size=rows * cols)
+    batch = tio.utils.get_first_item(loader)
+    tensor = batch['image'][tio.DATA]
+    pattern = '(b1 b2) c x y z -> c x (b1 y) (b2 z)'
+    tensor = rearrange(tensor, pattern, b1=rows, b2=cols)
+    sx = tensor.shape[1]
+    plt.imshow(tensor[0, sx // 2], cmap='gray')
+
+
+.. autoclass:: VesselMNIST3D
+
+.. plot::
+
+    import torch
+    import torchio as tio
+    from einops import rearrange
+    rows, cols = 16, 28
+    dataset = tio.datasets.VesselMNIST3D('train')
+    loader = torch.utils.data.DataLoader(dataset, batch_size=rows * cols)
+    batch = tio.utils.get_first_item(loader)
+    tensor = batch['image'][tio.DATA]
+    pattern = '(b1 b2) c x y z -> c x (b1 y) (b2 z)'
+    tensor = rearrange(tensor, pattern, b1=rows, b2=cols)
+    sx = tensor.shape[1]
+    plt.imshow(tensor[0, sx // 2], cmap='gray')
+
+
+.. autoclass:: SynapseMNIST3D
+
+.. plot::
+
+    import torch
+    import torchio as tio
+    from einops import rearrange
+    rows, cols = 16, 28
+    dataset = tio.datasets.SynapseMNIST3D('train')
+    loader = torch.utils.data.DataLoader(dataset, batch_size=rows * cols)
+    batch = tio.utils.get_first_item(loader)
+    tensor = batch['image'][tio.DATA]
+    pattern = '(b1 b2) c x y z -> c x (b1 y) (b2 z)'
+    tensor = rearrange(tensor, pattern, b1=rows, b2=cols)
+    sx = tensor.shape[1]
+    plt.imshow(tensor[0, sx // 2], cmap='gray')
