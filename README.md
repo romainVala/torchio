@@ -88,7 +88,7 @@ at [OpenAI](https://openai.com/) ([link](https://jack-clark.net/2020/03/17/)).
                 <img src="https://img.shields.io/twitter/url/https/twitter.com/TorchIOLib.svg?style=social&label=Follow%20%40TorchIOLib" alt="Twitter">
             </a>
             <a href="https://twitter.com/TorchIO_commits">
-                <img src="https://img.shields.io/twitter/url/https/twitter.com/TorchIO_commits.svg?style=social&label=Follow%20%40TorchIOLib" alt="Twitter">
+                <img src="https://img.shields.io/twitter/url/https/twitter.com/TorchIO_commits.svg?style=social&label=Follow%20%40TorchIO_commits" alt="Twitter">
             </a>
             <a href="https://www.youtube.com/watch?v=UEUVSw5-M9M">
                 <img src="https://img.shields.io/youtube/views/UEUVSw5-M9M?label=watch&style=social" alt="YouTube">
@@ -215,13 +215,16 @@ at [OpenAI](https://openai.com/) ([link](https://jack-clark.net/2020/03/17/)).
 
 ---
 
-<a href="https://torchio.readthedocs.io/data/patch_based.html">
-    <img align="center" style="width: 640px; height: 360px; overflow: hidden;" src="https://raw.githubusercontent.com/fepegar/torchio/main/docs/images/queue.gif" alt="Queue">
-</a>
-<!-- markdownlint-restore -->
+<p align="center">
+  <a href="https://torchio.readthedocs.io/patches/patch_training.html#queue">
+    <img style="width: 640px; height: 360px; overflow: hidden;" src="https://raw.githubusercontent.com/fepegar/torchio/main/docs/images/queue.gif" alt="Queue">
+  </a>
+</p>
 
-([Queue](https://torchio.readthedocs.io/data/patch_training.html#queue)
-for [patch-based training](https://torchio.readthedocs.io/data/patch_based.html))
+([Queue](https://torchio.readthedocs.io/patches/patch_training.html#queue)
+for [patch-based training](https://torchio.readthedocs.io/patches/index.html))
+
+<!-- markdownlint-restore -->
 
 ---
 
@@ -360,6 +363,9 @@ Thanks goes to all these people ([emoji key](https://allcontributors.org/docs/en
   </tr>
   <tr>
     <td align="center"><a href="https://github.com/Bigsealion"><img src="https://avatars.githubusercontent.com/u/23148550?v=4?s=100" width="100px;" alt=""/><br /><sub><b>Bigsealion</b></sub></a><br /><a href="https://github.com/fepegar/torchio/issues?q=author%3ABigsealion" title="Bug reports">🐛</a></td>
+    <td align="center"><a href="https://www.kitware.com/dzenan-zukic/"><img src="https://avatars.githubusercontent.com/u/1792121?v=4?s=100" width="100px;" alt=""/><br /><sub><b>Dženan Zukić</b></sub></a><br /><a href="https://github.com/fepegar/torchio/pulls?q=is%3Apr+reviewed-by%3Adzenanz" title="Reviewed Pull Requests">👀</a></td>
+    <td align="center"><a href="https://github.com/vasl12"><img src="https://avatars.githubusercontent.com/u/15161465?v=4?s=100" width="100px;" alt=""/><br /><sub><b>vasl12</b></sub></a><br /><a href="#tutorial-vasl12" title="Tutorials">✅</a> <a href="https://github.com/fepegar/torchio/issues?q=author%3Avasl12" title="Bug reports">🐛</a></td>
+    <td align="center"><a href="http://perso.telecom-bretagne.eu/francoisrousseau"><img src="https://avatars.githubusercontent.com/u/398895?v=4?s=100" width="100px;" alt=""/><br /><sub><b>François Rousseau</b></sub></a><br /><a href="https://github.com/fepegar/torchio/issues?q=author%3Arousseau" title="Bug reports">🐛</a></td>
   </tr>
 </table>
 

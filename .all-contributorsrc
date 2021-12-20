@@ -470,6 +470,34 @@
       "contributions": [
         "bug"
       ]
+    },
+    {
+      "login": "dzenanz",
+      "name": "Dženan Zukić",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1792121?v=4",
+      "profile": "https://www.kitware.com/dzenan-zukic/",
+      "contributions": [
+        "review"
+      ]
+    },
+    {
+      "login": "vasl12",
+      "name": "vasl12",
+      "avatar_url": "https://avatars.githubusercontent.com/u/15161465?v=4",
+      "profile": "https://github.com/vasl12",
+      "contributions": [
+        "tutorial",
+        "bug"
+      ]
+    },
+    {
+      "login": "rousseau",
+      "name": "François Rousseau",
+      "avatar_url": "https://avatars.githubusercontent.com/u/398895?v=4",
+      "profile": "http://perso.telecom-bretagne.eu/francoisrousseau",
+      "contributions": [
+        "bug"
+      ]
     }
   ],
   "contributorsPerLine": 7,

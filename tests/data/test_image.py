@@ -139,6 +139,7 @@ class TestImage(TorchioTestCase):
         self.assertEqual(image.height, image.shape[height_idx])
         self.assertEqual(image.width, image.shape[width_idx])
 
+    @pytest.mark.skipif(sys.platform == 'win32', reason='Unstable on Windows')
     def test_plot(self):
         image = self.sample_subject.t1
         image.plot(show=False, output_path=self.dir / 'image.png')
@@ -238,3 +239,13 @@ class TestImage(TorchioTestCase):
         paths = path1, path2
         image = tio.ScalarImage(paths)
         self.assertTensorEqual(image.affine, np.eye(4))
+
+    def test_bad_numpy_type_reader(self):
+        # https://github.com/fepegar/torchio/issues/764
+        def numpy_reader(path):
+            return np.load(path), np.eye(4)
+        tensor = np.random.rand(1, 2, 3, 4).astype(np.uint16)
+        test_path = self.dir / 'test_image.npy'
+        np.save(test_path, tensor)
+        image = tio.ScalarImage(test_path, reader=numpy_reader)
+        image.load()
