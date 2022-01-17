@@ -11,10 +11,11 @@ try:
     _finufft = True
 except ImportError:
     _finufft = False
+import SimpleITK as sitk
 
 from .. import RandomTransform
 from ... import IntensityTransform
-
+from ....data.io import nib_to_sitk
 
 class RandomMotionFromTimeCourse(RandomTransform, IntensityTransform):
 
@@ -26,7 +27,7 @@ class RandomMotionFromTimeCourse(RandomTransform, IntensityTransform):
                  seed: int = None, displacement_shift_strategy: str = None, freq_encoding_dim: List = [0],
                  tr: float = 2.3, es: float = 4E-3, oversampling_pct: float = 0.3,
                  preserve_center_frequency_pct: float = 0, correct_motion: bool = False, res_dir: str = None,
-                 nufft_type: str ='1D_type1', **kwargs):
+                 nufft_type: str ='1D_type1', coregistration_to_orig=False, **kwargs):
         """
         parameters to simulate 3 types of displacement random noise swllow or sudden mouvement
         :param nT (int): number of points of the time course
@@ -73,6 +74,7 @@ class RandomMotionFromTimeCourse(RandomTransform, IntensityTransform):
         self.freq_encoding_choice = freq_encoding_dim
         self.frequency_encoding_dim = self._rand_choice(self.freq_encoding_choice)
         self.nufft_type = nufft_type
+        self.coregistration_to_orig = coregistration_to_orig
         self.seed = seed
         if fitpars is None:
             self.fitpars = None
@@ -105,6 +107,7 @@ class RandomMotionFromTimeCourse(RandomTransform, IntensityTransform):
             arguments["es"][image_name] = self.es
             arguments["correct_motion"][image_name] = self.correct_motion
             arguments["nufft_type"][image_name] = self.nufft_type
+            arguments["coregistration_to_orig"][image_name] = self.coregistration_to_orig
 
         transform = MotionFromTimeCourse(**self.add_include_exclude(arguments))
         transformed = transform(sample)
@@ -512,7 +515,8 @@ def spm_matrix(P, order=0):
 class MotionFromTimeCourse(IntensityTransform):
     def __init__(self, fitpars: Union[List, np.ndarray, str], displacement_shift_strategy: str,
                  frequency_encoding_dim: int, tr: float, es: float, oversampling_pct: float,
-                 correct_motion: bool = False, nufft_type: str = '1D_type1', **kwargs):
+                 correct_motion: bool = False, nufft_type: str = '1D_type1', coregistration_to_orig: bool = False,
+                 **kwargs):
         """
         parameters to simulate 3 types of displacement random noise swllow or sudden mouvement
         :param nT (int): number of points of the time course
@@ -538,9 +542,10 @@ class MotionFromTimeCourse(IntensityTransform):
         self.correct_motion = correct_motion
         self.to_substract = None
         self.nufft_type = nufft_type
+        self.coregistration_to_orig = coregistration_to_orig
         self.nb_saved = 0
         self.args_names = ("fitpars", "displacement_shift_strategy", "frequency_encoding_dim", "tr", "es",
-                           "oversampling_pct", "correct_motion", "nufft_type")
+                           "oversampling_pct", "correct_motion", "nufft_type", "coregistration_to_orig")
 
     def apply_transform(self, sample):
         fitpars = self.fitpars
@@ -551,6 +556,8 @@ class MotionFromTimeCourse(IntensityTransform):
         es = self.es
         correct_motion = self.correct_motion
         nufft_type = self.nufft_type
+        coregistration_to_orig = self.coregistration_to_orig
+
         for image_name, image_dict in self.get_images_dict(sample).items():
             if self.arguments_are_dict():
                 fitpars = self.fitpars[image_name]
@@ -561,9 +568,12 @@ class MotionFromTimeCourse(IntensityTransform):
                 es = self.es[image_name]
                 nufft_type = self.nufft_type[image_name]
                 correct_motion = self.correct_motion[image_name]
+                coregistration_to_orig = self.coregistration_to_orig[image_name]
 
-            image_data = np.squeeze(image_dict['data'])[..., np.newaxis, np.newaxis]
-            original_image = np.squeeze(image_data[:, :, :, 0, 0])
+            #image_data = np.squeeze(image_dict['data'])[..., np.newaxis, np.newaxis]
+            #original_image = np.squeeze(image_data[:, :, :, 0, 0])
+            original_image = np.squeeze(image_dict['data'])
+
             if oversampling_pct > 0.0:
                 original_image_shape = original_image.shape
                 original_image = self._oversample(original_image, oversampling_pct)
@@ -629,6 +639,8 @@ class MotionFromTimeCourse(IntensityTransform):
 
             # magnitude
             corrupted_im = abs(corrupted_im)
+            if coregistration_to_orig:
+                corrupted_im = self.ElastixRegisterAndReslice(corrupted_im, original_image)
 
             if oversampling_pct > 0.0:
                 corrupted_im = self.crop_volume(corrupted_im, original_image_shape)
@@ -766,6 +778,25 @@ class MotionFromTimeCourse(IntensityTransform):
         corrected_im = abs(corrected_im)
 
         return corrected_im
+
+    def ElastixRegisterAndReslice(self, img_src, img_ref):
+        print(f'performing elastix coreg data shape is {img_src.shape} ')
+
+        img1 = img_src #.data
+        img2 = img_ref #.data
+        #I think affine does not matter here ... to check
+        affine = np.eye(4)
+        i1, i2 = nib_to_sitk(np.expand_dims(img1,0), affine), nib_to_sitk(np.expand_dims(img2,0), affine)
+        elastixImageFilter = sitk.ElastixImageFilter()
+        elastixImageFilter.SetFixedImage(i2);
+        elastixImageFilter.SetMovingImage(i1)
+        elastixImageFilter.SetParameterMap(sitk.GetDefaultParameterMap("rigid"))
+        elastixImageFilter.LogToConsoleOff()
+        elastixImageFilter.Execute()
+
+        reslice_img = np.transpose(sitk.GetArrayFromImage(elastixImageFilter.GetResultImage()))
+
+        return reslice_img
 
 
 def _interpolate_space_timing_1D(fitpars, nT, phase_encoding_shape, frequency_encoding_dim, phase_encoding_dims):
