@@ -104,6 +104,16 @@ Intensity
     :show-inheritance:
 
 
+:class:`RandomMotionFromTimecourse`
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. image:: ../../images/random_motion.gif
+   :alt: MRI k-space motion artifacts
+
+.. autoclass:: RandomMotionFromTimeCourse
+    :show-inheritance:
+
+
 :class:`RandomGhosting`
 ^^^^^^^^^^^^^^^^^^^^^^^
 
