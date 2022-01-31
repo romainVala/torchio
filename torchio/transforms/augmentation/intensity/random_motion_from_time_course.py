@@ -68,7 +68,7 @@ class RandomMotionFromTimeCourse(RandomTransform, IntensityTransform):
                  maxGlobalRot: Tuple[float, float] = None, fitpars: Union[List, np.ndarray, str] = None,
                  seed: int = None, displacement_shift_strategy: str = None, freq_encoding_dim: List = [0],
                  oversampling_pct: float = 0.3, preserve_center_frequency_pct: float = 0,
-                 nufft_type: str ='1D_type1', coregistration_to_orig=False, **kwargs):
+                 nufft_type: str ='1D_type2', coregistration_to_orig=False, **kwargs):
         super().__init__(**kwargs)
         self.nT = nT
         self.maxDisp = maxDisp
