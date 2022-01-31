@@ -44,7 +44,7 @@ class RandomMotionFromTimeCourse(RandomTransform, IntensityTransform):
         maxGlobalRot same as  maxGlobalDisp but for Rotations
         fitpars : movement parameters to use (if specified, will be applied as such, no movement is simulated)
         displacement_shift (bool): whether or not to subtract the time course by the values of the center of the kspace
-        freq_encoding_dim (tuple of ints): potential frequency encoding dims to use (one of them is randomly chosen)
+        phase_encoding_choice (tuple of ints): potential phase encoding dims (slowest) to use (one of them is randomly chosen)
         nufft (bool): whether or not to apply nufft (if false, no rotation is applied ! )
         oversampling_pct (float): percentage with which the data will be oversampled in the image domain prior to applying the motion
         verbose (bool): verbose
@@ -66,7 +66,7 @@ class RandomMotionFromTimeCourse(RandomTransform, IntensityTransform):
                  swallowMagnitude: Tuple[float, float] = (2,6), suddenFrequency: Tuple[int, int] = (0,5),
                  suddenMagnitude: Tuple[float, float] = (2,6), maxGlobalDisp: Tuple[float, float] = None,
                  maxGlobalRot: Tuple[float, float] = None, fitpars: Union[List, np.ndarray, str] = None,
-                 seed: int = None, displacement_shift_strategy: str = None, freq_encoding_dim: List = [0],
+                 seed: int = None, displacement_shift_strategy: str = None, phase_encoding_choice: List = [1],
                  oversampling_pct: float = 0.3, preserve_center_frequency_pct: float = 0,
                  nufft_type: str ='1D_type2', coregistration_to_orig=False, **kwargs):
         super().__init__(**kwargs)
@@ -82,8 +82,7 @@ class RandomMotionFromTimeCourse(RandomTransform, IntensityTransform):
         self.maxGlobalRot = maxGlobalRot
         self.displacement_shift_strategy = displacement_shift_strategy
         self.preserve_center_frequency_pct = preserve_center_frequency_pct
-        self.freq_encoding_choice = freq_encoding_dim
-        self.frequency_encoding_dim = self._rand_choice(self.freq_encoding_choice)
+        self.kspace_order = self._rand_kspace_order(phase_encoding_choice)
         self.nufft_type = nufft_type
         self.coregistration_to_orig = coregistration_to_orig
         self.seed = seed
@@ -107,7 +106,7 @@ class RandomMotionFromTimeCourse(RandomTransform, IntensityTransform):
         for image_name, image_dict in self.get_images_dict(subject).items():
             arguments["fitpars"][image_name] = self.fitpars
             arguments["displacement_shift_strategy"][image_name] = self.displacement_shift_strategy
-            arguments["frequency_encoding_dim"][image_name] = self.frequency_encoding_dim
+            arguments["kspace_order"][image_name] = self.kspace_order
             arguments["oversampling_pct"][image_name] = self.oversampling_pct
             arguments["nufft_type"][image_name] = self.nufft_type
             arguments["coregistration_to_orig"][image_name] = self.coregistration_to_orig
@@ -282,6 +281,18 @@ class RandomMotionFromTimeCourse(RandomTransform, IntensityTransform):
         return rand.numpy()
 
 
+    def _rand_kspace_order(self, phase_encoding_choise):
+        if not isinstance(phase_encoding_choise, list):
+            phase_encoding_choise = [phase_encoding_choise]
+        #choose phase axis (among user defined choices, ie list of possibilitie)
+        random_phase_axis = self._rand_choice(phase_encoding_choise)
+        #choose random order
+        kspace_order_axis = torch.randperm(3)
+        # put the phase at the end
+        result = torch.cat([kspace_order_axis[kspace_order_axis!=random_phase_axis],torch.tensor([random_phase_axis])])
+
+        return result.numpy()
+
     def _rand_choice(self, array):
         chosen_idx = torch.randint(0, len(array), (1, ))
         return array[chosen_idx]
@@ -289,7 +300,7 @@ class RandomMotionFromTimeCourse(RandomTransform, IntensityTransform):
 
 class MotionFromTimeCourse(IntensityTransform):
     def __init__(self, fitpars: Union[List, np.ndarray, str], displacement_shift_strategy: str,
-                 frequency_encoding_dim: int, oversampling_pct: float,
+                 kspace_order: int, oversampling_pct: float,
                  nufft_type: str = '1D_type1', coregistration_to_orig: bool = False,
                  **kwargs):
         """
@@ -297,15 +308,14 @@ class MotionFromTimeCourse(IntensityTransform):
         :param nT (int): number of points of the time course
         :param fitpars : movement parameters to use (if specified, will be applied as such, no movement is simulated)
         :param displacement_shift (bool): whether or not to substract the time course by the values of the center of the kspace
-        :param freq_encoding_dim (tuple of ints): potential frequency encoding dims to use (one of them is randomly chosen)
+        :param kspace order (tuple of ints): describing the kspace dim ordering (last is the slowest dimension)
         :param oversampling_pct (float): percentage with which the data will be oversampled in the image domain prior to applying the motion
         :param verbose (bool): verbose
-        Note currently on freq_encoding_dim=0 give the same ringing direction for rotation and translation, dim 1 and 2 are not coherent
         Note fot suddenFrequency and swallowFrequency min max must differ and the max is never achieved, so to have 0 put (0,1)
         """
         super().__init__(**kwargs)
         self.displacement_shift_strategy = displacement_shift_strategy
-        self.frequency_encoding_dim = frequency_encoding_dim
+        self.kspace_order = kspace_order
         self.fitpars = fitpars
         self.oversampling_pct = oversampling_pct
         if not _finufft:
@@ -313,13 +323,13 @@ class MotionFromTimeCourse(IntensityTransform):
         self.to_substract = None
         self.nufft_type = nufft_type
         self.coregistration_to_orig = coregistration_to_orig
-        self.args_names = ("fitpars", "displacement_shift_strategy", "frequency_encoding_dim",
+        self.args_names = ("fitpars", "displacement_shift_strategy", "kspace_order",
                            "oversampling_pct", "nufft_type", "coregistration_to_orig")
 
     def apply_transform(self, subject: Subject) -> Subject:
         fitpars = self.fitpars
         displacement_shift_strategy = self.displacement_shift_strategy
-        frequency_encoding_dim = self.frequency_encoding_dim
+        kspace_order = self.kspace_order
         oversampling_pct = self.oversampling_pct
         nufft_type = self.nufft_type
         coregistration_to_orig = self.coregistration_to_orig
@@ -328,7 +338,7 @@ class MotionFromTimeCourse(IntensityTransform):
             if self.arguments_are_dict():
                 fitpars = self.fitpars[image_name]
                 displacement_shift_strategy = self.displacement_shift_strategy[image_name]
-                frequency_encoding_dim = self.frequency_encoding_dim[image_name]
+                kspace_order = self.kspace_order[image_name]
                 oversampling_pct = self.oversampling_pct[image_name]
                 nufft_type = self.nufft_type[image_name]
                 coregistration_to_orig = self.coregistration_to_orig[image_name]
@@ -344,24 +354,24 @@ class MotionFromTimeCourse(IntensityTransform):
             # fft
             im_freq_domain = self._fft_im(original_image)
 
-            self._calc_dimensions(original_image.shape, frequency_encoding_dim=frequency_encoding_dim)
-
             if displacement_shift_strategy is not None: #demean before interpolation
                 if '1D' in displacement_shift_strategy: #new strategy to demean, just 1D fft
                     fitpars, self.to_substract = self.demean_fitpars(fitpars, im_freq_domain, displacement_shift_strategy,
-                                                                fast_dim = (frequency_encoding_dim, self.phase_encoding_dims[1]))
+                                                                fast_dim = kspace_order[:2])
                     if self.arguments_are_dict():
                         self.fitpars[image_name] = fitpars
                     else:
                         self.fitpars = fitpars #important to save to get the correct fitpar in history
 
-            if fitpars.shape[1] != self.phase_encoding_shape[0]:
-                fitpars = self._interpolate_fitpars(fitpars, len_output=self.phase_encoding_shape[0])
+            phase_encoding_shape = original_image.shape[kspace_order[-1]]
+            #TODO test when oversampling_pct we should add zero in fitpar and not interp to oversampled shape
+            if fitpars.shape[1] != phase_encoding_shape:
+                fitpars = self._interpolate_fitpars(fitpars, len_output=phase_encoding_shape)
 
             if 'type1' in nufft_type:
-                corrupted_im = self._trans_and_nufft_type1(im_freq_domain, fitpars)
+                corrupted_im = self._trans_and_nufft_type1(im_freq_domain, fitpars, kspace_order)
             else: #nufft_type2
-                corrupted_im = self._trans_and_nufft_type2(original_image, fitpars)
+                corrupted_im = self._trans_and_nufft_type2(original_image, fitpars, kspace_order)
             fitpars_interp = None #just to skip in _comput_motion_metrics
 
             # magnitude
@@ -377,24 +387,10 @@ class MotionFromTimeCourse(IntensityTransform):
 
         #todo remove from PR
         self._metrics = compute_motion_metrics(fitpars, fitpars_interp, im_freq_domain,
-                                               self.frequency_encoding_dim, self.phase_encoding_dims)
+                                               fast_dim=np.array(kspace_order)[:2])
 
         return subject
 
-    def _calc_dimensions(self, im_shape, frequency_encoding_dim):
-        """
-        calculate dimensions based on im_shape
-        :param im_shape (list/tuple) : image shape
-        - sets self.phase_encoding_dims, self.phase_encoding_shape, self.num_phase_encoding_steps, self.frequency_encoding_dim
-        """
-        pe_dims = [0, 1, 2]
-        pe_dims.pop(frequency_encoding_dim)
-        self.phase_encoding_dims = pe_dims
-        im_shape = list(im_shape)
-        self.im_shape = im_shape.copy()
-        im_shape.pop(frequency_encoding_dim)
-        self.phase_encoding_shape = im_shape
-        #frequency_encoding_dim = len(im_shape) - 1 if frequency_encoding_dim == -1 else frequency_encoding_dim
 
     def ElastixRegisterAndReslice(self, img_src, img_ref):
         img1 = img_src #.data
@@ -431,7 +427,7 @@ class MotionFromTimeCourse(IntensityTransform):
         return interpolated_fpars
 
 
-    def _rotate_coordinates_1D_motion(self, fitpar, image_shape, Apply_inv_affine=True):
+    def _rotate_coordinates_1D_motion(self, fitpar, image_shape, kspace_order, Apply_inv_affine=True):
         # Apply_inv_affinne is True for the nufft_type1 and false
         # for the nuft2 we also add a 1 voxel translation to fitpar todo check with different resolution
 
@@ -444,32 +440,42 @@ class MotionFromTimeCourse(IntensityTransform):
         #remove 1/x to avoid small scaling
 
         meshgrids = np.meshgrid(*lin_spaces, indexing='ij')
-        # pour une affine on ajoute de 1, dans les coordone du point, mais pour le augmented kspace on ajoute la phase initial, donc 0 ici
+        # pour une affine on ajoute de 1, dans les coordone du point, mais pour le augmented kspace
+        # on ajoute la phase initial, donc 0 ici
         meshgrids.append(np.zeros(image_shape))
 
-        grid_coords = np.array([mg for mg in meshgrids]) #grid_coords = np.array([mg.flatten(order='F') for mg in meshgrids])
-        grid_out = grid_coords
+        grid_out = np.array([mg for mg in meshgrids])
+        dim_order = np.hstack([np.array(0), np.array(kspace_order)+1]) #first dim is 4 (homogeneous coordinates)
+        grid_out = grid_out.transpose(dim_order) #so that wanted phase dim is at the end
+
+        if fitpar.shape[1] != grid_out.shape[3]:
+            raise('dimenssion issue fitpar and phase dim')
         #applied motion at each phase step (on the kspace grid plan)
+
         for nnp in range(fitpar.shape[1]):
             aff = get_matrix_from_euler_and_trans(fitpar[:,nnp])
             if Apply_inv_affine:
                 aff = np.linalg.inv(aff)
-            grid_plane = grid_out[:,:,nnp,:]
+            grid_plane = grid_out[:, :, :, nnp]
             shape_mem = grid_plane.shape
             grid_plane_moved = np.matmul(aff.T, grid_plane.reshape(4,shape_mem[1]*shape_mem[2])) #equ15 A.T * k0
             #grid_plane_moved = np.matmul( grid_plane.reshape(4,shape_mem[1]*shape_mem[2]).T, aff.T).T # r0.T * A.T
-            grid_out[:, :, nnp, :] = grid_plane_moved.reshape(shape_mem)
+            grid_out[:, :, :, nnp] = grid_plane_moved.reshape(shape_mem)
+
+        #tricky to insverse a given transpose
+        dim_order_back = np.array([np.argwhere(dim_order==k)[0][0] for k in range(4)])
+        grid_out = grid_out.transpose(dim_order_back) #go back to original order
 
         return grid_out
 
 
-    def _trans_and_nufft_type1(self, freq_domain, fitpar):
+    def _trans_and_nufft_type1(self, freq_domain, fitpar, kspace_order):
         if not _finufft:
             raise ImportError('finufft not available')
         eps = 1E-7
         f = np.zeros(freq_domain.shape, dtype=np.complex128, order='F')
 
-        grid_out = self._rotate_coordinates_1D_motion(fitpar, freq_domain.shape, Apply_inv_affine=True)
+        grid_out = self._rotate_coordinates_1D_motion(fitpar, freq_domain.shape, kspace_order, Apply_inv_affine=True)
 
         phase_shift = grid_out[3].flatten(order='F')
         exp_phase_shift = np.exp( 1j * phase_shift)  #+1j -> x z == tio, y inverse
@@ -487,11 +493,11 @@ class MotionFromTimeCourse(IntensityTransform):
         return im_out
 
 
-    def _trans_and_nufft_type2(self, image, fitpar, trans_last=False):
+    def _trans_and_nufft_type2(self, image, fitpar, kspace_order ):
         if not _finufft:
             raise ImportError('finufft not available')
         eps = 1E-7
-        grid_out = self._rotate_coordinates_1D_motion(fitpar, image.shape, Apply_inv_affine=False)
+        grid_out = self._rotate_coordinates_1D_motion(fitpar, image.shape, kspace_order, Apply_inv_affine=False)
 
         f = np.zeros(grid_out[0].shape, dtype=np.complex128, order='F').flatten() #(order='F')
         ip = np.asfortranarray(image.numpy().astype(complex) )
@@ -526,6 +532,7 @@ class MotionFromTimeCourse(IntensityTransform):
 
         if fitpars.shape[1] != coef_shaw.shape[0] :
             #just interpolate end to end. at image slowest dimention size
+            print('to test, should be done before ... ')
             fitpars = self._interpolate_fitpars(fitpars, len_output=coef_shaw.shape[0])
 
         to_substract = np.zeros(6)

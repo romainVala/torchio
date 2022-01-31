@@ -146,21 +146,16 @@ def calculate_mean_RMSE_displacment(fit_pars, coef=None):
     return res
 
 
-def compute_motion_metrics( fitpars, fitpars_interp, img_fft, frequency_encoding_dim, phase_encoding_dims):
+def compute_motion_metrics( fitpars, fitpars_interp, img_fft, fast_dim=(0,2)):
     metrics = dict()
     metrics["mean_DispP"] = calculate_mean_Disp_P(fitpars)
     metrics["mean_DispJ"] = calculate_mean_Disp_J(fitpars)
     #metrics["rmse_Disp"] = calculate_mean_RMSE_displacment(fitpars)
     metrics["rmse_Trans"], metrics["rmse_Rot"] = calculate_mean_RMSE_trans_rot(fitpars)
 
-    if isinstance(frequency_encoding_dim,dict):
-        for k in frequency_encoding_dim.keys(): #kind of weird, but we use with only one dict ... (if not probabely same value)
-            val = frequency_encoding_dim[k]
-        frequency_encoding_dim=val
-    dim_to_average = (frequency_encoding_dim, phase_encoding_dims[1] ) # warning, why slowest dim the phase_encoding_dims[0]
 
-    coef_TF = np.sum(abs(img_fft), axis=(0,2)) ;
-    coef_shaw = np.sqrt( np.sum(abs(img_fft)**2, axis=(0,2)) ) ;
+    coef_TF = np.sum(abs(img_fft), axis=tuple(fast_dim)) ;
+    coef_shaw = np.sqrt( np.sum(abs(img_fft)**2, axis=tuple(fast_dim)) ) ;
     # I do not see diff, but may be better to write with complex conjugate, here the fft is done on abs image, so I guess the
     # phase does not matter (Cf todd 2015)
     #print(f'averagin TF coef on dim {dim_to_average} shape coef {coef_TF.shape}')
