@@ -5,7 +5,6 @@ import numpy as np
 from collections import defaultdict
 from typing import Dict, Tuple, List, Union, Optional
 from scipy.interpolate import pchip_interpolate
-from transforms3d.euler import euler2mat
 try:
     import finufft
     _finufft = True
@@ -42,18 +41,19 @@ class RandomMotionFromTimeCourse(RandomTransform, IntensityTransform):
             optional (float, float, float) where the third is the probability to perform this type of noise
         suddenMagnitude (float, float): (min, max) magnitude of the sudden movements to generate
             if euler_motion_params is not None previous parameter are not used
-        maxGlobalDisp (float, float): (min, max) of the global translations. A random number is taken from this interval
-            to scale each translations if they are bigger. If None, it won't be used
+        maxGlobalDisp (float, float): (min, max) of the global translations. A random number is taken from
+            this interval to scale each translations if they are bigger. If None, it won't be used
         maxGlobalRot same as  maxGlobalDisp but for Rotations
-        euler_motion_params : movement parameters to use (if specified, will be applied as such, no movement is simulated)
+        euler_motion_params : movement parameters to use (if specified, no movement is simulated)
         displacement_shift (bool): whether or not to subtract the time course by the values of the center of the kspace
-        phase_encoding_choice (tuple of ints): potential phase encoding dims (slowest) to use (one of them is randomly chosen)
+        phase_encoding_choice (tuple of ints): potential phase encoding dims (slowest) to use
+            (randomly chosen from the input tuple)
         nufft (bool): whether or not to apply nufft (if false, no rotation is applied ! )
-        oversampling_pct (float): percentage with which the data will be oversampled in the image domain prior to applying the motion
-        verbose (bool): verbose
+        oversampling_pct (float): percentage with which the data will be oversampled in the image domain prior
+            to applying the motion
 
-    Note currently on freq_encoding_dim=0 give the same ringing direction for rotation and translation, dim 1 and 2 are not coherent
-    Note for suddenFrequency and swallowFrequency min max must differ and the max is never achieved, so to have 0 put (0,1)
+    Note for suddenFrequency and swallowFrequency min max must differ and the max is never achieved,
+        so to have 0 put (0,1)
 
     todo define parameter as degrees or translation in RandomMotion (specify chosen random distribution)
     todo short description of time course simu + reference gallichan retromoco
@@ -64,14 +64,27 @@ class RandomMotionFromTimeCourse(RandomTransform, IntensityTransform):
 
     """
 
-    def __init__(self, nT: int = 200, maxDisp: Tuple[float, float] = (2,5), maxRot: Tuple[float, float] = (2,5),
-                 noiseBasePars: Tuple[float, float] = (5,15), swallowFrequency: Tuple[float, float] = (0,5),
-                 swallowMagnitude: Tuple[float, float] = (2,6), suddenFrequency: Tuple[int, int] = (0,5),
-                 suddenMagnitude: Tuple[float, float] = (2,6), maxGlobalDisp: Tuple[float, float] = None,
-                 maxGlobalRot: Tuple[float, float] = None, euler_motion_params: Union[List, np.ndarray, str] = None,
-                 seed: int = None, displacement_shift_strategy: str = None, phase_encoding_choice: List = [1],
-                 oversampling_pct: float = 0.3, preserve_center_frequency_pct: float = 0,
-                 nufft_type: str ='1D_type2', coregistration_to_orig=False, **kwargs):
+    def __init__(
+            self,
+            nT: int = 200,
+            maxDisp: Tuple[float, float] = (2,5),
+            maxRot: Tuple[float, float] = (2,5),
+            noiseBasePars: Tuple[float, float] = (5,15),
+            swallowFrequency: Tuple[float, float] = (0,5),
+            swallowMagnitude: Tuple[float, float] = (2,6),
+            suddenFrequency: Tuple[int, int] = (0,5),
+            suddenMagnitude: Tuple[float, float] = (2,6),
+            maxGlobalDisp: Tuple[float, float] = 4,
+            maxGlobalRot: Tuple[float, float] = 4,
+            euler_motion_params: Union[List, np.ndarray, str] = None,
+            displacement_shift_strategy: str = None,
+            phase_encoding_choice: List = [1],
+            oversampling_pct: float = 0.3,
+            preserve_center_frequency_pct: float = 0,
+            nufft_type: str ='1D_type2',
+            coregistration_to_orig=False,
+            **kwargs
+            ):
         super().__init__(**kwargs)
         self.nT = nT
         self.maxDisp = maxDisp
@@ -88,7 +101,6 @@ class RandomMotionFromTimeCourse(RandomTransform, IntensityTransform):
         self.kspace_order = self._rand_kspace_order(phase_encoding_choice)
         self.nufft_type = nufft_type
         self.coregistration_to_orig = coregistration_to_orig
-        self.seed = seed
         if euler_motion_params is None:
             self.euler_motion_params = None
             self.simulate_displacement = True
@@ -117,11 +129,17 @@ class RandomMotionFromTimeCourse(RandomTransform, IntensityTransform):
         self._metrics = transform._metrics
         return transformed
 
-    def random_params(self, maxDisp: Tuple[float, float] = (2,5), maxRot: Tuple[float, float] = (2,5),
-                 noiseBasePars: Tuple[float, float] = (5,15), swallowFrequency: Tuple[float, float] = (0,5),
-                 swallowMagnitude: Tuple[float, float] = (2,6), suddenFrequency: Tuple[int, int] = (0,5),
-                 suddenMagnitude: Tuple[float, float] = (2,6), maxGlobalDisp: Tuple[float, float] = None,
-                 maxGlobalRot: Tuple[float, float] = None):
+    def random_params(self,
+                      maxDisp: Tuple[float, float] = (2,5),
+                      maxRot: Tuple[float, float] = (2,5),
+                      noiseBasePars: Tuple[float, float] = (5,15),
+                      swallowFrequency: Tuple[float, float] = (0,5),
+                      swallowMagnitude: Tuple[float, float] = (2,6),
+                      suddenFrequency: Tuple[int, int] = (0,5),
+                      suddenMagnitude: Tuple[float, float] = (2,6),
+                      maxGlobalDisp: Tuple[float, float] = None,
+                      maxGlobalRot: Tuple[float, float] = None
+                      ):
         maxDisp_r = self._rand_uniform(min=maxDisp[0], max=maxDisp[1])
         maxRot_r = self._rand_uniform(min=maxRot[0], max=maxRot[1])
         noiseBasePars_r = self._rand_uniform(min=noiseBasePars[0], max=noiseBasePars[1])
@@ -184,8 +202,8 @@ class RandomMotionFromTimeCourse(RandomTransform, IntensityTransform):
 
     def _simulate_random_trajectory(self):
         """
-        Simulates the parameters of the transformation through the vector euler_motion_params using 6 dimensions (3 translations and
-        3 rotations).
+        Simulates the parameters of the transformation through the vector euler_motion_params using 6 dimensions
+        (3 translations and 3 rotations).
         """
 
         maxDisp, maxRot, noiseBasePars, swallowMagnitude, suddenMagnitude, swallowFrequency, suddenFrequency, \
@@ -272,7 +290,6 @@ class RandomMotionFromTimeCourse(RandomTransform, IntensityTransform):
             fpars = fpars[:, :-1]
             if np.any(np.isnan(fpars)):
                 warnings.warn('There is still NaN in the euler_motion_params, it will crash the nufft')
-        return fpars
 
 
     def _rand_uniform(self, min=0.0, max=1.0, shape=1):
@@ -300,20 +317,28 @@ class RandomMotionFromTimeCourse(RandomTransform, IntensityTransform):
 
 
 class MotionFromTimeCourse(IntensityTransform, FourierTransform):
-    def __init__(self, euler_motion_params: Union[List, np.ndarray, str], displacement_shift_strategy: str,
-                 kspace_order: int, oversampling_pct: float,
-                 nufft_type: str = '1D_type1', coregistration_to_orig: bool = False,
-                 **kwargs):
-        """
+    r"""Add MRI motion artifact (computed in kspace).
         parameters to simulate 3 types of displacement random noise swllow or sudden mouvement
         :param nT (int): number of points of the time course
-        :param euler_motion_params : movement parameters to use (if specified, will be applied as such, no movement is simulated)
-        :param displacement_shift (bool): whether or not to substract the time course by the values of the center of the kspace
+        :param euler_motion_params : movement parameters to use (if specified, will be applied as such, and no
+            movement is simulated)
+        :param displacement_shift (bool): whether or not to substract the time course by the values of the center
+            of the kspace
         :param kspace order (tuple of ints): describing the kspace dim ordering (last is the slowest dimension)
-        :param oversampling_pct (float): percentage with which the data will be oversampled in the image domain prior to applying the motion
-        :param verbose (bool): verbose
-        Note fot suddenFrequency and swallowFrequency min max must differ and the max is never achieved, so to have 0 put (0,1)
+        :param oversampling_pct (float): percentage with which the data will be oversampled in the image domain
+            prior to applying the motion
         """
+
+    def __init__(
+            self,
+            euler_motion_params: Union[List, np.ndarray, str],
+            displacement_shift_strategy: str,
+            kspace_order: int,
+            oversampling_pct: float,
+            nufft_type: str = '1D_type1',
+            coregistration_to_orig: bool = False,
+            **kwargs
+            ):
         super().__init__(**kwargs)
         self.displacement_shift_strategy = displacement_shift_strategy
         self.kspace_order = kspace_order
@@ -348,19 +373,21 @@ class MotionFromTimeCourse(IntensityTransform, FourierTransform):
                 original_image, voxel_to_pad = oversample_volume_array(original_image, oversampling_pct)
 
             phase_encoding_shape = original_image.shape[kspace_order[-1]]
-            #TODO test when oversampling_pct we should add zero in euler_motion_params and not interp to oversampled shape
+            #TODO test if oversampling_pct we should add zero in euler_motion_params and not interp to oversampled shape
             if euler_motion_params.shape[1] != phase_encoding_shape:
-                euler_motion_params = self._interpolate_euler_motion_params(euler_motion_params, len_output=phase_encoding_shape)
+                euler_motion_params = self._interpolate_euler_motion_params(euler_motion_params,
+                                                                            len_output=phase_encoding_shape)
 
             if displacement_shift_strategy is not None:
                 euler_motion_params, self.to_substract = self.demean_euler_motion_params(euler_motion_params,
                                                                  self.fourier_transform_for_nufft(original_image),
                                                                  displacement_shift_strategy,
                                                                  fast_dim = kspace_order[:2])
+                # important to save to get the corrected euler_motion_params in history
                 if self.arguments_are_dict():
                     self.euler_motion_params[image_name] = euler_motion_params
                 else:
-                    self.euler_motion_params = euler_motion_params #important to save to get the corrected euler_motion_params in history
+                    self.euler_motion_params = euler_motion_params
 
             corrupted_im = self.apply_motion_in_kspace(original_image, euler_motion_params, kspace_order, nufft_type)
 
@@ -402,9 +429,16 @@ class MotionFromTimeCourse(IntensityTransform, FourierTransform):
 
 
 
-    def _interpolate_euler_motion_params(self, euler_motion_params, tr_fpars=None, tr_to_interpolate=2.4, len_output=250):
+    def _interpolate_euler_motion_params(
+            self,
+            euler_motion_params,
+            tr_fpars = None,
+            tr_to_interpolate = 2.4,
+            len_output = 250
+            ):
+
         fpars_length = euler_motion_params.shape[1]
-        if tr_fpars is None: #case where euler_motion_paramst where give as it in random motion (the all timecourse is fitted to kspace
+        if tr_fpars is None:
             xp = np.linspace(0,1,fpars_length)
             x  = np.linspace(0,1,len_output)
         else:
@@ -423,8 +457,8 @@ class MotionFromTimeCourse(IntensityTransform, FourierTransform):
         # for the nuft2 we also add a 1 voxel translation to euler_motion_params todo check with different resolution
 
         if Apply_inv_affine is False: #case for nufft_type2 add a one voxel shift
-            off_center = np.array([(x / 2 - x // 2) * 2 for x in image_shape])  # one voxel shift if odd ! todo resolution ?
-            # aff_offenter = np.eye(4); aff_offenter[:3,3] = -off_center
+            # one voxel shift if odd ! todo resolution ?
+            off_center = np.array([(x / 2 - x // 2) * 2 for x in image_shape])
             euler_motion_params[:3, :] = euler_motion_params[:3, :] - \
                                          np.repeat(np.expand_dims(off_center, 1), euler_motion_params.shape[1], axis=1)
 
@@ -469,12 +503,14 @@ class MotionFromTimeCourse(IntensityTransform, FourierTransform):
         eps = 1E-7
         f = np.zeros(freq_domain.shape, dtype=np.complex128, order='F')
 
-        grid_out = self._rotate_coordinates_1D_motion(euler_motion_params, freq_domain.shape, kspace_order, Apply_inv_affine=True)
+        grid_out = self._rotate_coordinates_1D_motion(euler_motion_params, freq_domain.shape,
+                                                      kspace_order, Apply_inv_affine=True)
 
         phase_shift = grid_out[3].flatten(order='F')
         exp_phase_shift = np.exp( 1j * phase_shift)  #+1j -> x z == tio, y inverse
 
-        freq_domain_data_flat = freq_domain.flatten(order='F')* exp_phase_shift # same F order as phase_shift if not inversion x z
+        # same F order as phase_shift if not inversion x z
+        freq_domain_data_flat = freq_domain.flatten(order='F')* exp_phase_shift
 
         finufft.nufft3d1(grid_out[0].flatten(order='F'), grid_out[1].flatten(order='F'),
                          grid_out[2].flatten(order='F'), freq_domain_data_flat,
@@ -489,12 +525,14 @@ class MotionFromTimeCourse(IntensityTransform, FourierTransform):
 
     def _trans_and_nufft_type2(self, image, euler_motion_params, kspace_order ):
         eps = 1E-7
-        grid_out = self._rotate_coordinates_1D_motion(euler_motion_params, image.shape, kspace_order, Apply_inv_affine=False)
+        grid_out = self._rotate_coordinates_1D_motion(euler_motion_params, image.shape,
+                                                      kspace_order, Apply_inv_affine=False)
 
         f = np.zeros(grid_out[0].shape, dtype=np.complex128, order='F').flatten() #(order='F')
         ip = np.asfortranarray(image.numpy().astype(complex) )
 
-        finufft.nufft3d2(grid_out[0].flatten(order='F'), grid_out[1].flatten(order='F'), grid_out[2].flatten(order='F'), ip,
+        finufft.nufft3d2(grid_out[0].flatten(order='F'), grid_out[1].flatten(order='F'),
+                         grid_out[2].flatten(order='F'), ip,
                          eps=eps, out=f, debug=0, spread_debug=0, spread_sort=2, fftw=0, modeord=0,
                          chkbnds=0, upsampfac=1.25, isign=-1)  # upsampling at 1.25 saves time at low precisions
 
@@ -522,23 +560,27 @@ class MotionFromTimeCourse(IntensityTransform, FourierTransform):
         #return a new time course, shifted .
         # we assume motion only in the slowest phase dimension (1D motion)
 
-        #coef_shaw = np.sqrt( np.sum(abs(original_image_fft**2), axis=(0,2)) ) ;
-        #should be equivalent if fft is done from real image, but not if the phase is acquired, CF Todd 2015 "Prospective motion correction of 3D echo-planar imaging data for functional MRI using optical tracking"
+        # coef_shaw = np.sqrt( np.sum(abs(original_image_fft**2), axis=(0,2)) ) ;
+        # should be equivalent if fft is done from real image, but not if the phase is acquired,
+        # CF Todd 2015 "Prospective motion correction of 3D echo-planar imaging data for functional MRI
+        # using optical tracking"
         if displacement_shift_strategy == '1D_wTF':
-            coef_shaw = np.abs( np.sqrt(np.sum( original_image_fft * np.conjugate(original_image_fft), axis=fast_dim )));
+            coef_shaw = np.abs( np.sqrt(np.sum( original_image_fft * np.conjugate(original_image_fft),
+                                                axis=fast_dim )));
         elif displacement_shift_strategy == '1D_wTF2':
             #coef_shaw = np.abs( np.sum( original_image_fft * np.conjugate(original_image_fft), axis=fast_dim ));
             coef_shaw = np.abs( np.sum( original_image_fft **2, axis=fast_dim ))
             coef_shaw = coef_shaw / np.sum(coef_shaw)
         else:
-            warnings.warn(f'No motion time course demean defined, for parameter displacement_shift_strategy {displacement_shift_strategy}')
+            warnings.warn(f'No motion time course demean defined, for parameter displacement_shift_strategy '
+                          f'{displacement_shift_strategy}')
 
         to_substract = np.zeros(6)
         for i in range(0,6):
             to_substract[i] = np.sum(euler_motion_params[i,:] * coef_shaw) / np.sum(coef_shaw)
             euler_motion_params[i,:] = euler_motion_params[i,:] - to_substract[i]
 
-        return euler_motion_params, to_substract  #note the 1D euler_motion_params, may have been interpolated to phase dim but should not matter for the rest
+        return euler_motion_params, to_substract
 
 
 def oversample_volume_array(volume, oversampling_pct):
@@ -563,18 +605,109 @@ def crop_volume_array(volume, voxel_to_crop):
 
 
 def get_matrix_from_euler_and_trans(P, rot_order='yxz', rotation_center=None):
-        # default choosen as the same default as simpleitk
-        rot = np.deg2rad(P[3:6])
-        aff = np.eye(4)
-        aff[:3,3] = P[:3]  #translation
-        if rot_order=='xyz':
-            aff[:3,:3]  = euler2mat(rot[0], rot[1], rot[2], axes='sxyz')
-        elif rot_order=='yxz':
-            aff[:3,:3] = euler2mat(rot[1], rot[0], rot[2], axes='syxz') #strange simpleitk convention of euler ... ?
-        else:
-            raise(f'rotation order {rot_order} not implemented')
+    # default choosen as the same default as simpleitk
+    rot = np.deg2rad(P[3:6])
+    aff = np.eye(4)
+    aff[:3,3] = P[:3]  #translation
+    if rot_order=='xyz':
+        aff[:3,:3]  = euler2mat(rot[0], rot[1], rot[2], axes='sxyz')
+    elif rot_order=='yxz':
+        aff[:3,:3] = euler2mat(rot[1], rot[0], rot[2], axes='syxz') #strange simpleitk convention of euler ... ?
+    else:
+        raise(f'rotation order {rot_order} not implemented')
 
-        if rotation_center is not None:
-            aff = change_affine_rotation_center(aff, rotation_center)
-        return aff
+    if rotation_center is not None:
+        aff = change_affine_rotation_center(aff, rotation_center)
+    return aff
 
+
+# to avoid, an extra dependency, athough this one is nice work from mathew Brett!
+# I copy paste the function from transforms3d.euler import euler2mat
+# map axes strings to/from tuples of inner axis, parity, repetition, frame
+
+# axis sequences for Euler angles
+_NEXT_AXIS = [1, 2, 0, 1]
+
+# map axes strings to/from tuples of inner axis, parity, repetition, frame
+_AXES2TUPLE = {
+    'sxyz': (0, 0, 0, 0), 'sxyx': (0, 0, 1, 0), 'sxzy': (0, 1, 0, 0),
+    'sxzx': (0, 1, 1, 0), 'syzx': (1, 0, 0, 0), 'syzy': (1, 0, 1, 0),
+    'syxz': (1, 1, 0, 0), 'syxy': (1, 1, 1, 0), 'szxy': (2, 0, 0, 0),
+    'szxz': (2, 0, 1, 0), 'szyx': (2, 1, 0, 0), 'szyz': (2, 1, 1, 0),
+    'rzyx': (0, 0, 0, 1), 'rxyx': (0, 0, 1, 1), 'ryzx': (0, 1, 0, 1),
+    'rxzx': (0, 1, 1, 1), 'rxzy': (1, 0, 0, 1), 'ryzy': (1, 0, 1, 1),
+    'rzxy': (1, 1, 0, 1), 'ryxy': (1, 1, 1, 1), 'ryxz': (2, 0, 0, 1),
+    'rzxz': (2, 0, 1, 1), 'rxyz': (2, 1, 0, 1), 'rzyz': (2, 1, 1, 1)}
+
+_TUPLE2AXES = dict((v, k) for k, v in _AXES2TUPLE.items())
+
+def euler2mat(ai, aj, ak, axes='sxyz'):
+    """Return rotation matrix from Euler angles and axis sequence.
+
+    Parameters
+    ----------
+    ai : float
+        First rotation angle (according to `axes`).
+    aj : float
+        Second rotation angle (according to `axes`).
+    ak : float
+        Third rotation angle (according to `axes`).
+    axes : str, optional
+        Axis specification; one of 24 axis sequences as string or encoded
+        tuple - e.g. ``sxyz`` (the default).
+
+    Returns
+    -------
+    mat : array (3, 3)
+        Rotation matrix or affine.
+
+    Examples
+    --------
+    >>> R = euler2mat(1, 2, 3, 'syxz')
+    >>> np.allclose(np.sum(R[0]), -1.34786452)
+    True
+    >>> R = euler2mat(1, 2, 3, (0, 1, 0, 1))
+    >>> np.allclose(np.sum(R[0]), -0.383436184)
+    True
+    """
+    try:
+        firstaxis, parity, repetition, frame = _AXES2TUPLE[axes]
+    except (AttributeError, KeyError):
+        _TUPLE2AXES[axes]  # validation
+        firstaxis, parity, repetition, frame = axes
+
+    i = firstaxis
+    j = _NEXT_AXIS[i+parity]
+    k = _NEXT_AXIS[i-parity+1]
+    if frame:
+        ai, ak = ak, ai
+    if parity:
+        ai, aj, ak = -ai, -aj, -ak
+
+    si, sj, sk = math.sin(ai), math.sin(aj), math.sin(ak)
+    ci, cj, ck = math.cos(ai), math.cos(aj), math.cos(ak)
+    cc, cs = ci*ck, ci*sk
+    sc, ss = si*ck, si*sk
+
+    M = np.eye(3)
+    if repetition:
+        M[i, i] = cj
+        M[i, j] = sj*si
+        M[i, k] = sj*ci
+        M[j, i] = sj*sk
+        M[j, j] = -cj*ss+cc
+        M[j, k] = -cj*cs-sc
+        M[k, i] = -sj*ck
+        M[k, j] = cj*sc+cs
+        M[k, k] = cj*cc-ss
+    else:
+        M[i, i] = cj*ck
+        M[i, j] = sj*sc-cs
+        M[i, k] = sj*cc+ss
+        M[j, i] = cj*sk
+        M[j, j] = sj*ss+cc
+        M[j, k] = sj*cs-sc
+        M[k, i] = -sj
+        M[k, j] = cj*si
+        M[k, k] = cj*ci
+    return M
