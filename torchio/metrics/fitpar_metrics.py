@@ -146,7 +146,7 @@ def calculate_mean_RMSE_displacment(fit_pars, coef=None):
     return res
 
 
-def compute_motion_metrics( fitpars, fitpars_interp, img_fft, fast_dim=(0,2)):
+def compute_motion_metrics( fitpars, img_fft, fast_dim=(0,2)):
     metrics = dict()
     metrics["mean_DispP"] = calculate_mean_Disp_P(fitpars)
     metrics["mean_DispJ"] = calculate_mean_Disp_J(fitpars)
@@ -175,18 +175,7 @@ def compute_motion_metrics( fitpars, fitpars_interp, img_fft, fast_dim=(0,2)):
 
     #compute meand disp as weighted mean (weigths beeing TF coef)
     w_coef = np.abs(img_fft)
-    if fitpars_interp is not None:
-        ff = fitpars_interp
-        disp_mean=[]
-        for i in range(0, 6):
-            ffi = ff[i].reshape(-1)
-            w_coef_flat = w_coef.reshape(-1)
-            metrics[f'wTF_Disp_{i}'] = np.sum(ffi * w_coef_flat) / np.sum(w_coef_flat)
-            metrics[f'wTF2_Disp_{i}'] = np.sum(ffi * w_coef_flat**2) / np.sum(w_coef_flat**2)
-            disp_mean.append(  np.sum(np.abs(ffi) * w_coef_flat) / np.sum(w_coef_flat) )
-        #metrics['wTF_absDisp_t'] = np.mean(disp_mean[:3])
-        #metrics['wTF_absDisp_r'] = np.mean(disp_mean[3:])
-        #metrics['wTF_absDisp_a'] = np.mean(disp_mean)
+
     ff = fitpars
     for i in range(0, 6):
         ffi = ff[i].reshape(-1)
