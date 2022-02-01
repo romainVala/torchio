@@ -29,7 +29,8 @@ class RandomMotionFromTimeCourse(RandomTransform, IntensityTransform):
     parameters relatated to simulate 3 types of displacement random noise swllow or sudden mouvement
 
     Args:
-        nT (int): number of points of the time course
+        nT (int): number of points of the simulated time course (not very important, as it will be interpolated afer
+            to the select phase axis dimension
         maxDisp (float, float): (min, max) value of displacement in the perlin noise (useless if noiseBasePars is 0)
         maxRot (float, float): (min, max) value of rotation in the perlin noise (useless if noiseBasePars is 0)
         noiseBasePars (float, float): (min, max) base value of the perlin noise to generate for the time course
@@ -42,15 +43,31 @@ class RandomMotionFromTimeCourse(RandomTransform, IntensityTransform):
         suddenMagnitude (float, float): (min, max) magnitude of the sudden movements to generate
             if euler_motion_params is not None previous parameter are not used
         maxGlobalDisp (float, float): (min, max) of the global translations. A random number is taken from
-            this interval to scale each translations if they are bigger. If None, it won't be used
+            this interval to scale each translations if they are bigger. If None, it won't be used. Note that the
+            previous maxDisp maxRot swallowMagnitude suddenMagnitude are controling the amplitude of the perturbation
+            but we then add all of then so that at the end we do not control the global amplitude. In order to find
+            the global amplitude (and scaled it), we take the max of all 2 by 2 positions distance
         maxGlobalRot same as  maxGlobalDisp but for Rotations
-        euler_motion_params : movement parameters to use (if specified, no movement is simulated)
-        displacement_shift (bool): whether or not to subtract the time course by the values of the center of the kspace
+        preserve_center_frequency_pct : percentage of the total time to be set to zero for simulated euler motion
+            parameters. (Usefull to avoid big global displacement)
+        euler_motion_params : movement parameters to use (if specified, no movement is simulated). Note that in this
+            case this is no more a random transform, and one could use directly MotionFromTimeCourse.
+            if you modify this attribute after the class instance has been created, you need to also set the
+            attribute simulate_displacement to false
+        displacement_shift (string): How to correct for Global displacement, (ie which choice of reference position)
+            possible choice are None (default)/ "center_zero" / "1D_wFT" / "1D_wFT2"
+            "center_zero": kspace center is the reference. "1D_wFT": reference is a weighted mean of position,
+            where the weights are the fft coeficient (summed over the kspace plane). "1D_wFT2" same as 1D_wFT
+            but the weights are squared (very similar to center_zero)
+        coregistration_to_orig (bool): Default false. If true it will use Elastix, to co-register the corrupted
+            motion volume to the original one. This is the prefer solution to avoid any global displacement
+            as none of the displacement_shift strategies defined above will be always correct.
+            (but this comes with an extra computational cost)
         phase_encoding_choice (tuple of ints): potential phase encoding dims (slowest) to use
             (randomly chosen from the input tuple)
-        nufft (bool): whether or not to apply nufft (if false, no rotation is applied ! )
         oversampling_pct (float): percentage with which the data will be oversampled in the image domain prior
             to applying the motion
+        nufft_type (string): "1D_type2" (default) or "1D_type1" for testing purpose, should not be changed
 
     Note for suddenFrequency and swallowFrequency min max must differ and the max is never achieved,
         so to have 0 put (0,1)
@@ -76,13 +93,13 @@ class RandomMotionFromTimeCourse(RandomTransform, IntensityTransform):
             suddenMagnitude: Tuple[float, float] = (2,6),
             maxGlobalDisp: Tuple[float, float] = 4,
             maxGlobalRot: Tuple[float, float] = 4,
+            preserve_center_frequency_pct: float = 0,
             euler_motion_params: Union[List, np.ndarray, str] = None,
             displacement_shift_strategy: str = None,
+            coregistration_to_orig=False,
             phase_encoding_choice: List = [1],
             oversampling_pct: float = 0.3,
-            preserve_center_frequency_pct: float = 0,
             nufft_type: str ='1D_type2',
-            coregistration_to_orig=False,
             **kwargs
             ):
         super().__init__(**kwargs)
@@ -108,7 +125,7 @@ class RandomMotionFromTimeCourse(RandomTransform, IntensityTransform):
             self.euler_motion_params = read_euler_motion_params(euler_motion_params)
             self.simulate_displacement = False
         self.oversampling_pct = oversampling_pct
-        self.to_substract = None
+        self.to_subtract = None
 
 
     def apply_transform(self, subject: Subject) -> Subject:
@@ -246,11 +263,6 @@ class RandomMotionFromTimeCourse(RandomTransform, IntensityTransform):
 
         if self.preserve_center_frequency_pct:
             center = np.int32(np.floor(euler_motion_params.shape[1] / 2))
-            if self.displacement_shift_strategy == "center_zero":  # added here to remove global motion outside center
-                to_substract = euler_motion_params[:, center]
-                to_substract_tile = np.tile(to_substract[..., np.newaxis], (1, euler_motion_params.shape[1]))
-                euler_motion_params = euler_motion_params - to_substract_tile
-
             nbpts = np.int32(np.floor(euler_motion_params.shape[1] * self.preserve_center_frequency_pct / 2))
             euler_motion_params[:, center - nbpts:center + nbpts] = 0
 
@@ -318,25 +330,35 @@ class RandomMotionFromTimeCourse(RandomTransform, IntensityTransform):
 
 class MotionFromTimeCourse(IntensityTransform, FourierTransform):
     r"""Add MRI motion artifact (computed in kspace).
-        parameters to simulate 3 types of displacement random noise swllow or sudden mouvement
-        :param nT (int): number of points of the time course
-        :param euler_motion_params : movement parameters to use (if specified, will be applied as such, and no
-            movement is simulated)
-        :param displacement_shift (bool): whether or not to substract the time course by the values of the center
-            of the kspace
-        :param kspace order (tuple of ints): describing the kspace dim ordering (last is the slowest dimension)
-        :param oversampling_pct (float): percentage with which the data will be oversampled in the image domain
-            prior to applying the motion
+
+        euler_motion_params : movement parameters to use (
+        displacement_shift (string): How to correct for Global displacement, (ie which choice of reference position)
+            possible choice are None (default)/ "center_zero" / "1D_wFT" / "1D_wFT2"
+            "center_zero": kspace center is the reference. "1D_wFT": reference is a weighted mean of position,
+            where the weights are the fft coeficient (summed over the kspace plane). "1D_wFT2" same as 1D_wFT
+            but the weights are squared (very similar to center_zero)
+        coregistration_to_orig (bool): Default false. If true it will use Elastix, to co-register the corrupted
+            motion volume to the original one. This is the prefer solution to avoid any global displacement
+            as none of the displacement_shift strategies defined above will be always correct.
+            (but this comes with an extra computational cost)
+        kspace order (3 tuple) dimension ordering of the kspace axis, the last one will then define the slowest varying
+            axis, and this is where the motion takes place (2 other dimension are assumed, step wise stationary)
+        phase_encoding_choice (tuple of ints): potential phase encoding dims (slowest) to use
+            (randomly chosen from the input tuple)
+        oversampling_pct (float): percentage with which the data will be oversampled in the image domain prior
+            to applying the motion
+        nufft_type (string): "1D_type2" (default) or "1D_type1" for testing purpose, should not be changed
+
         """
 
     def __init__(
             self,
             euler_motion_params: Union[List, np.ndarray, str],
-            displacement_shift_strategy: str,
-            kspace_order: int,
-            oversampling_pct: float,
-            nufft_type: str = '1D_type1',
+            displacement_shift_strategy: str = None,
             coregistration_to_orig: bool = False,
+            kspace_order: int = (0,2,1),
+            oversampling_pct: float = 0,
+            nufft_type: str = '1D_type1',
             **kwargs
             ):
         super().__init__(**kwargs)
@@ -344,7 +366,7 @@ class MotionFromTimeCourse(IntensityTransform, FourierTransform):
         self.kspace_order = kspace_order
         self.euler_motion_params = euler_motion_params
         self.oversampling_pct = oversampling_pct
-        self.to_substract = None
+        self.to_subtract = None
         self.nufft_type = nufft_type
         self.coregistration_to_orig = coregistration_to_orig
         self.args_names = ("euler_motion_params", "displacement_shift_strategy", "kspace_order",
@@ -379,7 +401,7 @@ class MotionFromTimeCourse(IntensityTransform, FourierTransform):
                                                                             len_output=phase_encoding_shape)
 
             if displacement_shift_strategy is not None:
-                euler_motion_params, self.to_substract = self.demean_euler_motion_params(euler_motion_params,
+                euler_motion_params, self.to_subtract = self.demean_euler_motion_params(euler_motion_params,
                                                                  self.fourier_transform_for_nufft(original_image),
                                                                  displacement_shift_strategy,
                                                                  fast_dim = kspace_order[:2])
@@ -554,20 +576,28 @@ class MotionFromTimeCourse(IntensityTransform, FourierTransform):
 
         return corrupted_im
 
-    def demean_euler_motion_params(self, euler_motion_params, original_image_fft, displacement_shift_strategy,
+    def demean_euler_motion_params(self, euler_motion_params, original_image, displacement_shift_strategy,
                        fast_dim=(0,2)):
         #compute a weighted average of motion time course, (separatly on each Euler parameters)
         #return a new time course, shifted .
         # we assume motion only in the slowest phase dimension (1D motion)
 
+        if displacement_shift_strategy == "center_zero":
+            center = np.int32(np.floor(euler_motion_params.shape[1] / 2))
+            to_subtract = euler_motion_params[:, center]
+            to_subtract_tile = np.tile(to_subtract[..., np.newaxis], (1, euler_motion_params.shape[1]))
+            euler_motion_params = euler_motion_params - to_subtract_tile
+            return euler_motion_params, to_subtract
+
+        original_image_fft = self.fourier_transform_for_nufft(original_image)
         # coef_shaw = np.sqrt( np.sum(abs(original_image_fft**2), axis=(0,2)) ) ;
         # should be equivalent if fft is done from real image, but not if the phase is acquired,
         # CF Todd 2015 "Prospective motion correction of 3D echo-planar imaging data for functional MRI
         # using optical tracking"
-        if displacement_shift_strategy == '1D_wTF':
+        if displacement_shift_strategy == '1D_wFT':
             coef_shaw = np.abs( np.sqrt(np.sum( original_image_fft * np.conjugate(original_image_fft),
                                                 axis=fast_dim )));
-        elif displacement_shift_strategy == '1D_wTF2':
+        elif displacement_shift_strategy == '1D_wFT2':
             #coef_shaw = np.abs( np.sum( original_image_fft * np.conjugate(original_image_fft), axis=fast_dim ));
             coef_shaw = np.abs( np.sum( original_image_fft **2, axis=fast_dim ))
             coef_shaw = coef_shaw / np.sum(coef_shaw)
@@ -575,12 +605,12 @@ class MotionFromTimeCourse(IntensityTransform, FourierTransform):
             warnings.warn(f'No motion time course demean defined, for parameter displacement_shift_strategy '
                           f'{displacement_shift_strategy}')
 
-        to_substract = np.zeros(6)
+        to_subtract = np.zeros(6)
         for i in range(0,6):
-            to_substract[i] = np.sum(euler_motion_params[i,:] * coef_shaw) / np.sum(coef_shaw)
-            euler_motion_params[i,:] = euler_motion_params[i,:] - to_substract[i]
+            to_subtract[i] = np.sum(euler_motion_params[i,:] * coef_shaw) / np.sum(coef_shaw)
+            euler_motion_params[i,:] = euler_motion_params[i,:] - to_subtract[i]
 
-        return euler_motion_params, to_substract
+        return euler_motion_params, to_subtract
 
 
 def oversample_volume_array(volume, oversampling_pct):
