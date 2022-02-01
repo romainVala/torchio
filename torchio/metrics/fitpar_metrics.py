@@ -3,6 +3,10 @@ from transforms3d.euler import euler2mat
 
 #does not work ... circular import
 #from ..transforms.augmentation.intensity.random_motion_from_time_course import get_matrix_from_euler_and_trans
+def change_affine_rotation_center(A, new_center):
+    aff_center = np.eye(4);
+    aff_center[:3, 3] = np.array(new_center)
+    return np.dot(aff_center, np.dot(A, np.linalg.inv(aff_center)))
 
 #warning duplicate function from random_motion_from_time_course ... (because cant import ...)
 def get_matrix_from_euler_and_trans(P, rot_order='yxz', rotation_center=None):
