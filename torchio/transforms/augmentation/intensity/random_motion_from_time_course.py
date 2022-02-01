@@ -18,6 +18,9 @@ from ... import IntensityTransform
 from ....data.io import nib_to_sitk
 from ....data.subject import Subject
 from ....metrics.fitpar_metrics import compute_motion_metrics #todo remove from PR
+from ...preprocessing.spatial.crop import Crop
+from ...preprocessing.spatial.pad import Pad
+
 
 class RandomMotionFromTimeCourse(RandomTransform, IntensityTransform):
     r"""Simulate motion artefact
@@ -348,8 +351,7 @@ class MotionFromTimeCourse(IntensityTransform):
             original_image = np.squeeze(image_dict['data'])
 
             if oversampling_pct > 0.0:
-                original_image_shape = original_image.shape
-                original_image = self._oversubject(original_image, oversampling_pct)
+                original_image = self._oversample_volume(original_image, oversampling_pct)
 
             # fft
             im_freq_domain = self._fft_im(original_image)
@@ -372,7 +374,6 @@ class MotionFromTimeCourse(IntensityTransform):
                 corrupted_im = self._trans_and_nufft_type1(im_freq_domain, fitpars, kspace_order)
             else: #nufft_type2
                 corrupted_im = self._trans_and_nufft_type2(original_image, fitpars, kspace_order)
-            fitpars_interp = None #just to skip in _comput_motion_metrics
 
             # magnitude
             corrupted_im = abs(corrupted_im)
@@ -380,13 +381,13 @@ class MotionFromTimeCourse(IntensityTransform):
                 corrupted_im = self.ElastixRegisterAndReslice(corrupted_im, original_image)
 
             if oversampling_pct > 0.0:
-                corrupted_im = self.crop_volume(corrupted_im, original_image_shape)
+                corrupted_im = self._crop_volume(corrupted_im)
 
             image_dict["data"] = corrupted_im[np.newaxis, ...]
             image_dict['data'] = torch.from_numpy(image_dict['data']).float()
 
         #todo remove from PR
-        self._metrics = compute_motion_metrics(fitpars, fitpars_interp, im_freq_domain,
+        self._metrics = compute_motion_metrics(fitpars, im_freq_domain,
                                                fast_dim=np.array(kspace_order)[:2])
 
         return subject
@@ -508,9 +509,8 @@ class MotionFromTimeCourse(IntensityTransform):
 
         f = f * np.exp(-1j * grid_out[3].flatten(order='F'))
         f = f.reshape(ip.shape,order='F')
-        #f = np.ascontiguousarray(f)  #pas l'aire de changer grand chose
-        iout = abs( np.fft.ifftshift(np.fft.ifftn(f)))
-        #iout = abs( np.fft.ifftshift(np.fft.ifftn(np.fft.fftshift(f))))
+
+        iout = abs( _ifft_im(f) )
         return iout
 
 
@@ -541,6 +541,41 @@ class MotionFromTimeCourse(IntensityTransform):
             fitpars[i,:] = fitpars[i,:] - to_substract[i]
 
         return fitpars, to_substract  #note the 1D fitpar, may have been interpolated to phase dim but should not matter for the rest
+
+@staticmethod
+def _fft_im(image):
+    output = (np.fft.fftshift(np.fft.fftn(np.fft.ifftshift(image)))).astype(np.complex128)
+    return output
+
+
+@staticmethod
+def _ifft_im(freq_domain):
+    output = np.fft.ifftshift(np.fft.ifftn(freq_domain))
+    return output
+    #fi_image = np.fft.ifftshift(np.fft.ifft(np.fft.fftshift(fi_phase), axis=1))
+
+
+@staticmethod
+def oversample_volume(self, volume, oversampling_pct):
+    data_shape = list(volume.shape)
+    self.to_pad = (np.ceil(np.asarray(data_shape) * oversampling_pct / 2) * 2).astype(int)
+    tpad = Pad(self.to_pad)
+    if isinstance(data,torch.Tensor):
+        volume = volume.unsqueeze(0)
+    else : #numpy
+        volume = np.expand_dims(volume,0)
+    vol_pad = tpad(volume)
+    return vol_pad.squeeze()
+
+@staticmethod
+def crop_volume(self, volume):
+    if isinstance(data,torch.Tensor):
+        volume = volume.unsqueeze(0)
+    else : #numpy
+        volume = np.expand_dims(volume,0)
+    tcrop = Crop(self.to_pad)
+    vol_crop = tcrop(volume)
+    return vol_crop.squeeze()
 
 
 def get_matrix_from_euler_and_trans(P, rot_order='yxz', rotation_center=None):
