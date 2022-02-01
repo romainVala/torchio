@@ -14,7 +14,7 @@ except ImportError:
 import SimpleITK as sitk
 
 from .. import RandomTransform
-from ... import IntensityTransform
+from ... import IntensityTransform, FourierTransform
 from ....data.io import nib_to_sitk
 from ....data.subject import Subject
 from ....metrics.fitpar_metrics import compute_motion_metrics #todo remove from PR
@@ -96,8 +96,6 @@ class RandomMotionFromTimeCourse(RandomTransform, IntensityTransform):
             self.fitpars = read_fitpars(fitpars)
             self.simulate_displacement = False
         self.oversampling_pct = oversampling_pct
-        if not _finufft:
-            raise ImportError('finufft cannot be imported')
         self.to_substract = None
 
 
@@ -301,7 +299,7 @@ class RandomMotionFromTimeCourse(RandomTransform, IntensityTransform):
         return array[chosen_idx]
 
 
-class MotionFromTimeCourse(IntensityTransform):
+class MotionFromTimeCourse(IntensityTransform, FourierTransform):
     def __init__(self, fitpars: Union[List, np.ndarray, str], displacement_shift_strategy: str,
                  kspace_order: int, oversampling_pct: float,
                  nufft_type: str = '1D_type1', coregistration_to_orig: bool = False,
@@ -321,8 +319,6 @@ class MotionFromTimeCourse(IntensityTransform):
         self.kspace_order = kspace_order
         self.fitpars = fitpars
         self.oversampling_pct = oversampling_pct
-        if not _finufft:
-            raise ImportError('finufft cannot be imported')
         self.to_substract = None
         self.nufft_type = nufft_type
         self.coregistration_to_orig = coregistration_to_orig
@@ -332,7 +328,7 @@ class MotionFromTimeCourse(IntensityTransform):
     def apply_transform(self, subject: Subject) -> Subject:
         fitpars = self.fitpars
         displacement_shift_strategy = self.displacement_shift_strategy
-        kspace_order = self.kspace_order
+        kspace_order = tuple(self.kspace_order)
         oversampling_pct = self.oversampling_pct
         nufft_type = self.nufft_type
         coregistration_to_orig = self.coregistration_to_orig
@@ -341,39 +337,32 @@ class MotionFromTimeCourse(IntensityTransform):
             if self.arguments_are_dict():
                 fitpars = self.fitpars[image_name]
                 displacement_shift_strategy = self.displacement_shift_strategy[image_name]
-                kspace_order = self.kspace_order[image_name]
+                kspace_order = tuple(self.kspace_order[image_name])
                 oversampling_pct = self.oversampling_pct[image_name]
                 nufft_type = self.nufft_type[image_name]
                 coregistration_to_orig = self.coregistration_to_orig[image_name]
 
-            #image_data = np.squeeze(image_dict['data'])[..., np.newaxis, np.newaxis]
-            #original_image = np.squeeze(image_data[:, :, :, 0, 0])
             original_image = np.squeeze(image_dict['data'])
 
             if oversampling_pct > 0.0:
-                original_image = self._oversample_volume(original_image, oversampling_pct)
-
-            # fft
-            im_freq_domain = self._fft_im(original_image)
-
-            if displacement_shift_strategy is not None: #demean before interpolation
-                if '1D' in displacement_shift_strategy: #new strategy to demean, just 1D fft
-                    fitpars, self.to_substract = self.demean_fitpars(fitpars, im_freq_domain, displacement_shift_strategy,
-                                                                fast_dim = kspace_order[:2])
-                    if self.arguments_are_dict():
-                        self.fitpars[image_name] = fitpars
-                    else:
-                        self.fitpars = fitpars #important to save to get the correct fitpar in history
+                original_image, voxel_to_pad = oversample_volume_array(original_image, oversampling_pct)
 
             phase_encoding_shape = original_image.shape[kspace_order[-1]]
             #TODO test when oversampling_pct we should add zero in fitpar and not interp to oversampled shape
             if fitpars.shape[1] != phase_encoding_shape:
                 fitpars = self._interpolate_fitpars(fitpars, len_output=phase_encoding_shape)
 
-            if 'type1' in nufft_type:
-                corrupted_im = self._trans_and_nufft_type1(im_freq_domain, fitpars, kspace_order)
-            else: #nufft_type2
-                corrupted_im = self._trans_and_nufft_type2(original_image, fitpars, kspace_order)
+            if displacement_shift_strategy is not None:
+                fitpars, self.to_substract = self.demean_fitpars(fitpars,
+                                                                 self.fourier_transform_for_nufft(original_image),
+                                                                 displacement_shift_strategy,
+                                                                 fast_dim = kspace_order[:2])
+                if self.arguments_are_dict():
+                    self.fitpars[image_name] = fitpars
+                else:
+                    self.fitpars = fitpars #important to save to get the corrected fitpar in history
+
+            corrupted_im = self.apply_motion_in_kspace(original_image, fitpars, kspace_order, nufft_type)
 
             # magnitude
             corrupted_im = abs(corrupted_im)
@@ -381,13 +370,14 @@ class MotionFromTimeCourse(IntensityTransform):
                 corrupted_im = self.ElastixRegisterAndReslice(corrupted_im, original_image)
 
             if oversampling_pct > 0.0:
-                corrupted_im = self._crop_volume(corrupted_im)
+                corrupted_im = crop_volume_array(corrupted_im, voxel_to_pad)
 
             image_dict["data"] = corrupted_im[np.newaxis, ...]
             image_dict['data'] = torch.from_numpy(image_dict['data']).float()
 
-        #todo remove from PR
-        self._metrics = compute_motion_metrics(fitpars, im_freq_domain,
+        # todo remove from PR
+        # second time we compute the fourier transform (in case we ask for demean too) ...
+        self._metrics = compute_motion_metrics(fitpars, self.fourier_transform_for_nufft(original_image),
                                                fast_dim=np.array(kspace_order)[:2])
 
         return subject
@@ -470,9 +460,11 @@ class MotionFromTimeCourse(IntensityTransform):
         return grid_out
 
 
-    def _trans_and_nufft_type1(self, freq_domain, fitpar, kspace_order):
-        if not _finufft:
-            raise ImportError('finufft not available')
+    def _trans_and_nufft_type1(self, image, fitpar, kspace_order):
+        warnings.warn('nufft_type1 is implemented for testing purpose, '
+                'you should prefer the nufft_type2 as it is more correct')
+        freq_domain = self.fourier_transform_for_nufft(image)
+
         eps = 1E-7
         f = np.zeros(freq_domain.shape, dtype=np.complex128, order='F')
 
@@ -495,8 +487,6 @@ class MotionFromTimeCourse(IntensityTransform):
 
 
     def _trans_and_nufft_type2(self, image, fitpar, kspace_order ):
-        if not _finufft:
-            raise ImportError('finufft not available')
         eps = 1E-7
         grid_out = self._rotate_coordinates_1D_motion(fitpar, image.shape, kspace_order, Apply_inv_affine=False)
 
@@ -510,30 +500,37 @@ class MotionFromTimeCourse(IntensityTransform):
         f = f * np.exp(-1j * grid_out[3].flatten(order='F'))
         f = f.reshape(ip.shape,order='F')
 
-        iout = abs( _ifft_im(f) )
+        iout = abs( self.inv_fourier_transform_for_nufft(f) )
         return iout
 
+    def apply_motion_in_kspace(self, image, fitpars, kspace_order, nufft_type):
+        if not _finufft:
+            raise ImportError('finufft not available')
+
+        if 'type1' in nufft_type:
+            # fft
+            corrupted_im = self._trans_and_nufft_type1(image, fitpars, kspace_order)
+        else:  # nufft_type2
+            corrupted_im = self._trans_and_nufft_type2(image, fitpars, kspace_order)
+
+        return corrupted_im
 
     def demean_fitpars(self, fitpars, original_image_fft, displacement_shift_strategy,
                        fast_dim=(0,2)):
+        #compute a weighted average of motion time course, (separatly on each Euler parameters)
+        #return a new time course, shifted .
+        # we assume motion only in the slowest phase dimension (1D motion)
 
-        to_substract = np.array([0, 0, 0, 0, 0, 0])
-
-        #ok only 1D fftp
         #coef_shaw = np.sqrt( np.sum(abs(original_image_fft**2), axis=(0,2)) ) ;
         #should be equivalent if fft is done from real image, but not if the phase is acquired, CF Todd 2015 "Prospective motion correction of 3D echo-planar imaging data for functional MRI using optical tracking"
         if displacement_shift_strategy == '1D_wTF':
             coef_shaw = np.abs( np.sqrt(np.sum( original_image_fft * np.conjugate(original_image_fft), axis=fast_dim )));
-        if displacement_shift_strategy == '1D_wTF2':
+        elif displacement_shift_strategy == '1D_wTF2':
             #coef_shaw = np.abs( np.sum( original_image_fft * np.conjugate(original_image_fft), axis=fast_dim ));
             coef_shaw = np.abs( np.sum( original_image_fft **2, axis=fast_dim ))
             coef_shaw = coef_shaw / np.sum(coef_shaw)
-
-
-        if fitpars.shape[1] != coef_shaw.shape[0] :
-            #just interpolate end to end. at image slowest dimention size
-            print('to test, should be done before ... ')
-            fitpars = self._interpolate_fitpars(fitpars, len_output=coef_shaw.shape[0])
+        else:
+            warnings.warn(f'No motion time course demean defined, for parameter displacement_shift_strategy {displacement_shift_strategy}')
 
         to_substract = np.zeros(6)
         for i in range(0,6):
@@ -542,38 +539,24 @@ class MotionFromTimeCourse(IntensityTransform):
 
         return fitpars, to_substract  #note the 1D fitpar, may have been interpolated to phase dim but should not matter for the rest
 
-@staticmethod
-def _fft_im(image):
-    output = (np.fft.fftshift(np.fft.fftn(np.fft.ifftshift(image)))).astype(np.complex128)
-    return output
 
-
-@staticmethod
-def _ifft_im(freq_domain):
-    output = np.fft.ifftshift(np.fft.ifftn(freq_domain))
-    return output
-    #fi_image = np.fft.ifftshift(np.fft.ifft(np.fft.fftshift(fi_phase), axis=1))
-
-
-@staticmethod
-def oversample_volume(self, volume, oversampling_pct):
+def oversample_volume_array(volume, oversampling_pct):
     data_shape = list(volume.shape)
-    self.to_pad = (np.ceil(np.asarray(data_shape) * oversampling_pct / 2) * 2).astype(int)
-    tpad = Pad(self.to_pad)
-    if isinstance(data,torch.Tensor):
+    voxel_to_pad = (np.ceil(np.asarray(data_shape) * oversampling_pct / 2) * 2).astype(int)
+    tpad = Pad(voxel_to_pad)
+    if isinstance(volume, torch.Tensor):
         volume = volume.unsqueeze(0)
     else : #numpy
         volume = np.expand_dims(volume,0)
     vol_pad = tpad(volume)
-    return vol_pad.squeeze()
+    return vol_pad.squeeze(), voxel_to_pad
 
-@staticmethod
-def crop_volume(self, volume):
-    if isinstance(data,torch.Tensor):
+def crop_volume_array(volume, voxel_to_crop):
+    if isinstance(volume, torch.Tensor):
         volume = volume.unsqueeze(0)
     else : #numpy
         volume = np.expand_dims(volume,0)
-    tcrop = Crop(self.to_pad)
+    tcrop = Crop(voxel_to_crop)
     vol_crop = tcrop(volume)
     return vol_crop.squeeze()
 

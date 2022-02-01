@@ -162,7 +162,7 @@ def compute_motion_metrics( fitpars, img_fft, fast_dim=(0,2)):
     if fitpars.shape[1] != coef_TF.shape[0] :
         #just interpolate end to end. at image slowest dimention size
         fitpars = _interpolate_fitpars(fitpars, len_output=coef_TF.shape[0])
-        #print(f'interp fitpar for wcoef new shape {fitpars.shape}')
+        print(f' WARNING SHOULD NOT HAPPEN rrr !!! interp fitpar for wcoef new shape {fitpars.shape}')
 
     metrics["meanDispJ_wTF"]  = calculate_mean_Disp_J(fitpars,  weights=coef_TF)
     metrics["meanDispJ_wSH"]  = calculate_mean_Disp_J(fitpars,  weights=coef_shaw)
