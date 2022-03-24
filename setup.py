@@ -36,6 +36,7 @@ setup(
         'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
+        'Typing :: Typed',
     ],
     description=(
         'Tools for loading, augmenting and writing 3D medical images'
@@ -58,11 +59,12 @@ setup(
     include_package_data=True,
     keywords='torchio',
     name='torchio',
+    package_data={'torchio': ['py.typed']},
     packages=find_packages(include=['torchio', 'torchio.*']),
     setup_requires=[],
     test_suite='tests',
     tests_require=[],
     url='https://github.com/fepegar/torchio',
-    version='0.18.72',
+    version='0.18.75',
     zip_safe=False,
 )
