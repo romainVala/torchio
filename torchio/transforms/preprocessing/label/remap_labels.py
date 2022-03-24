@@ -76,6 +76,10 @@ class RemapLabels(LabelTransform):
                 remap_list = [(int(k), v) for k, v in self.remapping.items()] # int because with json, dict keys must be a string
                 remap_list.sort(key=lambda x:x[1]) #sort with increasing new_id
                 max_new_id = torch.tensor(remap_list)[:,1].max() + 1
+                max_old_id = torch.tensor(remap_list)[:,0].max()
+                if max_old_id > image.data.shape[0]:
+                    print('warning bad mappin skiping remap label')
+                    continue
                 new_data = torch.zeros([max_new_id]+list(image.data.shape[1:]))
                 for old_id, new_id in remap_list:
                     new_data[new_id,::] += image.data[old_id,::]
