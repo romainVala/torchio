@@ -124,9 +124,9 @@ def write_image(
         ) -> None:
     args = tensor, affine, path
     try:
-        _write_sitk(*args, squeeze=squeeze)
-    except RuntimeError:  # try with NiBabel
         _write_nibabel(*args)
+    except RuntimeError:  # try with NiBabel
+        _write_sitk(*args, squeeze=squeeze)
 
 def _write_nibabel(
         tensor: TypeData,
@@ -144,7 +144,8 @@ def _write_nibabel(
     if num_components == 1:
         tensor = tensor[0]
     else:
-        tensor = tensor[np.newaxis].permute(2, 3, 4, 0, 1)
+        #tensor = tensor[np.newaxis].permute(2, 3, 4, 1, 0)
+        tensor = tensor.permute(1, 2, 3, 0)
     suffix = Path(str(path).replace('.gz', '')).suffix
     if '.nii' in suffix:
         img = nib.Nifti1Image(np.asarray(tensor), affine)
