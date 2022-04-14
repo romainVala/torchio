@@ -92,7 +92,7 @@ class Subject(dict):
 
         Consistency of shapes across images in the subject is checked first.
 
-        Example::
+        Example:
 
             >>> import torchio as tio
             >>> colin = tio.datasets.Colin27()
@@ -110,7 +110,7 @@ class Subject(dict):
         Consistency of spatial shapes across images in the subject is checked
         first.
 
-        Example::
+        Example:
 
             >>> import torchio as tio
             >>> colin = tio.datasets.Colin27()
@@ -126,7 +126,7 @@ class Subject(dict):
 
         Consistency of spacings across images in the subject is checked first.
 
-        Example::
+        Example:
 
             >>> import torchio as tio
             >>> colin = tio.datasets.Slicer()

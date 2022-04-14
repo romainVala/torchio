@@ -49,6 +49,7 @@ extensions = [
     'sphinx.ext.viewcode',
     'sphinx_copybutton',
     'sphinx_gallery.gen_gallery',
+    'sphinxext.opengraph',
 ]
 
 # Add mappings
@@ -237,3 +238,5 @@ sphinx_gallery_conf = {
 }
 
 # autosummary_generate = True  # Turn on sphinx.ext.autosummary
+
+plot_formats = [('png', 300)]
