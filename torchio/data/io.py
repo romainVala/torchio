@@ -141,6 +141,7 @@ def _write_nibabel(
     num_components = tensor.shape[0]
 
     # NIfTI components must be at the end, in a 5D array
+    #I change taht, where this 5D comes from ?
     if num_components == 1:
         tensor = tensor[0]
     else:
