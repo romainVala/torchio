@@ -87,7 +87,14 @@ class SubjectsDataset(Dataset):
             raise ValueError(f'Index "{index}" must be int, not {type(index)}')
 
         if self.load_from_dir:
-            subject = torch.load(self._subjects[index])
+            import os
+            sujtio_dir, sujtio_filepath = os.path.dirname(self._subjects[index]), os.path.basename(self._subjects[index]),
+            cmd = f'cd {sujtio_dir}; tar -xzf {sujtio_filepath}'
+            os.system(cmd)
+            subject = torch.load(f'{sujtio_dir}/{sujtio_filepath[:-7]}')
+            cmd = f'rm -f {sujtio_dir}/{sujtio_filepath[:-7]}'
+            os.system(cmd)
+
             if self.add_to_load is not None:
                 #print('adding subject with {}'.format(self.add_to_load))
                 ii = subject.get_images()
@@ -148,9 +155,16 @@ class SubjectsDataset(Dataset):
 
         if self.save_to_dir is not None:
             res_dir = self.save_to_dir
-            fname = res_dir + '/subject{:05d}'.format(index)
+            fname = 'subjectel'.format(index)
             if 'image_orig' in subject: subject.pop('image_orig')
-            torch.save(subject, fname + '_subject.pt')
+
+
+            filename = fname+ '_subject.pt'
+            os.chdir(res_dir)
+            torch.save(subject, filename)
+            with tarfile.open(f'{filename}.tar.gz','w:gz') as tar:
+                tar.add(filename)
+            os.system(f'rm -f {filename}')
 
         return subject
 
