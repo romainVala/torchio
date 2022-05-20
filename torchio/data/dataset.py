@@ -92,6 +92,12 @@ class SubjectsDataset(Dataset):
             cmd = f'cd {sujtio_dir}; tar -xzf {sujtio_filepath}'
             os.system(cmd)
             subject = torch.load(f'{sujtio_dir}/{sujtio_filepath[:-7]}')
+
+            #quick hack to avoid checking path !:! on disk since we load from disk no need of path
+            for img in subject.get_images_names():
+                subject[img]['path'] = None
+                subject[img].path = None
+
             cmd = f'rm -f {sujtio_dir}/{sujtio_filepath[:-7]}'
             os.system(cmd)
 
