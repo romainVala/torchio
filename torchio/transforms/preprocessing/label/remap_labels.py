@@ -150,10 +150,14 @@ class RemapLabels(LabelTransform):
 
     def apply_transform(self, subject):
         for image in self.get_images(subject):
-            original_label_set = set(image.data.unique().tolist())
+            if image.data.shape[0] > 1 : #4d label, either one hot, or Partial Volume
+                original_label_set = set([str(ii) for ii in range(0,image.data.shape[0])])
+            else:
+                original_label_set = set(image.data.unique().tolist())
             source_label_set = set(self.remapping.keys())
             # Do nothing if no keys in the mapping are found in the image
             if not source_label_set.intersection(original_label_set):
+                print('WARNIGN skiping remap because impossible mapping')
                 continue
             new_data = image.data.clone()
             mask = self.get_mask_from_masking_method(
@@ -182,7 +186,6 @@ class RemapLabels(LabelTransform):
                 for old_id, new_id in self.remapping.items():
                     new_data[mask & (image.data == old_id)] = new_id
                 image.set_data(new_data)
-
         return subject
 
     def is_invertible(self):
