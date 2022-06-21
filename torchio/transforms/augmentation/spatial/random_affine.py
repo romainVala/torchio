@@ -110,6 +110,7 @@ class RandomAffine(RandomTransform, SpatialTransform):
             isotropic: bool = False,
             center: str = 'image',
             default_pad_value: Union[str, float] = 'minimum',
+            default_pad_label: int = -1,
             image_interpolation: str = 'linear',
             label_interpolation: str = 'nearest',
             check_shape: bool = True,
@@ -129,6 +130,7 @@ class RandomAffine(RandomTransform, SpatialTransform):
             raise ValueError(message)
         self.center = center
         self.default_pad_value = _parse_default_value(default_pad_value)
+        self.default_pad_label = default_pad_label
         self.image_interpolation = self.parse_interpolation(
             image_interpolation)
         self.label_interpolation = self.parse_interpolation(
@@ -162,6 +164,7 @@ class RandomAffine(RandomTransform, SpatialTransform):
             'translation': translation_params.tolist(),
             'center': self.center,
             'default_pad_value': self.default_pad_value,
+            'default_pad_label': self.default_pad_label,
             'image_interpolation': self.image_interpolation,
             'label_interpolation': self.label_interpolation,
             'check_shape': self.check_shape,
@@ -207,6 +210,7 @@ class Affine(SpatialTransform):
             translation: TypeTripletFloat,
             center: str = 'image',
             default_pad_value: Union[str, float] = 'minimum',
+            default_pad_label: int = -1,
             image_interpolation: str = 'linear',
             label_interpolation: str = 'nearest',
             check_shape: bool = True,
@@ -241,6 +245,7 @@ class Affine(SpatialTransform):
         self.center = center
         self.use_image_center = center == 'image'
         self.default_pad_value = _parse_default_value(default_pad_value)
+        self.default_pad_label = default_pad_label
         self.image_interpolation = self.parse_interpolation(
             image_interpolation)
         self.label_interpolation = self.parse_interpolation(
@@ -253,6 +258,7 @@ class Affine(SpatialTransform):
             'translation',
             'center',
             'default_pad_value',
+            'default_pad_label',
             'image_interpolation',
             'label_interpolation',
             'check_shape',
@@ -377,7 +383,7 @@ class Affine(SpatialTransform):
                 #romain quick hask for 4D label, set unknown to last label (suposed bg)
                 im_res = torch.stack(transformed_tensors)
                 indd =  im_res.sum(dim=0) < 0.5
-                im_res[-1,indd] = 1
+                im_res[self.default_pad_label,indd] = 1
                 image.set_data(im_res)
             else:
                 image.set_data(torch.stack(transformed_tensors))
