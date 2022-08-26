@@ -4,6 +4,8 @@ import torch
 
 from ....utils import check_sequence
 from ....data.subject import Subject
+from ....data.image import ScalarImage
+from ....transforms.preprocessing.spatial.resize import Resize
 from ....typing import TypeData, TypeRangeFloat
 from ....data.image import ScalarImage, LabelMap
 from ... import IntensityTransform
@@ -85,6 +87,7 @@ class RandomLabelsToImage(RandomTransform, IntensityTransform):
             :func:`torch.argmax()` on the channel dimension (i.e. 0).
         ignore_background: If ``True``, input voxels labeled as ``0`` will not
             be modified.
+        random_shape: Default None, liste of tuple (label_inex, min res, max res)
         **kwargs: See :class:`~torchio.transforms.Transform` for additional
             keyword arguments.
 
@@ -135,6 +138,7 @@ class RandomLabelsToImage(RandomTransform, IntensityTransform):
             create_mask_index = None,
             create_mask_name = None,
             ignore_background: bool = False,
+            random_shape = None,
             **kwargs
             ):
         super().__init__(**kwargs)
@@ -152,6 +156,7 @@ class RandomLabelsToImage(RandomTransform, IntensityTransform):
         self.create_mask_index = create_mask_index
         self.create_mask_name = create_mask_name
         self.ignore_background = ignore_background
+        self.random_shape = random_shape
 
     def parse_mean_and_std(
             self,
@@ -228,6 +233,7 @@ class RandomLabelsToImage(RandomTransform, IntensityTransform):
             'create_mask_index': self.create_mask_index,
             'create_mask_name': self.create_mask_name,
             'ignore_background': self.ignore_background,
+            'random_shape': [],
         }
 
         label_map = subject[self.label_key].data
@@ -259,6 +265,11 @@ class RandomLabelsToImage(RandomTransform, IntensityTransform):
             mean, std = self.get_params(label)
             arguments['mean'].append(mean)
             arguments['std'].append(std)
+        if self.random_shape is not None:
+            for ind, s_min, s_max in self.random_shape:
+                r_size = self.sample_uniform(s_min, s_max)
+                #print(f' adding noise  to index {ind} with size  {r_size} ')
+                arguments['random_shape'].append([ind, r_size])
 
         transform = LabelsToImage(**self.add_include_exclude(arguments))
         transformed = transform(subject)
@@ -330,6 +341,7 @@ class LabelsToImage(IntensityTransform):
             discretize: bool = False,
             create_mask_index=None,
             create_mask_name=None,
+            random_shape=None,
             **kwargs
             ):
         super().__init__(**kwargs)
@@ -341,6 +353,7 @@ class LabelsToImage(IntensityTransform):
         self.discretize = discretize
         self.create_mask_index = create_mask_index
         self.create_mask_name = create_mask_name
+        self.random_shape = random_shape
         self.args_names = (
             'label_key',
             'mean',
@@ -351,6 +364,7 @@ class LabelsToImage(IntensityTransform):
             'discretize',
             'create_mask_index',
             'create_mask_name',
+            'random_shape',
         )
 
     def apply_transform(self, subject: Subject) -> Subject:
@@ -394,6 +408,16 @@ class LabelsToImage(IntensityTransform):
                     mask = label_map == label
                 else:
                     mask = label_map[label]
+                if self.random_shape is not None:
+                    for ind_r_shape, s_shape in self.random_shape:
+                        if ind_r_shape==label:
+                            s_shape = int(s_shape)
+                            data = torch.rand([1,s_shape,s_shape,s_shape])
+                            img = ScalarImage(tensor=data)
+                            t_resize = Resize(mask.shape)
+                            imgr = t_resize(img)
+                            mask = (0.5 + mask ) * imgr.data[0]
+
                 tissues += self.generate_tissue(mask, mean, std)
 
             else:
