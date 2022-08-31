@@ -50,6 +50,7 @@ from .preprocessing import RemapLabels
 from .preprocessing import RemoveLabels
 from .preprocessing import SequentialLabels
 from .preprocessing import KeepLargestComponent
+from .preprocessing import Coregister
 
 __all__ = [
     'Transform',
@@ -108,4 +109,5 @@ __all__ = [
     'RemoveLabels',
     'SequentialLabels',
     'KeepLargestComponent',
+    'Coregister',
 ]

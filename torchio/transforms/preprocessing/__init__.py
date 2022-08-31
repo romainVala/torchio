@@ -6,6 +6,8 @@ from .spatial.crop_or_pad import CropOrPad
 from .spatial.to_canonical import ToCanonical
 from .spatial.copy_affine import CopyAffine
 from .spatial.ensure_shape_multiple import EnsureShapeMultiple
+#romainadd
+from .spatial.coregister import Coregister
 
 from .intensity.mask import Mask
 from .intensity.rescale import RescaleIntensity
@@ -32,6 +34,7 @@ __all__ = [
     'CropOrPad',
     'CopyAffine',
     'EnsureShapeMultiple',
+    'Coregister',
     'Mask',
     'RescaleIntensity',
     'Clamp',
