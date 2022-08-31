@@ -414,9 +414,12 @@ class LabelsToImage(IntensityTransform):
                             s_shape = int(s_shape)
                             data = torch.rand([1,s_shape,s_shape,s_shape])
                             img = ScalarImage(tensor=data)
-                            t_resize = Resize(mask.shape)
+                            t_resize = Resize(mask.shape[1:]) if is_discretized else   Resize(mask.shape)
                             imgr = t_resize(img)
-                            mask = (0.5 + mask ) * imgr.data[0]
+                            if is_discretized:
+                                mask = (0.5 + mask) * imgr.data
+                            else:
+                                mask = (0.5 + mask ) * imgr.data[0]
 
                 tissues += self.generate_tissue(mask, mean, std)
 
