@@ -153,7 +153,7 @@ class RemapLabels(LabelTransform):
             if image.data.shape[0] > 1 : #4d label, either one hot, or Partial Volume
                 original_label_set = set([str(ii) for ii in range(0,image.data.shape[0])])
             else:
-                original_label_set = set([str(ii) for ii in image.data.unique().tolist()])
+                original_label_set = set([str(int(ii)) for ii in image.data.unique().tolist()])
             source_label_set = set(self.remapping.keys())
             # Do nothing if no keys in the mapping are found in the image
             if not source_label_set.intersection(original_label_set):
