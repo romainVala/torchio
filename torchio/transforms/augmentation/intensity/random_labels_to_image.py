@@ -132,6 +132,8 @@ class RandomLabelsToImage(RandomTransform, IntensityTransform):
             image_key: str = 'image_from_labels',
             mean: Optional[Sequence[TypeRangeFloat]] = None,
             std: Optional[Sequence[TypeRangeFloat]] = None,
+            special_mean = None,#rrr added
+            nb_labels = None, #rrr added for special_mean only
             default_mean: TypeRangeFloat = (0.1, 0.9),
             default_std: TypeRangeFloat = (0.01, 0.1),
             discretize: bool = False,
@@ -142,15 +144,18 @@ class RandomLabelsToImage(RandomTransform, IntensityTransform):
             **kwargs
             ):
         super().__init__(**kwargs)
-        self.label_key = _parse_label_key(label_key)
-        self.used_labels = _parse_used_labels(used_labels)
-        self.mean, self.std = self.parse_mean_and_std(mean, std)
+        self.special_mean = special_mean
+        self.nb_labels = nb_labels
         self.default_mean = self.parse_gaussian_parameter(
             default_mean, 'default_mean')
         self.default_std = self.parse_gaussian_parameter(
             default_std,
             'default_std',
         )
+
+        self.label_key = _parse_label_key(label_key)
+        self.used_labels = _parse_used_labels(used_labels)
+        self.mean, self.std = self.parse_mean_and_std(mean, std)
         self.image_key = image_key
         self.discretize = discretize
         self.create_mask_index = create_mask_index
@@ -163,6 +168,12 @@ class RandomLabelsToImage(RandomTransform, IntensityTransform):
             mean: Sequence[TypeRangeFloat],
             std: Sequence[TypeRangeFloat]
             ) -> Tuple[List[TypeRangeFloat], List[TypeRangeFloat]]:
+
+        if self.special_mean is not None:
+            mean = [self.default_mean for ll in range(self.nb_labels)]
+            for key, value in self.special_mean.items():
+                mean[int(key)] = tuple(value) #self.parse_gaussian_parameters(value, 'spetail_mean')
+
         if mean is not None:
             mean = self.parse_gaussian_parameters(mean, 'mean')
         if std is not None:
