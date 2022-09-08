@@ -19,6 +19,7 @@ from .spatial.resize import Resize
 from .spatial.to_canonical import ToCanonical
 #romainadd
 from .spatial.coregister import Coregister
+from .intensity.apply_mask import ApplyMask
 
 
 __all__ = [
@@ -42,4 +43,5 @@ __all__ = [
     'SequentialLabels',
     'KeepLargestComponent',
     'Coregister',
+    'ApplyMask'
 ]
