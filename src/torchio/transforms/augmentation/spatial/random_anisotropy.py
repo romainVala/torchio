@@ -112,8 +112,6 @@ class RandomAnisotropy(RandomTransform):
         target = image.spatial_shape, image.affine
         upsample = Resample(
             target=target,  # type: ignore[arg-type]
-            image_interpolation=self.image_interpolation,
-            scalars_only=self.scalars_only,
             ** self.add_include_exclude(arguments),
         )
         upsampled = upsample(downsampled)
