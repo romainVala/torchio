@@ -13,20 +13,21 @@ MRA images and Diffusion-weighted images (15 directions)".
 
 .. _Information eXtraction from Images (IXI): https://brain-development.org/ixi-dataset/
 """  # noqa: E501
-
 # Adapted from
 # https://pytorch.org/docs/stable/_modules/torchvision/datasets/mnist.html#MNIST
-
-
 import shutil
 from pathlib import Path
-from typing import Optional, Sequence
 from tempfile import NamedTemporaryFile
+from typing import Optional
+from typing import Sequence
 
-from ..typing import TypePath
-from ..transforms import Transform
+from .. import LabelMap
+from .. import ScalarImage
+from .. import Subject
+from .. import SubjectsDataset
 from ..download import download_and_extract_archive
-from .. import SubjectsDataset, Subject, ScalarImage, LabelMap
+from ..transforms import Transform
+from ..typing import TypePath
 
 
 class IXI(SubjectsDataset):
@@ -80,7 +81,7 @@ class IXI(SubjectsDataset):
             download: bool = False,
             modalities: Sequence[str] = ('T1', 'T2'),
             **kwargs,
-            ):
+    ):
         root = Path(root)
         for modality in modalities:
             if modality not in self.md5_dict:
@@ -126,7 +127,8 @@ class IXI(SubjectsDataset):
             images_dict[one_modality] = ScalarImage(filepath)
             for modality in modalities[1:]:
                 globbed = sglob(
-                    root / modality, f'{subject_id}-{modality}.nii.gz')
+                    root / modality, f'{subject_id}-{modality}.nii.gz',
+                )
                 if globbed:
                     assert len(globbed) == 1
                     images_dict[modality] = ScalarImage(globbed[0])
@@ -188,7 +190,7 @@ class IXITiny(SubjectsDataset):
             transform: Optional[Transform] = None,
             download: bool = False,
             **kwargs,
-            ):
+    ):
         root = Path(root)
         if download:
             self._download(root)
@@ -225,10 +227,10 @@ class IXITiny(SubjectsDataset):
     def _download(self, root):
         """Download the tiny IXI data if it doesn't exist already."""
         if root.is_dir():  # assume it's been downloaded
-            print('Root directory for IXITiny found:', root)  # noqa: T001
+            print('Root directory for IXITiny found:', root)  # noqa: T201
             return
-        print('Root directory for IXITiny not found:', root)  # noqa: T001
-        print('Downloading...')  # noqa: T001
+        print('Root directory for IXITiny not found:', root)  # noqa: T201
+        print('Downloading...')  # noqa: T201
         with NamedTemporaryFile(suffix='.zip', delete=False) as f:
             download_and_extract_archive(
                 self.url,

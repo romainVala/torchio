@@ -1,20 +1,23 @@
 import warnings
 from pathlib import Path
-from typing import Tuple, Union, Optional
+from typing import Optional
+from typing import Tuple
+from typing import Union
 
-import torch
-import numpy as np
 import nibabel as nib
+import numpy as np
 import SimpleITK as sitk
+import torch
 
 from ..constants import REPO_URL
-from ..typing import (
-    TypePath,
-    TypeData,
-    TypeDataAffine,
-    TypeDirection,
-    TypeTripletFloat,
-)
+from ..typing import TypeData
+from ..typing import TypeDataAffine
+from ..typing import TypeDirection
+from ..typing import TypeDoubletInt
+from ..typing import TypePath
+from ..typing import TypeQuartetInt
+from ..typing import TypeTripletFloat
+from ..typing import TypeTripletInt
 
 
 # Matrices used to switch between LPS and RAS
@@ -87,18 +90,28 @@ def _read_dicom(directory: TypePath):
     return image
 
 
-def read_shape(path: TypePath) -> Tuple[int, int, int, int]:
+def read_shape(path: TypePath) -> TypeQuartetInt:
     reader = sitk.ImageFileReader()
     reader.SetFileName(str(path))
     reader.ReadImageInformation()
     num_channels = reader.GetNumberOfComponents()
-    spatial_shape = reader.GetSize()
     num_dimensions = reader.GetDimension()
+    assert 2 <= num_dimensions <= 4
     if num_dimensions == 2:
-        spatial_shape = *spatial_shape, 1
-    elif num_dimensions == 4:  # assume bad NIfTI
-        *spatial_shape, num_channels = spatial_shape
-    shape = (num_channels,) + tuple(spatial_shape)
+        spatial_shape_2d: TypeDoubletInt = reader.GetSize()
+        assert len(spatial_shape_2d) == 2
+        si, sj = spatial_shape_2d
+        sk = 1
+    elif num_dimensions == 4:
+        # We assume bad NIfTI file (channels encoded as spatial dimension)
+        spatial_shape_4d: TypeQuartetInt = reader.GetSize()
+        assert len(spatial_shape_4d) == 4
+        si, sj, sk, num_channels = spatial_shape_4d
+    elif num_dimensions == 3:
+        spatial_shape_3d: TypeTripletInt = reader.GetSize()
+        assert len(spatial_shape_3d) == 3
+        si, sj, sk = spatial_shape_3d
+    shape = num_channels, si, sj, sk
     return shape
 
 
@@ -121,7 +134,7 @@ def write_image(
         affine: TypeData,
         path: TypePath,
         squeeze: Optional[bool] = None,
-        ) -> None:
+) -> None:
     args = tensor, affine, path
     try:
         _write_nibabel(*args)
@@ -129,10 +142,10 @@ def write_image(
         _write_sitk(*args, squeeze=squeeze)
 
 def _write_nibabel(
-        tensor: TypeData,
+        tensor: torch.Tensor,
         affine: TypeData,
         path: TypePath,
-        ) -> None:
+) -> None:
     """
     Expects a path with an extension that can be used by nibabel.save
     to write a NIfTI-1 image, such as '.nii.gz' or '.img'
@@ -167,7 +180,7 @@ def _write_sitk(
         path: TypePath,
         use_compression: bool = True,
         squeeze: Optional[bool] = None,
-        ) -> None:
+) -> None:
     assert tensor.ndim == 4
     path = Path(path)
     if path.suffix in ('.png', '.jpg', '.jpeg', '.bmp'):
@@ -266,7 +279,7 @@ def _write_niftyreg_matrix(matrix, txt_path):
 
 def get_rotation_and_spacing_from_affine(
         affine: np.ndarray,
-        ) -> Tuple[np.ndarray, np.ndarray]:
+) -> Tuple[np.ndarray, np.ndarray]:
     # From https://github.com/nipy/nibabel/blob/master/nibabel/orientations.py
     rotation_zoom = affine[:3, :3]
     spacing = np.sqrt(np.sum(rotation_zoom * rotation_zoom, axis=0))
@@ -279,7 +292,7 @@ def nib_to_sitk(
         affine: TypeData,
         force_3d: bool = False,
         force_4d: bool = False,
-        ) -> sitk.Image:
+) -> sitk.Image:
     """Create a SimpleITK image from a tensor and a 4x4 affine matrix."""
     if data.ndim != 4:
         shape = tuple(data.shape)
@@ -320,7 +333,7 @@ def nib_to_sitk(
 def sitk_to_nib(
         image: sitk.Image,
         keepdim: bool = False,
-        ) -> Tuple[np.ndarray, np.ndarray]:
+) -> Tuple[np.ndarray, np.ndarray]:
     data = sitk.GetArrayFromImage(image).transpose()
     data = check_uint_to_int(data)
     num_components = image.GetNumberOfComponentsPerPixel()
@@ -344,7 +357,7 @@ def sitk_to_nib(
 
 def get_ras_affine_from_sitk(
         sitk_object: Union[sitk.Image, sitk.ImageFileReader],
-        ) -> np.ndarray:
+) -> np.ndarray:
     spacing = np.array(sitk_object.GetSpacing())
     direction_lps = np.array(sitk_object.GetDirection())
     origin_lps = np.array(sitk_object.GetOrigin())
@@ -374,7 +387,7 @@ def get_sitk_metadata_from_ras_affine(
         affine: np.ndarray,
         is_2d: bool = False,
         lps: bool = True,
-        ) -> Tuple[TypeTripletFloat, TypeTripletFloat, TypeDirection]:
+) -> Tuple[TypeTripletFloat, TypeTripletFloat, TypeDirection]:
     direction_ras, spacing_array = get_rotation_and_spacing_from_affine(affine)
     origin_ras = affine[:3, 3]
     origin_lps = np.dot(FLIPXY_33, origin_ras)
@@ -385,10 +398,11 @@ def get_sitk_metadata_from_ras_affine(
     origin_array = origin_lps if lps else origin_ras
     direction_array = direction_lps if lps else direction_ras
     direction_array = direction_array.flatten()
-    # The following are to comply with typing hints
-    # (there must be prettier ways to do this)
+    # The following are to comply with mypy
+    # (although there must be prettier ways to do this)
     ox, oy, oz = origin_array
     sx, sy, sz = spacing_array
+    direction: TypeDirection
     if is_2d:
         d1, d2, d3, d4 = direction_array
         direction = d1, d2, d3, d4

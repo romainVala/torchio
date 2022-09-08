@@ -1,8 +1,8 @@
 import torch
 
 from ...transform import TypeMaskingMethod
-from .remap_labels import RemapLabels
 from .label_transform import LabelTransform
+from .remap_labels import RemapLabels
 
 
 class SequentialLabels(LabelTransform):
@@ -45,7 +45,7 @@ class SequentialLabels(LabelTransform):
             self,
             masking_method: TypeMaskingMethod = None,
             **kwargs
-            ):
+    ):
         super().__init__(**kwargs)
         self.masking_method = masking_method
 

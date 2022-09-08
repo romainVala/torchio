@@ -1,12 +1,13 @@
 import warnings
-from typing import Union, Tuple, List
+from typing import Tuple
+from typing import Union
 
 import torch
 
-from ....typing import TypeRangeFloat
-from ....data.subject import Subject
-from ....utils import to_tuple
 from .. import RandomTransform
+from ....data.subject import Subject
+from ....typing import TypeRangeFloat
+from ....utils import to_tuple
 from ...preprocessing import Resample
 
 
@@ -52,11 +53,12 @@ class RandomAnisotropy(RandomTransform):
             image_interpolation: str = 'linear',
             scalars_only: bool = True,
             **kwargs
-            ):
+    ):
         super().__init__(**kwargs)
         self.axes = self.parse_axes(axes)
         self.downsampling_range = self._parse_range(
-            downsampling, 'downsampling', min_constraint=1)
+            downsampling, 'downsampling', min_constraint=1,
+        )
         parsed_interpolation = self.parse_interpolation(image_interpolation)
         self.image_interpolation = parsed_interpolation
         self.scalars_only = scalars_only
@@ -65,9 +67,9 @@ class RandomAnisotropy(RandomTransform):
             self,
             axes: Tuple[int, ...],
             downsampling_range: Tuple[float, float],
-            ) -> List[bool]:
+    ) -> Tuple[int, float]:
         axis = axes[torch.randint(0, len(axes), (1,))]
-        downsampling = self.sample_uniform(*downsampling_range).item()
+        downsampling = self.sample_uniform(*downsampling_range)
         return axis, downsampling
 
     @staticmethod
@@ -100,16 +102,20 @@ class RandomAnisotropy(RandomTransform):
             'scalars_only': self.scalars_only,
         }
 
+        sx, sy, sz = target_spacing  # for mypy
         downsample = Resample(
-            target=tuple(target_spacing),
+            target=(sx, sy, sz),
             **self.add_include_exclude(arguments)
         )
         downsampled = downsample(subject)
         image = subject.get_first_image()
         target = image.spatial_shape, image.affine
         upsample = Resample(
-            target=target,
-            **self.add_include_exclude(arguments)
+            target=target,  # type: ignore[arg-type]
+            image_interpolation=self.image_interpolation,
+            scalars_only=self.scalars_only,
+            ** self.add_include_exclude(arguments),
         )
         upsampled = upsample(downsampled)
+        assert isinstance(upsampled, Subject)
         return upsampled

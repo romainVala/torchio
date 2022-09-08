@@ -1,5 +1,5 @@
-from ....transforms.transform import TypeBounds
 from ... import SpatialTransform
+from ....transforms.transform import TypeBounds
 
 
 class BoundsTransform(SpatialTransform):
@@ -15,7 +15,7 @@ class BoundsTransform(SpatialTransform):
             self,
             bounds_parameters: TypeBounds,
             **kwargs
-            ):
+    ):
         super().__init__(**kwargs)
         self.bounds_parameters = self.parse_bounds(bounds_parameters)
 

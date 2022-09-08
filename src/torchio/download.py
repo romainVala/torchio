@@ -3,13 +3,12 @@ Most of this code is from torchvision.
 I will remove all this once verbosity is reduced.
 More info: https://github.com/pytorch/vision/issues/2830
 """
-
-import os
 import gzip
+import hashlib
+import os
+import tarfile
 import urllib
 import zipfile
-import hashlib
-import tarfile
 from typing import Optional
 
 from torch.hub import tqdm
@@ -57,7 +56,7 @@ def download_and_extract_archive(
         filename: Optional[TypePath] = None,
         md5: str = None,
         remove_finished: bool = False,
-        ) -> None:
+) -> None:
     download_root = os.path.expanduser(download_root)
     if extract_root is None:
         extract_root = download_root
@@ -126,7 +125,7 @@ def download_url(
         root: TypePath,
         filename: Optional[TypePath] = None,
         md5: str = None,
-        ) -> None:
+) -> None:
     """Download a file from a url and place it in root.
 
     Args:
@@ -145,10 +144,10 @@ def download_url(
     # check if file is already present locally
     if not check_integrity(fpath, md5):
         try:
-            print('Downloading ' + url + ' to ' + fpath)  # noqa: T001
+            print('Downloading ' + url + ' to ' + fpath)  # noqa: T201
             urllib.request.urlretrieve(
                 url, fpath,
-                reporthook=gen_bar_updater()
+                reporthook=gen_bar_updater(),
             )
         except (urllib.error.URLError, OSError) as e:
             if url[:5] == 'https':
@@ -157,10 +156,10 @@ def download_url(
                     'Failed download. Trying https -> http instead.'
                     ' Downloading ' + url + ' to ' + fpath
                 )
-                print(message)  # noqa: T001
+                print(message)  # noqa: T201
                 urllib.request.urlretrieve(
                     url, fpath,
-                    reporthook=gen_bar_updater()
+                    reporthook=gen_bar_updater(),
                 )
             else:
                 raise e

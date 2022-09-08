@@ -1,5 +1,6 @@
 import numpy as np
 from torchio.transforms import ToCanonical
+
 from ...utils import TorchioTestCase
 
 
@@ -25,7 +26,7 @@ class TestToCanonical(TorchioTestCase):
         self.assertEqual(transformed.t1.orientation, ('R', 'A', 'S'))
         self.assertTensorAlmostEqual(
             transformed.t1.data,
-            self.sample_subject.t1.data.numpy()[:, ::-1, :, :]
+            self.sample_subject.t1.data.numpy()[:, ::-1, :, :],
         )
 
         fixture = np.eye(4)

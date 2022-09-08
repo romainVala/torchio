@@ -140,13 +140,13 @@ class RemapLabels(LabelTransform):
             masking_method: TypeMaskingMethod = None,
             new_key=None,
             **kwargs
-            ):
+    ):
         super().__init__(**kwargs)
         self.kwargs = kwargs
         self.remapping = remapping
         self.masking_method = masking_method
         self.new_key = new_key
-        self.args_names = 'remapping', 'masking_method'
+        self.args_names = ['remapping', 'masking_method']
 
     def apply_transform(self, subject):
         for name, image in self.get_images_dict(subject).items():

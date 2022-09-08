@@ -1,17 +1,24 @@
 from numbers import Number
-from typing import Tuple, Optional, Sequence, Union
+from typing import Optional
+from typing import Sequence
+from typing import Tuple
+from typing import Union
 
-import torch
 import numpy as np
 import SimpleITK as sitk
+import torch
 
+from .. import RandomTransform
+from ... import SpatialTransform
+from ....constants import INTENSITY
+from ....constants import TYPE
 from ....data.io import nib_to_sitk
 from ....data.subject import Subject
-from ....constants import INTENSITY, TYPE
-from ....utils import get_major_sitk_version, to_tuple
-from ....typing import TypeRangeFloat, TypeSextetFloat, TypeTripletFloat
-from ... import SpatialTransform
-from .. import RandomTransform
+from ....typing import TypeRangeFloat
+from ....typing import TypeSextetFloat
+from ....typing import TypeTripletFloat
+from ....utils import get_major_sitk_version
+from ....utils import to_tuple
 
 
 TypeOneToSixFloat = Union[TypeRangeFloat, TypeTripletFloat, TypeSextetFloat]
@@ -115,7 +122,7 @@ class RandomAffine(RandomTransform, SpatialTransform):
             label_interpolation: str = 'nearest',
             check_shape: bool = True,
             **kwargs
-            ):
+    ):
         super().__init__(**kwargs)
         self.isotropic = isotropic
         _parse_scales_isotropic(scales, isotropic)
@@ -132,9 +139,11 @@ class RandomAffine(RandomTransform, SpatialTransform):
         self.default_pad_value = _parse_default_value(default_pad_value)
         self.default_pad_label = default_pad_label
         self.image_interpolation = self.parse_interpolation(
-            image_interpolation)
+            image_interpolation,
+        )
         self.label_interpolation = self.parse_interpolation(
-            label_interpolation)
+            label_interpolation,
+        )
         self.check_shape = check_shape
 
     def get_params(
@@ -143,7 +152,7 @@ class RandomAffine(RandomTransform, SpatialTransform):
             degrees: TypeSextetFloat,
             translation: TypeSextetFloat,
             isotropic: bool,
-            ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         scaling_params = self.sample_uniform_sextet(scales)
         if isotropic:
             scaling_params.fill_(scaling_params[0])
@@ -171,6 +180,7 @@ class RandomAffine(RandomTransform, SpatialTransform):
         }
         transform = Affine(**self.add_include_exclude(arguments))
         transformed = transform(subject)
+        assert isinstance(transformed, Subject)
         return transformed
 
 
@@ -215,7 +225,7 @@ class Affine(SpatialTransform):
             label_interpolation: str = 'nearest',
             check_shape: bool = True,
             **kwargs
-            ):
+    ):
         super().__init__(**kwargs)
         self.scales = self.parse_params(
             scales,
@@ -247,12 +257,14 @@ class Affine(SpatialTransform):
         self.default_pad_value = _parse_default_value(default_pad_value)
         self.default_pad_label = default_pad_label
         self.image_interpolation = self.parse_interpolation(
-            image_interpolation)
+            image_interpolation,
+        )
         self.label_interpolation = self.parse_interpolation(
-            label_interpolation)
+            label_interpolation,
+        )
         self.invert_transform = False
         self.check_shape = check_shape
-        self.args_names = (
+        self.args_names = [
             'scales',
             'degrees',
             'translation',
@@ -262,17 +274,17 @@ class Affine(SpatialTransform):
             'image_interpolation',
             'label_interpolation',
             'check_shape',
-        )
+        ]
 
     @staticmethod
     def _get_scaling_transform(
             scaling_params: Sequence[float],
             center_lps: Optional[TypeTripletFloat] = None,
-            ) -> sitk.ScaleTransform:
+    ) -> sitk.ScaleTransform:
         # 1.5 means the objects look 1.5 times larger
         transform = sitk.ScaleTransform(3)
-        scaling_params = np.array(scaling_params).astype(float)
-        transform.SetScale(scaling_params)
+        scaling_params_array = np.array(scaling_params).astype(float)
+        transform.SetScale(scaling_params_array)
         if center_lps is not None:
             transform.SetCenter(center_lps)
         return transform
@@ -282,13 +294,13 @@ class Affine(SpatialTransform):
             degrees: Sequence[float],
             translation: Sequence[float],
             center_lps: Optional[TypeTripletFloat] = None,
-            ) -> sitk.Euler3DTransform:
+    ) -> sitk.Euler3DTransform:
 
-        def ras_to_lps(triplet: np.ndarray):
+        def ras_to_lps(triplet: Sequence[float]):
             return np.array((-1, -1, 1), dtype=float) * np.asarray(triplet)
 
         transform = sitk.Euler3DTransform()
-        radians = np.radians(degrees)
+        radians = np.radians(degrees).tolist()
 
         # SimpleITK uses LPS
         radians_lps = ras_to_lps(radians)
@@ -348,6 +360,7 @@ class Affine(SpatialTransform):
     def apply_transform(self, subject: Subject) -> Subject:
         if self.check_shape:
             subject.check_consistent_spatial_shape()
+        default_value: float
         for image in self.get_images(subject):
             transform = self.get_affine_transform(image)
             transformed_tensors = []
@@ -366,12 +379,15 @@ class Affine(SpatialTransform):
                         default_value = tensor.min().item()
                     elif self.default_pad_value == 'mean':
                         default_value = get_borders_mean(
-                            sitk_image, filter_otsu=False)
+                            sitk_image, filter_otsu=False,
+                        )
                     elif self.default_pad_value == 'otsu':
                         default_value = get_borders_mean(
-                            sitk_image, filter_otsu=True)
+                            sitk_image, filter_otsu=True,
+                        )
                     else:
-                        default_value = self.default_pad_value
+                        assert isinstance(self.default_pad_value, Number)
+                        default_value = float(self.default_pad_value)
                 transformed_tensor = self.apply_affine_transform(
                     sitk_image,
                     transform,
@@ -395,7 +411,7 @@ class Affine(SpatialTransform):
             transform: sitk.Transform,
             interpolation: str,
             default_value: float,
-            ) -> torch.Tensor:
+    ) -> torch.Tensor:
         floating = reference = sitk_image
 
         resampler = sitk.ResampleImageFilter()

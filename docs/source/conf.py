@@ -4,18 +4,16 @@
 # This file does only contain a selection of the most common options. For a
 # full list see the documentation:
 # http://www.sphinx-doc.org/en/master/config
-
 # -- Path setup --------------------------------------------------------------
-
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
 import os
 import sys
-from typing import List
 from datetime import date
-sys.path.insert(0, os.path.abspath('../..'))
+from typing import List
+sys.path.insert(0, os.path.abspath('../../src'))
 import torchio  # noqa: E402
 
 # -- Project information -----------------------------------------------------
@@ -28,7 +26,6 @@ copyright = f'{date.today().year}, {author}'  # noqa: A001
 # version is the short X.Y version
 # release is the full version, including alpha/beta/rc tags
 version = release = torchio.__version__
-
 
 # -- General configuration ---------------------------------------------------
 
@@ -80,7 +77,7 @@ master_doc = 'index'
 #
 # This is also used if you do content translation via gettext catalogs.
 # Usually you set "language" from the command line for these cases.
-language = None
+language = 'en'
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
@@ -167,8 +164,10 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, 'TorchIO.tex', 'TorchIO Documentation',
-     'Fernando Pérez-García', 'manual'),
+    (
+        master_doc, 'TorchIO.tex', 'TorchIO Documentation',
+        'Fernando Pérez-García', 'manual',
+    ),
 ]
 
 
@@ -177,8 +176,10 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    (master_doc, 'torchio', 'TorchIO Documentation',
-     [author], 1)
+    (
+        master_doc, 'torchio', 'TorchIO Documentation',
+        [author], 1,
+    ),
 ]
 
 
@@ -188,9 +189,11 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    (master_doc, 'TorchIO', 'TorchIO Documentation',
-     author, 'TorchIO', 'One line description of project.',
-     'Miscellaneous'),
+    (
+        master_doc, 'TorchIO', 'TorchIO Documentation',
+        author, 'TorchIO', 'One line description of project.',
+        'Miscellaneous',
+    ),
 ]
 
 
@@ -225,16 +228,6 @@ sphinx_gallery_conf = {
     'examples_dirs': '../examples',   # example scripts
     'gallery_dirs': 'auto_examples',  # where to save gallery generated output
     'matplotlib_animations': True,
-    'binder': {
-        # Required keys
-        'org': 'fepegar',
-        'repo': 'torchio',
-        'branch': 'main',
-        'binderhub_url': 'https://mybinder.org',
-        'dependencies': '../requirements.txt',
-        # Optional keys
-        'use_jupyter_lab': False,
-    }
 }
 
 # autosummary_generate = True  # Turn on sphinx.ext.autosummary

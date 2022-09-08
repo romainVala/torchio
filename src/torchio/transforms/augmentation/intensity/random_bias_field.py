@@ -1,13 +1,16 @@
 from collections import defaultdict
-from typing import Union, Tuple, Dict, List
+from typing import Dict
+from typing import List
+from typing import Tuple
+from typing import Union
 
-import torch
 import numpy as np
+import torch
 
-from ....typing import TypeData
-from ....data.subject import Subject
-from ... import IntensityTransform
 from .. import RandomTransform
+from ... import IntensityTransform
+from ....data.subject import Subject
+from ....typing import TypeData
 
 
 class RandomBiasField(RandomTransform, IntensityTransform):
@@ -38,14 +41,15 @@ class RandomBiasField(RandomTransform, IntensityTransform):
             coefficients: Union[float, Tuple[float, float]] = 0.5,
             order: int = 3,
             **kwargs
-            ):
+    ):
         super().__init__(**kwargs)
         self.coefficients_range = self._parse_range(
-            coefficients, 'coefficients_range')
+            coefficients, 'coefficients_range',
+        )
         self.order = _parse_order(order)
 
     def apply_transform(self, subject: Subject) -> Subject:
-        arguments = defaultdict(dict)
+        arguments: Dict[str, dict] = defaultdict(dict)
         for image_name in self.get_images_dict(subject):
             coefficients = self.get_params(
                 self.order,
@@ -55,21 +59,22 @@ class RandomBiasField(RandomTransform, IntensityTransform):
             arguments['order'][image_name] = self.order
         transform = BiasField(**self.add_include_exclude(arguments))
         transformed = transform(subject)
+        assert isinstance(transformed, Subject)
         return transformed
 
     def get_params(
             self,
             order: int,
             coefficients_range: Tuple[float, float],
-            ) -> List[float]:
+    ) -> List[float]:
         # Sampling of the appropriate number of coefficients for the creation
         # of the bias field map
         random_coefficients = []
         for x_order in range(0, order + 1):
             for y_order in range(0, order + 1 - x_order):
                 for _ in range(0, order + 1 - (x_order + y_order)):
-                    number = self.sample_uniform(*coefficients_range)
-                    random_coefficients.append(number.item())
+                    sample = self.sample_uniform(*coefficients_range)
+                    random_coefficients.append(sample)
         return random_coefficients
 
 
@@ -87,12 +92,12 @@ class BiasField(IntensityTransform):
             coefficients: Union[List[float], Dict[str, List[float]]],
             order: Union[int, Dict[str, int]],
             **kwargs
-            ):
+    ):
         super().__init__(**kwargs)
         self.coefficients = coefficients
         self.order = order
         self.invert_transform = False
-        self.args_names = 'coefficients', 'order'
+        self.args_names = ['coefficients', 'order']
 
     def arguments_are_dict(self):
         coefficients_dict = isinstance(self.coefficients, dict)
@@ -106,9 +111,13 @@ class BiasField(IntensityTransform):
         coefficients, order = self.coefficients, self.order
         for name, image in self.get_images_dict(subject).items():
             if self.arguments_are_dict():
+                assert isinstance(self.coefficients, dict)
+                assert isinstance(self.order, dict)
                 coefficients, order = self.coefficients[name], self.order[name]
+            assert isinstance(order, int)
             bias_field = self.generate_bias_field(
-                image.data, order, coefficients)
+                image.data, order, coefficients,  # type: ignore[arg-type]
+            )
             if self.invert_transform:
                 np.divide(1, bias_field, out=bias_field)
             image.set_data(image.data * torch.as_tensor(bias_field))
@@ -119,7 +128,7 @@ class BiasField(IntensityTransform):
             data: TypeData,
             order: int,
             coefficients: TypeData,
-            ) -> np.ndarray:
+    ) -> np.ndarray:
         # Create the bias field map using a linear combination of polynomial
         # functions and the coefficients previously sampled
         shape = np.array(data.shape[1:])  # first axis is channels

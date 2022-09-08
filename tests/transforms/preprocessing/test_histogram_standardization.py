@@ -1,7 +1,11 @@
-import torch
 import numpy as np
+import torch
+from torchio import LabelMap
+from torchio import ScalarImage
+from torchio import Subject
+from torchio import SubjectsDataset
 from torchio.transforms import HistogramStandardization
-from torchio import LabelMap, ScalarImage, Subject, SubjectsDataset
+
 from ...utils import TorchioTestCase
 
 
@@ -14,7 +18,8 @@ class TestHistogramStandardization(TorchioTestCase):
         for i in range(5):
             image = ScalarImage(self.get_image_path(f'hs_image_{i}'))
             label_path = self.get_image_path(
-                f'hs_label_{i}', binary=True, force_binary_foreground=True)
+                f'hs_label_{i}', binary=True, force_binary_foreground=True,
+            )
             label = LabelMap(label_path)
             subject = Subject(image=image, label=label)
             subjects.append(subject)

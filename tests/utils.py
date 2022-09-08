@@ -1,17 +1,19 @@
-import os
 import copy
-import shutil
+import os
 import random
+import shutil
 import tempfile
 import unittest
 from pathlib import Path
 from random import shuffle
-from typing import Set, Sequence
+from typing import Sequence
+from typing import Set
 
-import torch
 import numpy as np
-from numpy.testing import assert_array_equal, assert_array_almost_equal
+import torch
 import torchio as tio
+from numpy.testing import assert_array_almost_equal
+from numpy.testing import assert_array_equal
 
 
 class TorchioTestCase(unittest.TestCase):
@@ -27,7 +29,7 @@ class TorchioTestCase(unittest.TestCase):
             [1, 0, 0, 10],
             [0, 1, 0, 0],
             [0, 0, 1.2, 0],
-            [0, 0, 0, 1]
+            [0, 0, 0, 1],
         ])
 
         subject_a = tio.Subject(
@@ -49,7 +51,7 @@ class TorchioTestCase(unittest.TestCase):
             label=tio.LabelMap(self.get_image_path('label_d', binary=True)),
         )
         subject_a4 = tio.Subject(
-            t1=tio.ScalarImage(self.get_image_path('t1_a'), components=2),
+            t1=tio.ScalarImage(self.get_image_path('t1_a'), components=4),
         )
         self.subjects_list = [
             subject_a,
@@ -60,6 +62,7 @@ class TorchioTestCase(unittest.TestCase):
         ]
         self.dataset = tio.SubjectsDataset(self.subjects_list)
         self.sample_subject = self.dataset[-1]  # subject_d
+        self.subject_4d = self.dataset[1]
 
     def make_2d(self, subject):
         subject = copy.deepcopy(subject)
@@ -84,7 +87,8 @@ class TorchioTestCase(unittest.TestCase):
         subject = tio.Subject(
             t1=tio.ScalarImage(self.get_image_path('t1_inc')),
             t2=tio.ScalarImage(
-                self.get_image_path('t2_inc', shape=(10, 20, 31))),
+                self.get_image_path('t2_inc', shape=(10, 20, 31)),
+            ),
             label=tio.LabelMap(
                 self.get_image_path(
                     'label_inc',
@@ -120,8 +124,8 @@ class TorchioTestCase(unittest.TestCase):
             ),
             label=tio.LabelMap(
                 self.get_image_path(
-                    'label_d2', binary=False, components=components
-                )
+                    'label_d2', binary=False, components=components,
+                ),
             ),
         )
 
@@ -129,9 +133,9 @@ class TorchioTestCase(unittest.TestCase):
         return tio.Subject(
             label=tio.LabelMap(
                 self.get_image_path(
-                    'label_multi', labels=labels
-                )
-            )
+                    'label_multi', labels=labels,
+                ),
+            ),
         )
 
     @staticmethod
@@ -163,7 +167,7 @@ class TorchioTestCase(unittest.TestCase):
             add_nans=False,
             suffix=None,
             force_binary_foreground=True,
-            ):
+    ):
         shape = (*shape, 1) if len(shape) == 2 else shape
         data = np.random.rand(components, *shape)
         if binary:

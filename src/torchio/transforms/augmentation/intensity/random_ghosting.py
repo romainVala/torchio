@@ -1,12 +1,16 @@
 from collections import defaultdict
-from typing import Tuple, Union, Dict
+from typing import Dict
+from typing import Iterable
+from typing import Tuple
+from typing import Union
 
-import torch
 import numpy as np
+import torch
 
-from ....data.subject import Subject
-from ... import IntensityTransform, FourierTransform
 from .. import RandomTransform
+from ... import FourierTransform
+from ... import IntensityTransform
+from ....data.subject import Subject
 
 
 class RandomGhosting(RandomTransform, IntensityTransform):
@@ -53,33 +57,37 @@ class RandomGhosting(RandomTransform, IntensityTransform):
             intensity: Union[float, Tuple[float, float]] = (0.5, 1),
             restore: float = 0.02,
             **kwargs
-            ):
+    ):
         super().__init__(**kwargs)
         if not isinstance(axes, tuple):
             try:
-                axes = tuple(axes)
+                axes = tuple(axes)  # type: ignore[arg-type]
             except TypeError:
-                axes = (axes,)
+                axes = (axes,)  # type: ignore[assignment]
+        assert isinstance(axes, Iterable)
         for axis in axes:
             if not isinstance(axis, str) and axis not in (0, 1, 2):
                 raise ValueError(f'Axes must be in (0, 1, 2), not "{axes}"')
         self.axes = axes
         self.num_ghosts_range = self._parse_range(
-            num_ghosts, 'num_ghosts', min_constraint=0, type_constraint=int)
+            num_ghosts, 'num_ghosts', min_constraint=0, type_constraint=int,
+        )
         self.intensity_range = self._parse_range(
-            intensity, 'intensity_range', min_constraint=0)
+            intensity, 'intensity_range', min_constraint=0,
+        )
         self.restore = _parse_restore(restore)
 
     def apply_transform(self, subject: Subject) -> Subject:
-        arguments = defaultdict(dict)
+        arguments: Dict[str, dict] = defaultdict(dict)
         if any(isinstance(n, str) for n in self.axes):
             subject.check_consistent_orientation()
         for name, image in self.get_images_dict(subject).items():
             is_2d = image.is_2d()
             axes = [a for a in self.axes if a != 2] if is_2d else self.axes
+            min_ghosts, max_ghosts = self.num_ghosts_range
             params = self.get_params(
-                self.num_ghosts_range,
-                axes,
+                (int(min_ghosts), int(max_ghosts)),
+                axes,  # type: ignore[arg-type]
                 self.intensity_range,
             )
             num_ghosts_param, axis_param, intensity_param = params
@@ -89,6 +97,7 @@ class RandomGhosting(RandomTransform, IntensityTransform):
             arguments['restore'][name] = self.restore
         transform = Ghosting(**self.add_include_exclude(arguments))
         transformed = transform(subject)
+        assert isinstance(transformed, Subject)
         return transformed
 
     def get_params(
@@ -96,11 +105,11 @@ class RandomGhosting(RandomTransform, IntensityTransform):
             num_ghosts_range: Tuple[int, int],
             axes: Tuple[int, ...],
             intensity_range: Tuple[float, float],
-            ) -> Tuple:
+    ) -> Tuple:
         ng_min, ng_max = num_ghosts_range
         num_ghosts = torch.randint(ng_min, ng_max + 1, (1,)).item()
         axis = axes[torch.randint(0, len(axes), (1,))]
-        intensity = self.sample_uniform(*intensity_range).item()
+        intensity = self.sample_uniform(*intensity_range)
         return num_ghosts, axis, intensity
 
 
@@ -138,13 +147,13 @@ class Ghosting(IntensityTransform, FourierTransform):
             intensity: Union[float, Dict[str, float]],
             restore: Union[float, Dict[str, float]],
             **kwargs
-            ):
+    ):
         super().__init__(**kwargs)
         self.axis = axis
         self.num_ghosts = num_ghosts
         self.intensity = intensity
         self.restore = restore
-        self.args_names = 'num_ghosts', 'axis', 'intensity', 'restore'
+        self.args_names = ['num_ghosts', 'axis', 'intensity', 'restore']
 
     def apply_transform(self, subject: Subject) -> Subject:
         axis = self.axis
@@ -153,12 +162,20 @@ class Ghosting(IntensityTransform, FourierTransform):
         restore = self.restore
         for name, image in self.get_images_dict(subject).items():
             if self.arguments_are_dict():
+                assert isinstance(self.axis, dict)
+                assert isinstance(self.num_ghosts, dict)
+                assert isinstance(self.intensity, dict)
+                assert isinstance(self.restore, dict)
                 axis = self.axis[name]
                 num_ghosts = self.num_ghosts[name]
                 intensity = self.intensity[name]
                 restore = self.restore[name]
             transformed_tensors = []
             for tensor in image.data:
+                assert isinstance(num_ghosts, int)
+                assert isinstance(axis, int)
+                assert isinstance(intensity, float)
+                assert isinstance(restore, float)
                 transformed_tensor = self.add_artifact(
                     tensor,
                     num_ghosts,
@@ -177,25 +194,26 @@ class Ghosting(IntensityTransform, FourierTransform):
             axis: int,
             intensity: float,
             restore_center: float,
-            ):
+    ):
         if not num_ghosts or not intensity:
             return tensor
 
-        array = tensor.numpy()
-        spectrum = self.fourier_transform(array)
+        spectrum = self.fourier_transform(tensor)
 
-        mi, mj, mk = np.array(array.shape) // 2
+        shape = np.array(tensor.shape)
+        ri, rj, rk = np.round(restore_center * shape).astype(np.uint16)
+        mi, mj, mk = np.array(tensor.shape) // 2
 
         # Variable "planes" is the part of the spectrum that will be modified
         if axis == 0:
             planes = spectrum[::num_ghosts, :, :]
-            restore = spectrum[mi, :, :].copy()
+            restore = spectrum[mi, :, :].clone()
         elif axis == 1:
             planes = spectrum[:, ::num_ghosts, :]
-            restore = spectrum[:, mj, :].copy()
+            restore = spectrum[:, mj, :].clone()
         elif axis == 2:
             planes = spectrum[:, :, ::num_ghosts]
-            restore = spectrum[:, :, mk].copy()
+            restore = spectrum[:, :, mk].clone()
 
         # Multiply by 0 if intensity is 1
         planes *= 1 - intensity
@@ -208,9 +226,8 @@ class Ghosting(IntensityTransform, FourierTransform):
         elif axis == 2:
             spectrum[:, :, mk] = restore
 
-        array_ghosts = self.inv_fourier_transform(spectrum)
-        array_ghosts = np.real(array_ghosts).astype(np.float32)
-        return torch.as_tensor(array_ghosts)
+        tensor_ghosts = self.inv_fourier_transform(spectrum)
+        return tensor_ghosts.real.float()
 
 
 def _parse_restore(restore):
@@ -220,6 +237,7 @@ def _parse_restore(restore):
         raise TypeError(f'Restore must be a float, not "{restore}"') from e
     if not 0 <= restore <= 1:
         message = (
-            f'Restore must be a number between 0 and 1, not {restore}')
+            f'Restore must be a number between 0 and 1, not {restore}'
+        )
         raise ValueError(message)
     return restore

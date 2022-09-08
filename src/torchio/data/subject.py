@@ -1,12 +1,22 @@
+from __future__ import annotations
+
 import copy
 import pprint
-from typing import Any, Dict, List, Tuple, Optional, Sequence, TYPE_CHECKING
+from typing import Any
+from typing import Callable
+from typing import Dict
+from typing import List
+from typing import Optional
+from typing import Sequence
+from typing import Tuple
+from typing import TYPE_CHECKING
 
 import numpy as np
 
-from ..constants import TYPE, INTENSITY
-from .image import Image
+from ..constants import INTENSITY
+from ..constants import TYPE
 from ..utils import get_subclasses
+from .image import Image
 
 if TYPE_CHECKING:
     from ..transforms import Transform, Compose
@@ -48,12 +58,13 @@ class Subject(dict):
                 kwargs.update(args[0])
             else:
                 message = (
-                    'Only one dictionary as positional argument is allowed')
+                    'Only one dictionary as positional argument is allowed'
+                )
                 raise ValueError(message)
         super().__init__(**kwargs)
         self._parse_images(self.get_images(intensity_only=False))
         self.update_attributes()  # this allows me to do e.g. subject.t1
-        self.applied_transforms = []
+        self.applied_transforms: List[Tuple[str, dict]] = []
         self.transforms_metrics = []
 
     def __repr__(self):
@@ -65,23 +76,13 @@ class Subject(dict):
         return string
 
     def __copy__(self):
-        result_dict = {}
-        for key, value in self.items():
-            if isinstance(value, Image):
-                value = copy.copy(value)
-            else:
-                value = copy.deepcopy(value)
-            result_dict[key] = value
-        new = Subject(result_dict)
-        new.applied_transforms = self.applied_transforms[:]
-        new.transforms_metrics = self.transforms_metrics[:]
-        return new
+        return _subject_copy_helper(self, type(self))
 
     def __len__(self):
         return len(self.get_images(intensity_only=False))
 
     @staticmethod
-    def _parse_images(images: List[Tuple[str, Image]]) -> None:
+    def _parse_images(images: List[Image]) -> None:
         # Check that it's not empty
         if not images:
             raise TypeError('A subject without images cannot be created')
@@ -114,7 +115,7 @@ class Subject(dict):
 
             >>> import torchio as tio
             >>> colin = tio.datasets.Colin27()
-            >>> colin.shape
+            >>> colin.spatial_shape
             (181, 217, 181)
         """
         self.check_consistent_spatial_shape()
@@ -130,7 +131,7 @@ class Subject(dict):
 
             >>> import torchio as tio
             >>> colin = tio.datasets.Slicer()
-            >>> colin.shape
+            >>> colin.spacing
             (1.0, 1.0, 1.2999954223632812)
         """
         self.check_consistent_attribute('spacing')
@@ -148,7 +149,7 @@ class Subject(dict):
             self,
             ignore_intensity: bool = False,
             image_interpolation: Optional[str] = None,
-            ) -> List['Transform']:
+    ) -> List[Transform]:
         from ..transforms.transform import Transform
         from ..transforms.intensity_transform import IntensityTransform
         name_to_transform = {
@@ -175,7 +176,7 @@ class Subject(dict):
             self,
             ignore_intensity: bool = False,
             image_interpolation: Optional[str] = None,
-            ) -> 'Compose':
+    ) -> Compose:
         from ..transforms.augmentation.composition import Compose
         transforms = self.get_applied_transforms(
             ignore_intensity=ignore_intensity,
@@ -188,7 +189,7 @@ class Subject(dict):
             warn: bool = True,
             ignore_intensity: bool = True,
             image_interpolation: Optional[str] = None,
-            ) -> 'Compose':
+    ) -> Compose:
         """Get a reversed list of the inverses of the applied transforms.
 
         Args:
@@ -206,7 +207,7 @@ class Subject(dict):
         inverse_transform = history_transform.inverse(warn=warn)
         return inverse_transform
 
-    def apply_inverse_transform(self, **kwargs) -> 'Subject':
+    def apply_inverse_transform(self, **kwargs) -> Subject:
         """Try to apply the inverse of all applied transforms, in reverse order.
 
         Args:
@@ -214,7 +215,8 @@ class Subject(dict):
                 :meth:`~torchio.data.subject.Subject.get_inverse_transform`.
         """
         inverse_transform = self.get_inverse_transform(**kwargs)
-        transformed = inverse_transform(self)
+        transformed: Subject
+        transformed = inverse_transform(self)  # type: ignore[assignment]
         transformed.clear_history()
         return transformed
 
@@ -228,7 +230,7 @@ class Subject(dict):
             relative_tolerance: float = 1e-6,
             absolute_tolerance: float = 1e-6,
             message: Optional[str] = None,
-            ) -> None:
+    ) -> None:
         r"""Check for consistency of an attribute across all images.
 
         Args:
@@ -285,7 +287,7 @@ class Subject(dict):
                     message = message.format(
                         pprint.pformat({
                             first_image: first_attribute,
-                            image_name: current_attribute
+                            image_name: current_attribute,
                         }),
                     )
                     raise RuntimeError(message)
@@ -331,7 +333,7 @@ class Subject(dict):
             intensity_only=True,
             include: Optional[Sequence[str]] = None,
             exclude: Optional[Sequence[str]] = None,
-            ) -> Dict[str, Image]:
+    ) -> Dict[str, Image]:
         images = {}
         for image_name, image in self.items():
             if not isinstance(image, Image):
@@ -350,7 +352,7 @@ class Subject(dict):
             intensity_only=True,
             include: Optional[Sequence[str]] = None,
             exclude: Optional[Sequence[str]] = None,
-            ) -> List[Image]:
+    ) -> List[Image]:
         images_dict = self.get_images_dict(
             intensity_only=intensity_only,
             include=include,
@@ -370,9 +372,9 @@ class Subject(dict):
 
     def add_transform(
             self,
-            transform: 'Transform',
+            transform: Transform,
             parameters_dict: dict,
-            ) -> None:
+    ) -> None:
         self.applied_transforms.append((transform.name, parameters_dict))
 
     def add_transform_all(
@@ -392,13 +394,31 @@ class Subject(dict):
         # This allows to get images using attribute notation, e.g. subject.t1
         self.__dict__.update(self)
 
+    @staticmethod
+    def _check_image_name(image_name):
+        if not isinstance(image_name, str):
+            message = (
+                'The image name must be a string,'
+                f' but it has type "{type(image_name)}"'
+            )
+            raise ValueError(message)
+        return image_name
+
     def add_image(self, image: Image, image_name: str) -> None:
-        """Add an image."""
+        """Add an image to the subject instance."""
+        if not isinstance(image, Image):
+            message = (
+                'Image must be an instance of torchio.Image,'
+                f' but its type is "{type(image)}"'
+            )
+            raise ValueError(message)
+        self._check_image_name(image_name)
         self[image_name] = image
         self.update_attributes()
 
     def remove_image(self, image_name: str) -> None:
-        """Remove an image."""
+        """Remove an image from the subject instance."""
+        self._check_image_name(image_name)
         del self[image_name]
         delattr(self, image_name)
 
@@ -411,3 +431,28 @@ class Subject(dict):
         """
         from ..visualization import plot_subject  # avoid circular import
         plot_subject(self, **kwargs)
+
+
+def _subject_copy_helper(
+    old_obj: Subject,
+    new_subj_cls: Callable[[Dict[str, Any]], Subject],
+):
+    result_dict = {}
+    for key, value in old_obj.items():
+        if isinstance(value, Image):
+            value = copy.copy(value)
+        else:
+            value = copy.deepcopy(value)
+        result_dict[key] = value
+
+    new = new_subj_cls(result_dict)
+    new.applied_transforms = old_obj.applied_transforms[:]
+    new.transforms_metrics = old_obj.transforms_metrics[:]
+
+    return new
+
+
+class _RawSubjectCopySubject(Subject):
+
+    def __copy__(self):
+        return _subject_copy_helper(self, Subject)

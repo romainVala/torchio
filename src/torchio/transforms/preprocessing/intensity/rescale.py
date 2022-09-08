@@ -1,12 +1,14 @@
 import warnings
-from typing import Optional, Tuple
+from typing import Optional
+from typing import Tuple
 
-import torch
 import numpy as np
+import torch
 
 from ....data.subject import Subject
 from ....typing import TypeRangeFloat
-from .normalization_transform import NormalizationTransform, TypeMaskingMethod
+from .normalization_transform import NormalizationTransform
+from .normalization_transform import TypeMaskingMethod
 
 
 class RescaleIntensity(NormalizationTransform):
@@ -48,22 +50,24 @@ class RescaleIntensity(NormalizationTransform):
             masking_method: TypeMaskingMethod = None,
             in_min_max: Optional[Tuple[float, float]] = None,
             **kwargs
-            ):
+    ):
         super().__init__(masking_method=masking_method, **kwargs)
         self.out_min_max = out_min_max
         self.in_min_max = in_min_max
         self.out_min, self.out_max = self._parse_range(
-            out_min_max, 'out_min_max')
+            out_min_max, 'out_min_max',
+        )
         self.percentiles = self._parse_range(
-            percentiles, 'percentiles', min_constraint=0, max_constraint=100)
-        self.args_names = 'out_min_max', 'percentiles', 'masking_method'
+            percentiles, 'percentiles', min_constraint=0, max_constraint=100,
+        )
+        self.args_names = ['out_min_max', 'percentiles', 'masking_method']
 
     def apply_normalization(
             self,
             subject: Subject,
             image_name: str,
             mask: torch.Tensor,
-            ) -> None:
+    ) -> None:
         image = subject[image_name]
         image.set_data(self.rescale(image.data, mask, image_name))
 
@@ -72,7 +76,7 @@ class RescaleIntensity(NormalizationTransform):
             tensor: torch.Tensor,
             mask: torch.Tensor,
             image_name: str,
-            ) -> torch.Tensor:
+    ) -> torch.Tensor:
         # The tensor is cloned as in-place operations will be used
         array = tensor.clone().float().numpy()
         mask = mask.numpy()
@@ -85,7 +89,7 @@ class RescaleIntensity(NormalizationTransform):
             return tensor
         values = array[mask]
         cutoff = np.percentile(values, self.percentiles)
-        np.clip(array, *cutoff, out=array)
+        np.clip(array, *cutoff, out=array)  # type: ignore[call-overload]
         if self.in_min_max is None:
             in_min, in_max = array.min(), array.max()
         else:

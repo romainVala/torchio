@@ -1,13 +1,14 @@
 import tempfile
 from pathlib import Path
 
-import torch
-import pytest
 import numpy as np
+import pytest
 import SimpleITK as sitk
+import torch
+from torchio.data import io
+from torchio.data import ScalarImage
 
 from ..utils import TorchioTestCase
-from torchio.data import io, ScalarImage
 
 
 class TestIO(TorchioTestCase):
@@ -152,7 +153,7 @@ def test_write_nd_with_a_read_it_with_b(save_lib, load_lib, dims):
     loaded_tensor, loaded_affine = load_function(path)
     TorchioTestCase.assertTensorEqual(
         tensor.squeeze(), loaded_tensor.squeeze(),
-        f'Save lib: {save_lib}; load lib: {load_lib}; dims: {dims}'
+        f'Save lib: {save_lib}; load lib: {load_lib}; dims: {dims}',
     )
     TorchioTestCase.assertTensorEqual(affine, loaded_affine)
 

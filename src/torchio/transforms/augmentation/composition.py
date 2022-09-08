@@ -1,12 +1,16 @@
+from __future__ import annotations
+
 import warnings
-from typing import Union, Sequence, Dict
+from typing import Dict
+from typing import Sequence
+from typing import Union
 
-import torch
 import numpy as np
+import torch
 
-from ...data.subject import Subject
-from .. import Transform
 from . import RandomTransform
+from .. import Transform
+from ...data.subject import Subject
 from typing import List
 
 
@@ -45,13 +49,13 @@ class Compose(Transform):
 
     def apply_transform(self, subject: Subject) -> Subject:
         for transform in self.transforms:
-            subject = transform(subject)
+            subject = transform(subject)  # type: ignore[assignment]
         return subject
 
     def is_invertible(self) -> bool:
         return all(t.is_invertible() for t in self.transforms)
 
-    def inverse(self, warn: bool = True) -> Transform:
+    def inverse(self, warn: bool = True) -> Compose:
         """Return a composed transform with inverted order and transforms.
 
         Args:
@@ -98,7 +102,7 @@ class OneOf(RandomTransform):
             self,
             transforms: TypeTransformsDict,
             **kwargs
-            ):
+    ):
         super().__init__(parse_input=False, **kwargs)
         self.transforms_dict = self._get_transforms_dict(transforms)
 
@@ -108,12 +112,12 @@ class OneOf(RandomTransform):
         transforms = list(self.transforms_dict.keys())
         transform = transforms[index]
         transformed = transform(subject)
-        return transformed
+        return transformed  # type: ignore[return-value]
 
     def _get_transforms_dict(
             self,
             transforms: TypeTransformsDict,
-            ) -> Dict[Transform, float]:
+    ) -> Dict[Transform, float]:
         if isinstance(transforms, dict):
             transforms_dict = dict(transforms)
             self._normalize_probabilities(transforms_dict)
@@ -139,7 +143,7 @@ class OneOf(RandomTransform):
     @staticmethod
     def _normalize_probabilities(
             transforms_dict: Dict[Transform, float],
-            ) -> None:
+    ) -> None:
         probabilities = np.array(list(transforms_dict.values()), dtype=float)
         if np.any(probabilities < 0):
             message = (

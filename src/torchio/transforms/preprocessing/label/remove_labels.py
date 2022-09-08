@@ -59,13 +59,13 @@ class RemoveLabels(RemapLabels):
             background_label: int = 0,
             masking_method: TypeMaskingMethod = None,
             **kwargs
-            ):
+    ):
         remapping = {label: background_label for label in labels}
         super().__init__(remapping, masking_method, **kwargs)
         self.labels = labels
         self.background_label = background_label
         self.masking_method = masking_method
-        self.args_names = 'labels', 'background_label', 'masking_method'
+        self.args_names = ['labels', 'background_label', 'masking_method']
 
     def is_invertible(self):
         return False

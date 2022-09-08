@@ -1,12 +1,14 @@
 from numbers import Number
+from typing import Dict
 from typing import Union
 
-import numpy as np
 import nibabel as nib
+import numpy as np
 import torch
 
 from ....data.subject import Subject
-from .bounds_transform import BoundsTransform, TypeBounds
+from .bounds_transform import BoundsTransform
+from .bounds_transform import TypeBounds
 
 
 class Pad(BoundsTransform):
@@ -57,12 +59,12 @@ class Pad(BoundsTransform):
             padding: TypeBounds,
             padding_mode: Union[str, float] = 0,
             **kwargs
-            ):
+    ):
         super().__init__(padding, **kwargs)
         self.padding = padding
         self.check_padding_mode(padding_mode)
         self.padding_mode = padding_mode
-        self.args_names = 'padding', 'padding_mode'
+        self.args_names = ['padding', 'padding_mode']
 
     @classmethod
     def check_padding_mode(cls, padding_mode):
@@ -75,19 +77,23 @@ class Pad(BoundsTransform):
             raise KeyError(message)
 
     def apply_transform(self, subject: Subject) -> Subject:
+        assert self.bounds_parameters is not None
         low = self.bounds_parameters[::2]
         for image in self.get_images(subject):
             new_origin = nib.affines.apply_affine(image.affine, -np.array(low))
             new_affine = image.affine.copy()
             new_affine[:3, 3] = new_origin
+            kwargs: Dict[str, Union[str, float]]
             if isinstance(self.padding_mode, Number):
-                kwargs = {'mode': 'constant',
-                          'constant_values': self.padding_mode}
+                kwargs = {
+                    'mode': 'constant',
+                    'constant_values': self.padding_mode,
+                }
             else:
                 kwargs = {'mode': self.padding_mode}
             pad_params = self.bounds_parameters
             paddings = (0, 0), pad_params[:2], pad_params[2:4], pad_params[4:]
-            padded = np.pad(image.data, paddings, **kwargs)
+            padded = np.pad(image.data, paddings, **kwargs)  # type: ignore[call-overload]  # noqa: E501
             image.set_data(torch.as_tensor(padded))
             image.affine = new_affine
         return subject

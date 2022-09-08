@@ -1,15 +1,17 @@
-import warnings
 from itertools import islice
-from typing import List, Iterator, Optional
+from typing import Iterator
+from typing import List
+from typing import Optional
 
-import torch
 import humanize
-from tqdm import trange
-from torch.utils.data import Dataset, DataLoader
+import torch
+from torch.utils.data import DataLoader
+from torch.utils.data import Dataset
 
-from .subject import Subject
-from .sampler import PatchSampler
+from .. import NUM_SAMPLES
 from .dataset import SubjectsDataset
+from .sampler import PatchSampler
+from .subject import Subject
 
 
 class Queue(Dataset):
@@ -59,7 +61,9 @@ class Queue(Dataset):
         max_length: Maximum number of patches that can be stored in the queue.
             Using a large number means that the queue needs to be filled less
             often, but more CPU memory is needed to store the patches.
-        samples_per_volume: Number of patches to extract from each volume.
+        samples_per_volume: Default number of patches to extract from each
+            volume. If a subject contains an attribute :attr:`num_samples`, it
+            will be used instead of :attr:`samples_per_volume`.
             A small number of patches ensures a large variability in the queue,
             but training will be slower.
         sampler: A subclass of :class:`~torchio.data.sampler.PatchSampler` used
@@ -144,7 +148,7 @@ class Queue(Dataset):
             shuffle_patches: bool = True,
             start_background: bool = True,
             verbose: bool = False,
-            ):
+    ):
         self.subjects_dataset = subjects_dataset
         self.max_length = max_length
         self.shuffle_subjects = shuffle_subjects
@@ -185,7 +189,7 @@ class Queue(Dataset):
 
     def _print(self, *args):
         if self.verbose:
-            print(*args)  # noqa: T001
+            print(*args)  # noqa: T201
 
     def _initialize_subjects_iterable(self):
         self._subjects_iterable = self._get_subjects_iterable()
@@ -206,34 +210,38 @@ class Queue(Dataset):
 
     @property
     def iterations_per_epoch(self) -> int:
-        return self.num_subjects * self.samples_per_volume
+        total_num_patches = sum(
+            self._get_subject_num_samples(subject)
+            for subject in self.subjects_dataset.dry_iter()
+        )
+        return total_num_patches
+
+    def _get_subject_num_samples(self, subject):
+        num_samples = getattr(
+            subject,
+            NUM_SAMPLES,
+            self.samples_per_volume,
+        )
+        return num_samples
 
     def _fill(self) -> None:
         assert self.sampler is not None
-        if self.max_length % self.samples_per_volume != 0:
-            message = (
-                f'Queue length ({self.max_length})'
-                ' not divisible by the number of'
-                f' patches per volume ({self.samples_per_volume})'
-            )
-            warnings.warn(message, RuntimeWarning)
 
-        # If there are e.g. 4 subjects and 1 sample per volume and max_length
-        # is 6, we just need to load 4 subjects, not 6
-        max_num_subjects_for_queue = self.max_length // self.samples_per_volume
-        num_subjects_for_queue = min(
-            self.num_subjects, max_num_subjects_for_queue)
-
-        self._print(f'Filling queue from {num_subjects_for_queue} subjects...')
-        if self.verbose:
-            iterable = trange(num_subjects_for_queue, leave=False)
-        else:
-            iterable = range(num_subjects_for_queue)
-        for _ in iterable:
+        num_subjects = 0
+        while True:
             subject = self._get_next_subject()
             iterable = self.sampler(subject)
-            patches = list(islice(iterable, self.samples_per_volume))
+            num_samples = self._get_subject_num_samples(subject)
+            num_free_slots = self.max_length - len(self.patches_list)
+            num_samples = min(num_samples, num_free_slots)
+            patches = list(islice(iterable, num_samples))
             self.patches_list.extend(patches)
+            num_subjects += 1
+            list_full = len(self.patches_list) >= self.max_length
+            all_subjects_sampled = num_subjects >= len(self.subjects_dataset)
+            if list_full or all_subjects_sampled:
+                break
+
         if self.shuffle_patches:
             self._shuffle_patches_list()
 
@@ -266,7 +274,8 @@ class Queue(Dataset):
         # I need a DataLoader to handle parallelism
         # But this loader is always expected to yield single subject samples
         self._print(
-            f'\nCreating subjects loader with {self.num_workers} workers')
+            f'\nCreating subjects loader with {self.num_workers} workers',
+        )
         subjects_loader = DataLoader(
             self.subjects_dataset,
             num_workers=self.num_workers,

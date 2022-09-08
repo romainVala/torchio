@@ -1,7 +1,7 @@
 # pylint: disable=import-outside-toplevel
-
 """Console script for torchio."""
 import sys
+
 import click
 
 
@@ -18,7 +18,7 @@ import click
     '--imclass', '-c',
     type=str,
     default='ScalarImage',
-    help='Subclass of torchio.Image used to instantiate the image.'
+    help='Subclass of torchio.Image used to instantiate the image.',
 )
 @click.option(
     '--seed', '-s',
@@ -39,7 +39,7 @@ def main(
         imclass,
         seed,
         verbose,
-        ):
+):
     """Apply transform to an image.
 
     \b

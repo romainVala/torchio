@@ -1,27 +1,36 @@
+from __future__ import annotations
+
 import ast
-import os
-import sys
 import gzip
+import os
 import shutil
+import sys
 import tempfile
 from pathlib import Path
-from typing import Union, Tuple, Any, Optional, List, Sequence, Dict
+from typing import Any
+from typing import Dict
+from typing import List
+from typing import Optional
+from typing import Sequence
+from typing import Tuple
+from typing import Union
 
+import nibabel as nib
+import numpy as np
+import SimpleITK as sitk
 import torch
 from torch.utils.data._utils.collate import default_collate
-import numpy as np
-import nibabel as nib
-import SimpleITK as sitk
-from tqdm import trange
+from tqdm.auto import trange
 
 from . import constants
-from .typing import TypeNumber, TypePath
+from .typing import TypeNumber
+from .typing import TypePath
 
 
 def to_tuple(
         value: Any,
         length: int = 1,
-        ) -> Tuple[TypeNumber, ...]:
+) -> Tuple[TypeNumber, ...]:
     """
     to_tuple(1, length=1) -> (1,)
     to_tuple(1, length=3) -> (1, 1, 1)
@@ -40,16 +49,17 @@ def to_tuple(
 
 
 def get_stem(
-        path: Union[TypePath, Sequence[TypePath]]
-        ) -> Union[str, List[str]]:
+        path: Union[TypePath, Sequence[TypePath]],
+) -> Union[str, List[str]]:
     """
     '/home/user/image.nii.gz' -> 'image'
     """
-    def _get_stem(path_string):
+    def _get_stem(path_string: TypePath) -> str:
         return Path(path_string).name.split('.')[0]
-    if isinstance(path, (str, Path)):
+    if isinstance(path, (str, os.PathLike)):
         return _get_stem(path)
-    return [_get_stem(p) for p in path]
+    else:  # path is actually a sequence of paths
+        return [_get_stem(p) for p in path]
 
 
 def create_dummy_dataset(
@@ -59,7 +69,7 @@ def create_dummy_dataset(
         suffix: str = '.nii.gz',
         force: bool = False,
         verbose: bool = False,
-        ):
+):
     from .data import ScalarImage, LabelMap, Subject
     output_dir = tempfile.gettempdir() if directory is None else directory
     output_dir = Path(output_dir)
@@ -84,7 +94,7 @@ def create_dummy_dataset(
         images_dir.mkdir(exist_ok=True, parents=True)
         labels_dir.mkdir(exist_ok=True, parents=True)
         if verbose:
-            print('Creating dummy dataset...')  # noqa: T001
+            print('Creating dummy dataset...')  # noqa: T201
             iterable = trange(num_images)
         else:
             iterable = range(num_images)
@@ -119,14 +129,14 @@ def apply_transform_to_file(
         output_path: TypePath,
         class_: str = 'ScalarImage',
         verbose: bool = False,
-        ):
+):
     from . import data
     image = getattr(data, class_)(input_path)
     subject = data.Subject(image=image)
     transformed = transform(subject)
     transformed.image.save(output_path)
     if verbose and transformed.history:
-        print('Applied transform:', transformed.history[0])  # noqa: T001
+        print('Applied transform:', transformed.history[0])  # noqa: T201
 
 
 def guess_type(string: str) -> Any:
@@ -160,7 +170,7 @@ def get_torchio_cache_dir() -> Path:
 def compress(
         input_path: TypePath,
         output_path: Optional[TypePath] = None,
-        ) -> Path:
+) -> Path:
     if output_path is None:
         output_path = Path(input_path).with_suffix('.nii.gz')
     with open(input_path, 'rb') as f_in:
@@ -269,7 +279,7 @@ def add_images_from_batch(
         tensor: torch.Tensor,
         class_=None,
         name='prediction',
-        ) -> None:
+) -> None:
     """Add images to subjects in a list, typically from a network prediction.
 
     The spatial metadata (affine matrices) will be extracted from one of the
@@ -304,7 +314,7 @@ def guess_external_viewer() -> Optional[Path]:
     and Windows.
     """
     if 'SITK_SHOW_COMMAND' in os.environ:
-        return os.environ['SITK_SHOW_COMMAND']
+        return Path(os.environ['SITK_SHOW_COMMAND'])
     platform = sys.platform
     itk = 'ITK-SNAP'
     slicer = 'Slicer'
@@ -331,12 +341,13 @@ def guess_external_viewer() -> Optional[Path]:
             if slicer_path.is_file():
                 return slicer_path
     elif 'linux' in platform:
-        itk_snap_path = shutil.which('itksnap')
-        if itk_snap_path is not None:
-            return Path(itk_snap_path)
-        slicer_path = shutil.which('Slicer')
-        if slicer_path is not None:
-            return Path(slicer_path)
+        itk_snap_which = shutil.which('itksnap')
+        if itk_snap_which is not None:
+            return Path(itk_snap_which)
+        slicer_which = shutil.which('Slicer')
+        if slicer_which is not None:
+            return Path(slicer_which)
+    return None  # for mypy
 
 
 def parse_spatial_shape(shape):
@@ -355,3 +366,7 @@ def parse_spatial_shape(shape):
         )
         raise ValueError(message)
     return result
+
+
+def normalize_path(path: TypePath):
+    return Path(path).expanduser().resolve()

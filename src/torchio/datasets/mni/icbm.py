@@ -1,8 +1,12 @@
 import urllib.parse
+
 import torch
-from ...utils import get_torchio_cache_dir, compress
+
+from ... import LabelMap
+from ... import ScalarImage
 from ...download import download_and_extract_archive
-from ... import ScalarImage, LabelMap
+from ...utils import compress
+from ...utils import get_torchio_cache_dir
 from .mni import SubjectMNI
 
 
@@ -72,7 +76,8 @@ class ICBM2009CNonlinearSymmetric(SubjectMNI):
         }
         if load_4d_tissues:
             subject_dict['tissues'] = LabelMap(
-                tissues_path, channels_last=True)
+                tissues_path, channels_last=True,
+            )
         else:
             subject_dict['gm'] = LabelMap(f'{p}_gm_{m}{s}')
             subject_dict['wm'] = LabelMap(f'{p}_wm_{m}{s}')

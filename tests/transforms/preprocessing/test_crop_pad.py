@@ -1,5 +1,6 @@
 import numpy as np
 import torchio as tio
+
 from ...utils import TorchioTestCase
 
 
@@ -143,7 +144,8 @@ class TestCropOrPad(TorchioTestCase):
         target_shape = 8, 22, 30
         transform_center = tio.CropOrPad(target_shape)
         transform_mask = tio.CropOrPad(
-            target_shape, mask_name='label')
+            target_shape, mask_name='label',
+        )
         mask = self.sample_subject['label'].data
         mask *= 0
         mask[0, 0, 0, 0] = 1

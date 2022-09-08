@@ -1,13 +1,14 @@
 import warnings
 
-import torch
 import numpy as np
+import torch
 
-from .typing import TypePath
+from .data.image import Image
+from .data.image import LabelMap
 from .data.subject import Subject
-from .data.image import Image, LabelMap
-from .transforms.preprocessing.spatial.to_canonical import ToCanonical
 from .transforms.preprocessing.intensity.rescale import RescaleIntensity
+from .transforms.preprocessing.spatial.to_canonical import ToCanonical
+from .typing import TypePath
 
 
 def import_mpl_plt():
@@ -40,7 +41,7 @@ def plot_volume(
         figsize=None,
         reorient=True,
         indices=None,
-        ):
+):
     _, plt = import_mpl_plt()
     fig = None
     if axes is None:
@@ -48,7 +49,7 @@ def plot_volume(
     sag_axis, cor_axis, axi_axis = axes
 
     if reorient:
-        image = ToCanonical()(image)
+        image = ToCanonical()(image)  # type: ignore[assignment]
     data = image.data[channel]
     if indices is None:
         indices = np.array(data.shape) // 2
@@ -105,6 +106,7 @@ def plot_volume(
         fig.savefig(output_path)
     if show:
         plt.show()
+    return fig
 
 
 def plot_subject(
@@ -115,7 +117,7 @@ def plot_subject(
         figsize=None,
         clear_axes=True,
         **kwargs,
-        ):
+):
     _, plt = import_mpl_plt()
     num_images = len(subject)
     many_images = num_images > 2
@@ -210,7 +212,7 @@ def make_gif(
         optimize: bool = True,
         rescale: bool = True,
         reverse: bool = False,
-        ) -> None:
+) -> None:
     try:
         from PIL import Image as ImagePIL
     except ModuleNotFoundError as e:
@@ -219,7 +221,8 @@ def make_gif(
             ' pip install Pillow'
         )
         raise RuntimeError(message) from e
-    tensor = RescaleIntensity((0, 255))(tensor) if rescale else tensor
+    transform = RescaleIntensity((0, 255))
+    tensor = transform(tensor) if rescale else tensor  # type: ignore[assignment]  # noqa: E501
     single_channel = len(tensor) == 1
 
     # Move channels dimension to the end and bring selected axis to 0

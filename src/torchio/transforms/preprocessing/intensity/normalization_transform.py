@@ -1,7 +1,8 @@
 import torch
+
+from ... import IntensityTransform
 from ....data.subject import Subject
 from ....transforms.transform import TypeMaskingMethod
-from ... import IntensityTransform
 
 
 class NormalizationTransform(IntensityTransform):
@@ -39,7 +40,7 @@ class NormalizationTransform(IntensityTransform):
             self,
             masking_method: TypeMaskingMethod = None,
             **kwargs
-            ):
+    ):
         super().__init__(**kwargs)
         self.masking_method = masking_method
 
@@ -58,6 +59,6 @@ class NormalizationTransform(IntensityTransform):
             subject: Subject,
             image_name: str,
             mask: torch.Tensor,
-            ) -> None:
+    ) -> None:
         # There must be a nicer way of doing this
         raise NotImplementedError
