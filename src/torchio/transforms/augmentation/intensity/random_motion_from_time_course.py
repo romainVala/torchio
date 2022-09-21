@@ -477,12 +477,12 @@ class MotionFromTimeCourse(IntensityTransform, FourierTransform):
     def _rotate_coordinates_1D_motion(self, euler_motion_params, image_shape, kspace_order, Apply_inv_affine=True):
         # Apply_inv_affinne is True for the nufft_type1 and false
         # for the nuft2 we also add a 1 voxel translation to euler_motion_params todo check with different resolution
-
+        euler_motion_params_local = euler_motion_params.copy()
         if Apply_inv_affine is False: #case for nufft_type2 add a one voxel shift
             # one voxel shift if odd ! todo resolution ?
             off_center = np.array([(x / 2 - x // 2) * 2 for x in image_shape])
-            euler_motion_params[:3, :] = euler_motion_params[:3, :] - \
-                                         np.repeat(np.expand_dims(off_center, 1), euler_motion_params.shape[1], axis=1)
+            euler_motion_params_local[:3, :] = euler_motion_params_local[:3, :] - \
+                                         np.repeat(np.expand_dims(off_center, 1), euler_motion_params_local.shape[1], axis=1)
 
         lin_spaces = [np.linspace(-0.5, 0.5-1/x, x)*2*math.pi for x in image_shape]  # todo it suposes 1 vox = 1mm
         #remove 1/x to avoid small scaling
@@ -496,12 +496,12 @@ class MotionFromTimeCourse(IntensityTransform, FourierTransform):
         dim_order = np.hstack([np.array(0), np.array(kspace_order)+1]) #first dim is 4 (homogeneous coordinates)
         grid_out = grid_out.transpose(dim_order) #so that wanted phase dim is at the end
 
-        if euler_motion_params.shape[1] != grid_out.shape[3]:
+        if euler_motion_params_local.shape[1] != grid_out.shape[3]:
             raise('dimenssion issue euler_motion_params and phase dim')
         #applied motion at each phase step (on the kspace grid plan)
 
-        for nnp in range(euler_motion_params.shape[1]):
-            aff = get_matrix_from_euler_and_trans(euler_motion_params[:,nnp])
+        for nnp in range(euler_motion_params_local.shape[1]):
+            aff = get_matrix_from_euler_and_trans(euler_motion_params_local[:,nnp])
             if Apply_inv_affine:
                 aff = np.linalg.inv(aff)
             grid_plane = grid_out[:, :, :, nnp]
