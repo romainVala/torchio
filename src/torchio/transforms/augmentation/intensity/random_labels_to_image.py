@@ -442,7 +442,7 @@ class LabelsToImage(IntensityTransform):
                 if self.random_shape is not None:
                     for ind_r_shape, s_shape in self.random_shape:
                         if ind_r_shape==label:
-                            s_shape = int(s_shape)
+                            s_shape = int(s_shape[0]) if isinstance(s_shape,list) else int(s_shape)
                             data = torch.rand([1,s_shape,s_shape,s_shape])
                             img = ScalarImage(tensor=data)
                             t_resize = Resize(mask.shape[1:]) if is_discretized else   Resize(mask.shape)
