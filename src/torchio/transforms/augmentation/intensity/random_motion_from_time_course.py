@@ -410,7 +410,6 @@ class MotionFromTimeCourse(IntensityTransform, FourierTransform):
                     self.euler_motion_params[image_name] = euler_motion_params
                 else:
                     self.euler_motion_params = euler_motion_params
-
             corrupted_im = self.apply_motion_in_kspace(original_image, euler_motion_params, kspace_order, nufft_type)
 
             # magnitude
@@ -576,7 +575,7 @@ class MotionFromTimeCourse(IntensityTransform, FourierTransform):
 
         return corrupted_im
 
-    def demean_euler_motion_params(self, euler_motion_params, original_image, displacement_shift_strategy,
+    def demean_euler_motion_params(self, euler_motion_params, original_image_fft, displacement_shift_strategy,
                        fast_dim=(0,2)):
         #compute a weighted average of motion time course, (separatly on each Euler parameters)
         #return a new time course, shifted .
@@ -589,7 +588,8 @@ class MotionFromTimeCourse(IntensityTransform, FourierTransform):
             euler_motion_params = euler_motion_params - to_subtract_tile
             return euler_motion_params, to_subtract
 
-        original_image_fft = self.fourier_transform_for_nufft(original_image)
+        #original_image_fft = self.fourier_transform_for_nufft(original_image) #fucking bug, coef_shaw was computed on image
+
         # coef_shaw = np.sqrt( np.sum(abs(original_image_fft**2), axis=(0,2)) ) ;
         # should be equivalent if fft is done from real image, but not if the phase is acquired,
         # CF Todd 2015 "Prospective motion correction of 3D echo-planar imaging data for functional MRI
@@ -600,10 +600,11 @@ class MotionFromTimeCourse(IntensityTransform, FourierTransform):
         elif displacement_shift_strategy == '1D_wFT2':
             #coef_shaw = np.abs( np.sum( original_image_fft * np.conjugate(original_image_fft), axis=fast_dim ));
             coef_shaw = np.abs( np.sum( original_image_fft **2, axis=fast_dim ))
-            coef_shaw = coef_shaw / np.sum(coef_shaw)
         else:
             warnings.warn(f'No motion time course demean defined, for parameter displacement_shift_strategy '
                           f'{displacement_shift_strategy}')
+
+        coef_shaw = coef_shaw / np.sum(coef_shaw)
 
         to_subtract = np.zeros(6)
         for i in range(0,6):
