@@ -204,9 +204,9 @@ class Coregister(SpatialTransform):
 
         coregistered_data = []
 
-        for data_img, trsfm_map in zip(
-                img_src[DATA],
-                transform_parameter_maps):
+        #for data_img, trsfm_map in zip(img_src[DATA], transform_parameter_maps):  #Rrr list of different size
+        trsfm_map = transform_parameter_maps[0] #rrr tocheck can it be greater than 1 ?
+        for data_img in img_src[DATA]:
 
             data_sitk = nib_to_sitk(data_img[np.newaxis, ...],
                                     affine=img_src.affine,
