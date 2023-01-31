@@ -99,7 +99,8 @@ def calculate_mean_Disp_J(motion_params, rmax=80, center_of_mass=np.array([0,0,0
 
     # T_rb_prev = pm[0].reshape(4, 4)   # for Frame displacement
     fd = np.zeros(nbt)
-    for i in range(1, nbt):
+    #first I implemented to start at 1 (as if we compare to the first one, but because of the remove of the mean let's count the first one
+    for i in range(0, nbt):
         P = np.hstack((motion_params[:, i], np.array([1, 1, 1, 0, 0, 0])))
         T_rb = get_matrix_from_euler_and_trans(P)
         #M = np.dot(T_rb, np.linalg.inv(T_rb_prev)) - np.eye(4)  #for Frame displacmeent
