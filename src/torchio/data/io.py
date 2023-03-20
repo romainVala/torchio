@@ -160,6 +160,8 @@ def _write_nibabel(
     else:
         #tensor = tensor[np.newaxis].permute(2, 3, 4, 1, 0)
         tensor = tensor.permute(1, 2, 3, 0)
+    if (tensor.dtype is torch.float16) or (tensor.dtype is torch.int64) :
+        tensor = tensor.to(torch.float32)
     suffix = Path(str(path).replace('.gz', '')).suffix
     if '.nii' in suffix:
         img = nib.Nifti1Image(np.asarray(tensor), affine)
