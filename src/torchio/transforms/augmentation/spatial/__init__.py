@@ -6,6 +6,7 @@ from .random_elastic_deformation import (
     RandomElasticDeformation,
     ElasticDeformation,
 )
+from .random_crop_or_p import RandomCropOrPad
 
 __all__ = [
     'RandomFlip',
@@ -16,4 +17,5 @@ __all__ = [
     'RandomAnisotropy',
     'RandomElasticDeformation',
     'ElasticDeformation',
+    'RandomCropIrPad',
 ]
