@@ -16,6 +16,8 @@ from ....data.subject import Subject
 from ....typing import TypeTripletFloat
 from ....typing import TypeTripletInt
 from ....utils import to_tuple
+from ....constants import TYPE
+from ....constants import INTENSITY
 
 
 SPLINE_ORDER = 3
@@ -285,7 +287,15 @@ class ElasticDeformation(SpatialTransform):
                 image.affine,
                 interpolation,
             )
-            image.set_data(transformed)
+            if image[TYPE] != INTENSITY and len(transformed)>1 :
+                #romain quick hask for 4D label, set unknown to last label (suposed bg)
+                im_res = transformed
+                indd =  im_res.sum(dim=0) < 0.5
+                im_res[0,indd] = 1 #totdo should be a parameter like self.default_pad_label
+                image.set_data(im_res)
+                print(f'RdElast, 4D labels seting {indd.sum()} vox to backgroug index 0')
+            else:
+                image.set_data(transformed)
         return subject
 
     def apply_bspline_transform(
