@@ -72,7 +72,6 @@ class Coregister(SpatialTransform):
             'target',
             'estimation_mapping',
             'default_parameter_map',
-            'estimated_parameter_maps'
         )
 
     def apply_transform(self, subject: Subject) -> Subject:
@@ -161,7 +160,7 @@ class Coregister(SpatialTransform):
                     moving_img.set_data(coregistered)
                     moving_img.affine = affine
         self.estimated_parameter_maps = transform_map
-        os.remove('TransformParameters.0.txt')
+        #os.remove('TransformParameters.0.txt')
         return subject
 
     @staticmethod
