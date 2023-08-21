@@ -144,6 +144,8 @@ class Queue(Dataset):
             samples_per_volume: int,
             sampler: PatchSampler,
             num_workers: int = 0,
+            persistent_workers: bool = False,
+            pin_memory: bool = False,
             shuffle_subjects: bool = True,
             shuffle_patches: bool = True,
             start_background: bool = True,
@@ -156,6 +158,8 @@ class Queue(Dataset):
         self.samples_per_volume = samples_per_volume
         self.sampler = sampler
         self.num_workers = num_workers
+        self.persistent_workers = persistent_workers
+        self.pin_memory = pin_memory
         self.verbose = verbose
         self._subjects_iterable = None
         if start_background:
@@ -274,11 +278,13 @@ class Queue(Dataset):
         # I need a DataLoader to handle parallelism
         # But this loader is always expected to yield single subject samples
         self._print(
-            f'\nCreating subjects loader with {self.num_workers} workers',
+            f'\nCreating subjects loader with {self.num_workers} workers pin_mem {self.pin_memory} persistent {self.persistent_workers}',
         )
         subjects_loader = DataLoader(
             self.subjects_dataset,
             num_workers=self.num_workers,
+            pin_memory=self.pin_memory,
+            persistent_workers=self.persistent_workers,
             batch_size=1,
             collate_fn=self._get_first_item,
             shuffle=self.shuffle_subjects,
