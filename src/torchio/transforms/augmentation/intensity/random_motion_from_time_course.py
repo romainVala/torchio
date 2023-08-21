@@ -472,6 +472,41 @@ class MotionFromTimeCourse(IntensityTransform, FourierTransform):
             print(f'adding {npt_added:.1f}')
         return interpolated_fpars
 
+    def scale_image(self,image,  scale_factor):
+        def fourier_transform_for_nufft(image):
+            output = (np.fft.fftshift(np.fft.fftn(np.fft.ifftshift(image)))).astype(np.complex128)
+            return output
+        i = tio.ScalarImage('sub-CC00284BN13_ses-90801_desc-drawem9_dseg.nii.gz')
+        image = i.data[0]
+
+        image_shape=image.shape
+
+        lin_spaces = [np.linspace(-0.5, 0.5-1/x, x)*2*math.pi for x in image_shape]  # todo it suposes 1 vox = 1mm
+        #remove 1/x to avoid small scaling
+        lin_spaces = [np.linspace(-0.5+ 1 / x, 0.5 , x) * 2 * math.pi for x in  image_shape]  # todo it suposes 1 vox = 1mm
+        meshgrids = np.meshgrid(*lin_spaces, indexing='ij')
+        # pour une affine on ajoute de 1, dans les coordone du point, mais pour le augmented kspace
+        # on ajoute la phase initial, donc 0 ici
+        meshgrids.append(np.zeros(image_shape))
+        grid_out = np.array([mg * scale_factor for mg in meshgrids])
+
+        eps = 1E-7
+        #grid_out = grid_out * scale_factor
+
+        f = np.zeros(grid_out[0].shape, dtype=np.complex128, order='F').flatten() #(order='F')
+        ip = np.asfortranarray(image.numpy().astype(complex) )
+
+        finufft.nufft3d2(grid_out[0].flatten(order='F'), grid_out[1].flatten(order='F'),
+                         grid_out[2].flatten(order='F'), ip,
+                         eps=eps, out=f, debug=0, spread_debug=0, spread_sort=2, fftw=0, modeord=0,
+                         chkbnds=0, upsampfac=1.25, isign=-1)  # upsampling at 1.25 saves time at low precisions
+
+        #f = f * np.exp(-1j * grid_out[3].flatten(order='F'))
+        f = f.reshape(ip.shape,order='F')
+
+        iout = abs( inv_fourier_transform_for_nufft(f) )
+        return iout
+
 
     def _rotate_coordinates_1D_motion(self, euler_motion_params, image_shape, kspace_order, Apply_inv_affine=True):
         # Apply_inv_affinne is True for the nufft_type1 and false
