@@ -95,17 +95,20 @@ class SubjectsDataset(Dataset):
         if self.load_from_dir:
             import os
             sujtio_dir, sujtio_filepath = os.path.dirname(self._subjects[index]), os.path.basename(self._subjects[index]),
-            cmd = f'cd {sujtio_dir}; tar -xzf {sujtio_filepath}'
-            os.system(cmd)
-            subject = torch.load(f'{sujtio_dir}/{sujtio_filepath[:-7]}')
+            if sujtio_filepath.endswith('.pt'):
+                subject = torch.load(f'{sujtio_dir}/{sujtio_filepath}')
+            else:
+                cmd = f'cd {sujtio_dir}; tar -xzf {sujtio_filepath}'
+                os.system(cmd)
+                subject = torch.load(f'{sujtio_dir}/{sujtio_filepath[:-7]}')
+
+                cmd = f'rm -f {sujtio_dir}/{sujtio_filepath[:-7]}'
+                os.system(cmd)
 
             #quick hack to avoid checking path !:! on disk since we load from disk no need of path
             for img in subject.get_images_names():
                 subject[img]['path'] = None
                 subject[img].path = None
-
-            cmd = f'rm -f {sujtio_dir}/{sujtio_filepath[:-7]}'
-            os.system(cmd)
 
             if self.add_to_load is not None:
                 #print('adding subject with {}'.format(self.add_to_load))
