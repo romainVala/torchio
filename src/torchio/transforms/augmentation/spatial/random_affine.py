@@ -110,7 +110,6 @@ class RandomAffine(RandomTransform, SpatialTransform):
     """  # noqa: B950
 
     def __init__(
-<<<<<<< HEAD
             self,
             scales: TypeOneToSixFloat = 0.1,
             degrees: TypeOneToSixFloat = 10,
@@ -123,19 +122,6 @@ class RandomAffine(RandomTransform, SpatialTransform):
             label_interpolation: str = 'nearest',
             check_shape: bool = True,
             **kwargs
-=======
-        self,
-        scales: TypeOneToSixFloat = 0.1,
-        degrees: TypeOneToSixFloat = 10,
-        translation: TypeOneToSixFloat = 0,
-        isotropic: bool = False,
-        center: str = 'image',
-        default_pad_value: Union[str, float] = 'minimum',
-        image_interpolation: str = 'linear',
-        label_interpolation: str = 'nearest',
-        check_shape: bool = True,
-        **kwargs,
->>>>>>> 97232165c74061b0fe9e018c5377cb3ed63d67fe
     ):
         super().__init__(**kwargs)
         self.isotropic = isotropic

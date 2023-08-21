@@ -85,20 +85,12 @@ class Noise(IntensityTransform):
     """
 
     def __init__(
-<<<<<<< HEAD
             self,
             mean: Union[float, Dict[str, float]],
             std: Union[float, Dict[str, float]],
             seed: Union[int, Sequence[int]],
             abs_after_noise: bool = False,
             **kwargs
-=======
-        self,
-        mean: Union[float, Dict[str, float]],
-        std: Union[float, Dict[str, float]],
-        seed: Union[int, Sequence[int]],
-        **kwargs,
->>>>>>> 97232165c74061b0fe9e018c5377cb3ed63d67fe
     ):
         super().__init__(**kwargs)
         self.mean = mean  # type: ignore[assignment]
@@ -112,13 +104,8 @@ class Noise(IntensityTransform):
         mean, std, seed, abs_after_noise = args = self.mean, self.std, self.seed, self.abs_after_noise
         for name, image in self.get_images_dict(subject).items():
             if self.arguments_are_dict():
-<<<<<<< HEAD
                 values = (arg[name] for arg in args)  # type: ignore[index,call-overload]  # noqa: E501
                 mean, std, seed, abs_after_noise  = values  # type: ignore[assignment]  # noqa: E501
-=======
-                values = (arg[name] for arg in args)  # type: ignore[index,call-overload]  # noqa: B950
-                mean, std, seed = values  # type: ignore[assignment]  # noqa: B950
->>>>>>> 97232165c74061b0fe9e018c5377cb3ed63d67fe
             with self._use_seed(seed):
                 assert isinstance(mean, float)
                 assert isinstance(std, float)

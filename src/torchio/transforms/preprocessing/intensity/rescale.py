@@ -46,9 +46,9 @@ class RescaleIntensity(NormalizationTransform):
     def __init__(
             self,
             out_min_max: TypeRangeFloat = (0, 1),
-            percentiles: TypeRangeFloat = (1, 99),
+            percentiles: TypeRangeFloat = (1, 100),
             masking_method: TypeMaskingMethod = None,
-            in_min_max: Optional[Tuple[float, float]] = None,
+            in_min_max: Optional[TypeRangeFloat] = None,
             **kwargs
     ):
         super().__init__(masking_method=masking_method, **kwargs)
