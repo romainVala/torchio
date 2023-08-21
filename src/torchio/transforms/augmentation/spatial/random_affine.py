@@ -107,9 +107,10 @@ class RandomAffine(RandomTransform, SpatialTransform):
         ct_transformed = transform(ct)
         subject.add_image(ct_transformed, 'Transformed')
         subject.plot()
+    """  # noqa: B950
 
-    """  # noqa: E501
     def __init__(
+<<<<<<< HEAD
             self,
             scales: TypeOneToSixFloat = 0.1,
             degrees: TypeOneToSixFloat = 10,
@@ -122,6 +123,19 @@ class RandomAffine(RandomTransform, SpatialTransform):
             label_interpolation: str = 'nearest',
             check_shape: bool = True,
             **kwargs
+=======
+        self,
+        scales: TypeOneToSixFloat = 0.1,
+        degrees: TypeOneToSixFloat = 10,
+        translation: TypeOneToSixFloat = 0,
+        isotropic: bool = False,
+        center: str = 'image',
+        default_pad_value: Union[str, float] = 'minimum',
+        image_interpolation: str = 'linear',
+        label_interpolation: str = 'nearest',
+        check_shape: bool = True,
+        **kwargs,
+>>>>>>> 97232165c74061b0fe9e018c5377cb3ed63d67fe
     ):
         super().__init__(**kwargs)
         self.isotropic = isotropic
@@ -130,10 +144,7 @@ class RandomAffine(RandomTransform, SpatialTransform):
         self.degrees = self.parse_params(degrees, 0, 'degrees')
         self.translation = self.parse_params(translation, 0, 'translation')
         if center not in ('image', 'origin'):
-            message = (
-                'Center argument must be "image" or "origin",'
-                f' not "{center}"'
-            )
+            message = f'Center argument must be "image" or "origin", not "{center}"'
             raise ValueError(message)
         self.center = center
         self.default_pad_value = _parse_default_value(default_pad_value)
@@ -147,11 +158,11 @@ class RandomAffine(RandomTransform, SpatialTransform):
         self.check_shape = check_shape
 
     def get_params(
-            self,
-            scales: TypeSextetFloat,
-            degrees: TypeSextetFloat,
-            translation: TypeSextetFloat,
-            isotropic: bool,
+        self,
+        scales: TypeSextetFloat,
+        degrees: TypeSextetFloat,
+        translation: TypeSextetFloat,
+        isotropic: bool,
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         scaling_params = self.sample_uniform_sextet(scales)
         if isotropic:
@@ -213,6 +224,7 @@ class Affine(SpatialTransform):
         **kwargs: See :class:`~torchio.transforms.Transform` for additional
             keyword arguments.
     """
+
     def __init__(
             self,
             scales: TypeTripletFloat,
@@ -247,10 +259,7 @@ class Affine(SpatialTransform):
             make_ranges=False,
         )
         if center not in ('image', 'origin'):
-            message = (
-                'Center argument must be "image" or "origin",'
-                f' not "{center}"'
-            )
+            message = f'Center argument must be "image" or "origin", not "{center}"'
             raise ValueError(message)
         self.center = center
         self.use_image_center = center == 'image'
@@ -278,8 +287,8 @@ class Affine(SpatialTransform):
 
     @staticmethod
     def _get_scaling_transform(
-            scaling_params: Sequence[float],
-            center_lps: Optional[TypeTripletFloat] = None,
+        scaling_params: Sequence[float],
+        center_lps: Optional[TypeTripletFloat] = None,
     ) -> sitk.ScaleTransform:
         # 1.5 means the objects look 1.5 times larger
         transform = sitk.ScaleTransform(3)
@@ -291,11 +300,10 @@ class Affine(SpatialTransform):
 
     @staticmethod
     def _get_rotation_transform(
-            degrees: Sequence[float],
-            translation: Sequence[float],
-            center_lps: Optional[TypeTripletFloat] = None,
+        degrees: Sequence[float],
+        translation: Sequence[float],
+        center_lps: Optional[TypeTripletFloat] = None,
     ) -> sitk.Euler3DTransform:
-
         def ras_to_lps(triplet: Sequence[float]):
             return np.array((-1, -1, 1), dtype=float) * np.asarray(triplet)
 
@@ -379,11 +387,13 @@ class Affine(SpatialTransform):
                         default_value = tensor.min().item()
                     elif self.default_pad_value == 'mean':
                         default_value = get_borders_mean(
-                            sitk_image, filter_otsu=False,
+                            sitk_image,
+                            filter_otsu=False,
                         )
                     elif self.default_pad_value == 'otsu':
                         default_value = get_borders_mean(
-                            sitk_image, filter_otsu=True,
+                            sitk_image,
+                            filter_otsu=True,
                         )
                     else:
                         assert isinstance(self.default_pad_value, Number)
@@ -406,11 +416,11 @@ class Affine(SpatialTransform):
         return subject
 
     def apply_affine_transform(
-            self,
-            sitk_image: sitk.Image,
-            transform: sitk.Transform,
-            interpolation: str,
-            default_value: float,
+        self,
+        sitk_image: sitk.Image,
+        transform: sitk.Transform,
+        interpolation: str,
+        default_value: float,
     ) -> torch.Tensor:
         floating = reference = sitk_image
 
@@ -468,7 +478,6 @@ def _parse_default_value(value: Union[str, float]) -> Union[str, float]:
     if isinstance(value, Number) or value in ('minimum', 'otsu', 'mean'):
         return value
     message = (
-        'Value for default_pad_value must be "minimum", "otsu", "mean"'
-        ' or a number'
+        'Value for default_pad_value must be "minimum", "otsu", "mean" or a number'
     )
     raise ValueError(message)

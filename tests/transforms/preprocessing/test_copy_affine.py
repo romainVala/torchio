@@ -1,3 +1,5 @@
+import numpy as np
+import pytest
 import torch
 import torchio as tio
 
@@ -9,11 +11,11 @@ class TestCopyAffine(TorchioTestCase):
 
     def test_missing_reference(self):
         transform = tio.CopyAffine(target='missing')
-        with self.assertRaises(RuntimeError):
+        with pytest.raises(RuntimeError):
             transform(self.sample_subject)
 
     def test_wrong_target_type(self):
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             tio.CopyAffine(target=[1])
 
     def test_same_affine(self):
@@ -23,7 +25,19 @@ class TestCopyAffine(TorchioTestCase):
         subject = tio.Subject(t1=image, mask=mask)
         transform = tio.CopyAffine('t1')
         transformed = transform(subject)
-        self.assertTensorEqual(
+        self.assert_tensor_equal(
+            transformed['t1'].affine,
+            transformed['mask'].affine,
+        )
+
+    def test_before_loading(self):
+        affine = 2 * np.eye(4)
+        image = tio.ScalarImage(tensor=torch.rand(2, 2, 2, 2), affine=affine)
+        mask = tio.LabelMap(self.get_image_path('mask'))
+        subject = tio.Subject(t1=image, mask=mask)
+        transform = tio.CopyAffine('t1')
+        transformed = transform(subject)
+        self.assert_tensor_equal(
             transformed['t1'].affine,
             transformed['mask'].affine,
         )

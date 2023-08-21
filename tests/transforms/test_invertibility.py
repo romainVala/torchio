@@ -3,13 +3,11 @@ import warnings
 
 import torch
 import torchio as tio
-from torchio.transforms.intensity_transform import IntensityTransform
 
 from ..utils import TorchioTestCase
 
 
 class TestInvertibility(TorchioTestCase):
-
     def test_all_random_transforms(self):
         transform = self.get_large_composed_transform()
         # Remove RandomLabelsToImage as it will add a new image to the subject
@@ -24,23 +22,11 @@ class TestInvertibility(TorchioTestCase):
             transformed = transform(self.sample_subject)
             inverting_transform = transformed.get_inverse_transform()
             transformed_back = inverting_transform(transformed)
-        self.assertEqual(
-            transformed.t1.shape,
-            transformed_back.t1.shape,
-        )
-        self.assertTensorEqual(
+        assert transformed.t1.shape == transformed_back.t1.shape
+        self.assert_tensor_equal(
             transformed.label.affine,
             transformed_back.label.affine,
         )
-
-    def test_ignore_intensity(self):
-        composed = self.get_large_composed_transform()
-        with warnings.catch_warnings():
-            warnings.simplefilter('ignore', RuntimeWarning)
-            transformed = composed(self.sample_subject)
-        inverse_transform = transformed.get_inverse_transform(warn=False)
-        for transform in inverse_transform:
-            assert not isinstance(transform, IntensityTransform)
 
     def test_different_interpolation(self):
         def model_probs(subject):

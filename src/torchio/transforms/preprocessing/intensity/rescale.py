@@ -1,6 +1,5 @@
 import warnings
 from typing import Optional
-from typing import Tuple
 
 import numpy as np
 import torch
@@ -42,7 +41,8 @@ class RescaleIntensity(NormalizationTransform):
 
     .. _this scikit-image example: https://scikit-image.org/docs/dev/auto_examples/color_exposure/plot_equalize.html#sphx-glr-auto-examples-color-exposure-plot-equalize-py
     .. _nn-UNet paper: https://arxiv.org/abs/1809.10486
-    """  # noqa: E501
+    """  # noqa: B950
+
     def __init__(
             self,
             out_min_max: TypeRangeFloat = (0, 1),
@@ -55,27 +55,49 @@ class RescaleIntensity(NormalizationTransform):
         self.out_min_max = out_min_max
         self.in_min_max = in_min_max
         self.out_min, self.out_max = self._parse_range(
-            out_min_max, 'out_min_max',
+            out_min_max,
+            'out_min_max',
         )
         self.percentiles = self._parse_range(
-            percentiles, 'percentiles', min_constraint=0, max_constraint=100,
+            percentiles,
+            'percentiles',
+            min_constraint=0,
+            max_constraint=100,
         )
-        self.args_names = ['out_min_max', 'percentiles', 'masking_method']
+
+        self.in_min: Optional[float]
+        self.in_max: Optional[float]
+        if self.in_min_max is not None:
+            self.in_min, self.in_max = self._parse_range(
+                self.in_min_max,
+                'in_min_max',
+            )
+        else:
+            self.in_min = None
+            self.in_max = None
+
+        self.args_names = [
+            'out_min_max',
+            'percentiles',
+            'masking_method',
+            'in_min_max',
+        ]
+        self.invert_transform = False
 
     def apply_normalization(
-            self,
-            subject: Subject,
-            image_name: str,
-            mask: torch.Tensor,
+        self,
+        subject: Subject,
+        image_name: str,
+        mask: torch.Tensor,
     ) -> None:
         image = subject[image_name]
         image.set_data(self.rescale(image.data, mask, image_name))
 
     def rescale(
-            self,
-            tensor: torch.Tensor,
-            mask: torch.Tensor,
-            image_name: str,
+        self,
+        tensor: torch.Tensor,
+        mask: torch.Tensor,
+        image_name: str,
     ) -> torch.Tensor:
         # The tensor is cloned as in-place operations will be used
         array = tensor.clone().float().numpy()
@@ -85,26 +107,36 @@ class RescaleIntensity(NormalizationTransform):
                 f'Rescaling image "{image_name}" not possible'
                 ' because the mask to compute the statistics is empty'
             )
-            warnings.warn(message, RuntimeWarning)
+            warnings.warn(message, RuntimeWarning, stacklevel=2)
             return tensor
         values = array[mask]
         cutoff = np.percentile(values, self.percentiles)
         np.clip(array, *cutoff, out=array)  # type: ignore[call-overload]
         if self.in_min_max is None:
-            in_min, in_max = array.min(), array.max()
-        else:
-            in_min, in_max = self.in_min_max
-        in_range = in_max - in_min
+            self.in_min_max = self._parse_range(
+                (array.min(), array.max()),
+                'in_min_max',
+            )
+            self.in_min, self.in_max = self.in_min_max
+        assert self.in_min is not None
+        assert self.in_max is not None
+        in_range = self.in_max - self.in_min
         if in_range == 0:  # should this be compared using a tolerance?
             message = (
                 f'Rescaling image "{image_name}" not possible'
                 ' because all the intensity values are the same'
             )
-            warnings.warn(message, RuntimeWarning)
+            warnings.warn(message, RuntimeWarning, stacklevel=2)
             return tensor
-        array -= in_min
-        array /= in_range
         out_range = self.out_max - self.out_min
-        array *= out_range
-        array += self.out_min
+        if self.invert_transform:
+            array -= self.out_min
+            array /= out_range
+            array *= in_range
+            array += self.in_min
+        else:
+            array -= self.in_min
+            array /= in_range
+            array *= out_range
+            array += self.out_min
         return torch.as_tensor(array)

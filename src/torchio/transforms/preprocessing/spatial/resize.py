@@ -28,12 +28,13 @@ class Resize(SpatialTransform):
         image_interpolation: See :ref:`Interpolation`.
         label_interpolation: See :ref:`Interpolation`.
     """
+
     def __init__(
-            self,
-            target_shape: TypeSpatialShape,
-            image_interpolation: str = 'linear',
-            label_interpolation: str = 'nearest',
-            **kwargs
+        self,
+        target_shape: TypeSpatialShape,
+        image_interpolation: str = 'linear',
+        label_interpolation: str = 'nearest',
+        **kwargs,
     ):
         super().__init__(**kwargs)
         self.target_shape = np.asarray(to_tuple(target_shape, length=3))
@@ -70,7 +71,7 @@ class Resize(SpatialTransform):
                 f'Output shape {resampled.spatial_shape}'
                 f' != target shape {tuple(shape_out)}. Fixing with CropOrPad'
             )
-            warnings.warn(message)
+            warnings.warn(message, RuntimeWarning, stacklevel=2)
             crop_pad = CropOrPad(shape_out)  # type: ignore[arg-type]
             resampled = crop_pad(resampled)
         assert isinstance(resampled, Subject)

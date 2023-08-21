@@ -49,7 +49,7 @@ All transforms inherit from :class:`torchio.transforms.Transform`:
 Composability
 -------------
 
-Images can be composed to create directed acyclic graphs defining the
+Transforms can be composed to create directed acyclic graphs defining the
 probability that each transform will be applied.
 
 For example, to obtain the following graph:
@@ -197,7 +197,6 @@ for some further general explanations of digital image interpolation.
 .. currentmodule:: torchio.transforms.interpolation
 
 .. autoclass:: Interpolation
-    :show-inheritance:
     :members:
     :undoc-members:
 

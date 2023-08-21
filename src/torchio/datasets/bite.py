@@ -17,11 +17,11 @@ class BITE(SubjectsDataset, abc.ABC):
     base_url = 'http://www.bic.mni.mcgill.ca/uploads/Services/'
 
     def __init__(
-            self,
-            root: TypePath,
-            transform: Optional[Transform] = None,
-            download: bool = False,
-            **kwargs,
+        self,
+        root: TypePath,
+        transform: Optional[Transform] = None,
+        download: bool = False,
+        **kwargs,
     ):
         root = Path(root).expanduser().absolute()
         if download:
@@ -30,9 +30,11 @@ class BITE(SubjectsDataset, abc.ABC):
         self.kwargs = kwargs
         super().__init__(subjects_list, transform=transform, **kwargs)
 
+    @abc.abstractmethod
     def _download(self, root: Path):
         raise NotImplementedError
 
+    @abc.abstractmethod
     def _get_subjects_list(self, root: Path):
         raise NotImplementedError
 
@@ -54,7 +56,8 @@ class BITE3(BITE):
         transform: An instance of
             :class:`~torchio.transforms.transform.Transform`.
         download: If set to ``True``, will download the data into :attr:`root`.
-    """  # noqa: E501
+    """  # noqa: B950
+
     dirname = 'group3'
 
     def _download(self, root: Path):

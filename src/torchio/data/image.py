@@ -23,6 +23,7 @@ from ..constants import INTENSITY
 from ..constants import LABEL
 from ..constants import PATH
 from ..constants import STEM
+from ..constants import TENSOR
 from ..constants import TYPE
 from ..typing import TypeData
 from ..typing import TypeDataAffine
@@ -124,16 +125,17 @@ class Image(dict):
     .. _FSL docs: https://fsl.fmrib.ox.ac.uk/fsl/fslwiki/Orientation%20Explained
     .. _SimpleITK docs: https://simpleitk.readthedocs.io/en/master/fundamentalConcepts.html
     .. _Graham Wideman's website: http://www.grahamwideman.com/gw/brain/orientation/orientterms.htm
-    """  # noqa: E501
+    """  # noqa: B950
+
     def __init__(
-            self,
-            path: Union[TypePath, Sequence[TypePath], None] = None,
-            type: str = None,  # noqa: A002
-            tensor: Optional[TypeData] = None,
-            affine: Optional[TypeData] = None,
-            check_nans: bool = False,  # removed by ITK by default
-            reader: Callable = read_image,
-            **kwargs: Dict[str, Any],
+        self,
+        path: Union[TypePath, Sequence[TypePath], None] = None,
+        type: Optional[str] = None,  # noqa: A002
+        tensor: Optional[TypeData] = None,
+        affine: Optional[TypeData] = None,
+        check_nans: bool = False,  # removed by ITK by default
+        reader: Callable = read_image,
+        **kwargs: Dict[str, Any],
     ):
         self.check_nans = check_nans
         self.reader = reader
@@ -143,6 +145,8 @@ class Image(dict):
                 'Not specifying the image type is deprecated and will be'
                 ' mandatory in the future. You can probably use'
                 ' tio.ScalarImage or tio.LabelMap instead',
+                DeprecationWarning,
+                stacklevel=2,
             )
             type = INTENSITY  # noqa: A001
 
@@ -166,7 +170,7 @@ class Image(dict):
                 ' https://github.com/fepegar/torchio/pull/685 and will be'
                 ' removed in the future'
             )
-            warnings.warn(message, DeprecationWarning)
+            warnings.warn(message, DeprecationWarning, stacklevel=2)
 
         super().__init__(**kwargs)
         self.path = self._parse_path(path)
@@ -177,11 +181,13 @@ class Image(dict):
 
     def __repr__(self):
         properties = []
-        properties.extend([
-            f'shape: {self.shape}',
-            f'spacing: {self.get_spacing_string()}',
-            f'orientation: {"".join(self.orientation)}+',
-        ])
+        properties.extend(
+            [
+                f'shape: {self.shape}',
+                f'spacing: {self.get_spacing_string()}',
+                f'orientation: {"".join(self.orientation)}+',
+            ]
+        )
         if self._loaded:
             properties.append(f'dtype: {self.data.type()}')
             natural = humanize.naturalsize(self.memory, binary=True)
@@ -204,20 +210,27 @@ class Image(dict):
 
     def __copy__(self):
         kwargs = {
-            'tensor': self.data,
-            'affine': self.affine,
-            'type': self.type,
-            'path': self.path,
+            TYPE: self.type,
+            PATH: self.path,
         }
+        if self._loaded:
+            kwargs[TENSOR] = self.data
+            kwargs[AFFINE] = self.affine
         for key, value in self.items():
             if key in PROTECTED_KEYS:
                 continue
             kwargs[key] = value  # should I copy? deepcopy?
-        return type(self)(**kwargs)
+        new_image_class = type(self)
+        new_image = new_image_class(
+            check_nans=self.check_nans,
+            reader=self.reader,
+            **kwargs,
+        )
+        return new_image
 
     @property
     def data(self) -> torch.Tensor:
-        """Tensor data. Same as :class:`Image.tensor`."""
+        """Tensor data (same as :class:`Image.tensor`)."""
         return self[DATA]
 
     @data.setter  # type: ignore[misc]
@@ -235,7 +248,7 @@ class Image(dict):
 
     @property
     def tensor(self) -> torch.Tensor:
-        """Tensor data. Same as :class:`Image.data`."""
+        """Tensor data (same as :class:`Image.data`)."""
         return self.data
 
     @property
@@ -243,7 +256,10 @@ class Image(dict):
         """Affine matrix to transform voxel indices into world coordinates."""
         # If path is a dir (probably DICOM), just load the data
         # Same if it's a list of paths (used to create a 4D image)
-        if self._loaded or self._is_dir() or self._is_multipath():
+        # Finally, if we use a custom reader, SimpleITK probably won't be able
+        # to read the metadata, so we resort to loading everything into memory
+        is_custom_reader = self.reader is not read_image
+        if self._loaded or self._is_dir() or self._is_multipath() or is_custom_reader:
             affine = self[AFFINE]
         else:
             assert self.path is not None
@@ -305,7 +321,8 @@ class Image(dict):
     @property
     def direction(self) -> TypeDirection3D:
         _, _, direction = get_sitk_metadata_from_ras_affine(
-            self.affine, lps=False,
+            self.affine,
+            lps=False,
         )
         return direction  # type: ignore[return-value]
 
@@ -419,7 +436,7 @@ class Image(dict):
 
     @staticmethod
     def _parse_single_path(
-            path: TypePath,
+        path: TypePath,
     ) -> Path:
         try:
             path = Path(path).expanduser()
@@ -430,18 +447,16 @@ class Image(dict):
             )
             raise TypeError(message)
         except RuntimeError:
-            message = (
-                f'Conversion to path not possible for variable: {path}'
-            )
+            message = f'Conversion to path not possible for variable: {path}'
             raise RuntimeError(message)
 
-        if not (path.is_file() or path.is_dir()):   # might be a dir with DICOM
+        if not (path.is_file() or path.is_dir()):  # might be a dir with DICOM
             raise FileNotFoundError(f'File not found: "{path}"')
         return path
 
     def _parse_path(
-            self,
-            path: Optional[Union[TypePath, Sequence[TypePath]]],
+        self,
+        path: Optional[Union[TypePath, Sequence[TypePath]]],
     ) -> Optional[Union[Path, List[Path]]]:
         if path is None:
             return None
@@ -449,14 +464,14 @@ class Image(dict):
             # https://github.com/fepegar/torchio/pull/838
             raise TypeError('The path argument cannot be a dictionary')
         elif self._is_paths_sequence(path):
-            return [self._parse_single_path(p) for p in path]  # type: ignore[union-attr]  # noqa: E501
+            return [self._parse_single_path(p) for p in path]  # type: ignore[union-attr]  # noqa: B950
         else:
             return self._parse_single_path(path)  # type: ignore[arg-type]
 
     def _parse_tensor(
-            self,
-            tensor: Optional[TypeData],
-            none_ok: bool = True,
+        self,
+        tensor: Optional[TypeData],
+        none_ok: bool = True,
     ) -> Optional[torch.Tensor]:
         if tensor is None:
             if none_ok:
@@ -478,7 +493,7 @@ class Image(dict):
         if tensor.dtype == torch.bool:
             tensor = tensor.to(torch.uint8)
         if self.check_nans and torch.isnan(tensor).any():
-            warnings.warn('NaNs found in tensor', RuntimeWarning)
+            warnings.warn('NaNs found in tensor', RuntimeWarning, stacklevel=2)
         return tensor
 
     @staticmethod
@@ -548,7 +563,7 @@ class Image(dict):
                     f'\nMatrix of {path}:'
                     f'\n{new_affine}'
                 )
-                warnings.warn(message, RuntimeWarning)
+                warnings.warn(message, RuntimeWarning, stacklevel=2)
             if not tensor.shape[1:] == new_tensor.shape[1:]:
                 message = (
                     f'Files shape do not match, found {tensor.shape}'
@@ -561,6 +576,26 @@ class Image(dict):
         self.affine = affine
         self._loaded = True
 
+    def unload(self) -> None:
+        """Unload the image from memory.
+
+        Raises:
+            RuntimeError: If the images has not been loaded yet or if no path
+                is available.
+        """
+        if not self._loaded:
+            message = 'Image cannot be unloaded as it has not been loaded yet'
+            raise RuntimeError(message)
+        if self.path is None:
+            message = (
+                'Cannot unload image as no path is available'
+                ' from where the image could be loaded again'
+            )
+            raise RuntimeError(message)
+        self[DATA] = None
+        self[AFFINE] = None
+        self._loaded = False
+
     def read_and_check(self, path: TypePath) -> TypeDataAffine:
         tensor, affine = self.reader(path)
         # Make sure the data type is compatible with PyTorch
@@ -570,7 +605,11 @@ class Image(dict):
         tensor = self._parse_tensor(tensor)
         affine = self._parse_affine(affine)
         if self.check_nans and torch.isnan(tensor).any():
-            warnings.warn(f'NaNs found in file "{path}"', RuntimeWarning)
+            warnings.warn(
+                f'NaNs found in file "{path}"',
+                RuntimeWarning,
+                stacklevel=2,
+            )
         return tensor, affine
 
     def save(self, path: TypePath, squeeze: Optional[bool] = None) -> None:
@@ -613,7 +652,7 @@ class Image(dict):
             >>> sitk_image = sitk.Image((224, 224), sitk.sitkVectorFloat32, 3)
             >>> tio.ScalarImage.from_sitk(sitk_image)
             ScalarImage(shape: (3, 224, 224, 1); spacing: (1.00, 1.00, 1.00); orientation: LPS+; memory: 588.0 KiB; dtype: torch.FloatTensor)
-        """  # noqa: E501
+        """  # noqa: B950
         tensor, affine = sitk_to_nib(sitk_image)
         return cls(tensor=tensor, affine=affine)
 
@@ -621,16 +660,14 @@ class Image(dict):
         """Get the image as an instance of :class:`PIL.Image`.
 
         .. note:: Values will be clamped to 0-255 and cast to uint8.
-        .. note:: To use this method, `Pillow` needs to be installed:
-            `pip install Pillow`.
+
+        .. note:: To use this method, Pillow needs to be installed:
+            ``pip install Pillow``.
         """
         try:
             from PIL import Image as ImagePIL
         except ModuleNotFoundError as e:
-            message = (
-                'Please install Pillow to use Image.as_pil():'
-                ' pip install Pillow'
-            )
+            message = 'Please install Pillow to use Image.as_pil(): pip install Pillow'
             raise RuntimeError(message) from e
 
         self.check_is_2d()
@@ -647,14 +684,14 @@ class Image(dict):
         return ImagePIL.fromarray(array.astype(np.uint8))
 
     def to_gif(
-            self,
-            axis: int,
-            duration: float,  # of full gif
-            output_path: TypePath,
-            loop: int = 0,
-            rescale: bool = True,
-            optimize: bool = True,
-            reverse: bool = False,
+        self,
+        axis: int,
+        duration: float,  # of full gif
+        output_path: TypePath,
+        loop: int = 0,
+        rescale: bool = True,
+        optimize: bool = True,
+        reverse: bool = False,
     ) -> None:
         """Save an animated GIF of the image.
 
@@ -670,8 +707,9 @@ class Image(dict):
                 eliminating unused colors. This is only useful if the palette
                 can be compressed to the next smaller power of 2 elements.
             reverse: Reverse the temporal order of frames.
-        """  # noqa: E501
+        """  # noqa: B950
         from ..visualization import make_gif  # avoid circular import
+
         make_gif(
             self.data,
             axis,
@@ -708,6 +746,7 @@ class Image(dict):
             self.as_pil().show()
         else:
             from ..visualization import plot_volume  # avoid circular import
+
             plot_volume(self, **kwargs)
 
     def show(self, viewer_path: Optional[TypePath] = None) -> None:
@@ -768,6 +807,7 @@ class ScalarImage(Image):
 
     See :class:`~torchio.Image` for more information.
     """
+
     def __init__(self, *args, **kwargs):
         if 'type' in kwargs and kwargs['type'] != INTENSITY:
             raise ValueError('Type of ScalarImage is always torchio.INTENSITY')
@@ -777,6 +817,7 @@ class ScalarImage(Image):
     def hist(self, **kwargs) -> None:
         """Plot histogram."""
         from ..visualization import plot_histogram
+
         x = self.data.flatten().numpy()
         plot_histogram(x, **kwargs)
 
@@ -803,6 +844,7 @@ class LabelMap(Image):
 
     See :class:`~torchio.Image` for more information.
     """
+
     def __init__(self, *args, **kwargs):
         if 'type' in kwargs and kwargs['type'] != LABEL:
             raise ValueError('Type of LabelMap is always torchio.LABEL')

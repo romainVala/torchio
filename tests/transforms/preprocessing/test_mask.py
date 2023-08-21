@@ -1,12 +1,11 @@
-import torch
+import pytest
 import torchio as tio
+import torch
 
 from ...utils import TorchioTestCase
 
 
 class TestMask(TorchioTestCase):
-    """Tests for :class:`tio.Mask` class."""
-
     def test_single_mask(self):
         negated_mask = self.sample_subject.label.data.logical_not()
         masked_voxel_indices = negated_mask.nonzero(as_tuple=True)
@@ -25,10 +24,7 @@ class TestMask(TorchioTestCase):
         )
         transformed = transform(self.sample_subject)
 
-        assert (
-            transformed.t1.data[masked_voxel_indices]
-            == background_value
-        ).all()
+        assert (transformed.t1.data[masked_voxel_indices] == background_value).all()
 
     def test_mask_specified_label(self):
         mask_label = [1]
@@ -41,7 +37,6 @@ class TestMask(TorchioTestCase):
         assert (transformed.t1.data[masked_voxel_indices] == 0).all()
 
     def test_mask_specified_label_small(self):
-
         def to_image(*numbers):
             return torch.as_tensor(numbers).reshape(1, 1, 1, len(numbers))
 
@@ -70,6 +65,6 @@ class TestMask(TorchioTestCase):
         mask = tio.LabelMap(tensor=torch.ones(1, 4, 5, 6))
         subject = tio.Subject(image=image, mask_lm=mask)
         transform = tio.Mask(masking_method='mask_lm')
-        with self.assertWarnsRegex(RuntimeWarning, '^Expanding.*'):
+        with pytest.warns(RuntimeWarning, match='^Expanding.*'):
             masked = transform(subject)
         assert masked.image.shape == image.shape

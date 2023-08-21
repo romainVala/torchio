@@ -1,12 +1,12 @@
+import pytest
 import torchio as tio
 
 from ...utils import TorchioTestCase
 
 
 class TestEnsureShapeMultiple(TorchioTestCase):
-
     def test_bad_method(self):
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             tio.EnsureShapeMultiple(1, method='bad')
 
     def test_pad(self):

@@ -9,6 +9,7 @@ import tempfile
 from pathlib import Path
 from typing import Any
 from typing import Dict
+from typing import Iterable
 from typing import List
 from typing import Optional
 from typing import Sequence
@@ -28,17 +29,27 @@ from .typing import TypePath
 
 
 def to_tuple(
-        value: Any,
-        length: int = 1,
+    value: Any,
+    length: int = 1,
 ) -> Tuple[TypeNumber, ...]:
-    """
-    to_tuple(1, length=1) -> (1,)
-    to_tuple(1, length=3) -> (1, 1, 1)
+    """Convert variable to tuple of length n.
+
+    Example:
+        >>> from torchio.utils import to_tuple
+        >>> to_tuple(1, length=1)
+        (1,)
+        >>> to_tuple(1, length=3)
+        (1, 1, 1)
 
     If value is an iterable, n is ignored and tuple(value) is returned
-    to_tuple((1,), length=1) -> (1,)
-    to_tuple((1, 2), length=1) -> (1, 2)
-    to_tuple([1, 2], length=3) -> (1, 2)
+
+    Example:
+        >>> to_tuple((1,), length=1)
+        (1,)
+        >>> to_tuple((1, 2), length=1)
+        (1, 2)
+        >>> to_tuple([1, 2], length=3)
+        (1, 2)
     """
     try:
         iter(value)
@@ -49,13 +60,19 @@ def to_tuple(
 
 
 def get_stem(
-        path: Union[TypePath, Sequence[TypePath]],
+    path: Union[TypePath, Sequence[TypePath]],
 ) -> Union[str, List[str]]:
+    """Get stem of path or paths.
+
+    Example:
+        >>> from torchio.utils import get_stem
+        >>> get_stem('/home/user/my_image.nii.gz')
+        'my_image'
     """
-    '/home/user/image.nii.gz' -> 'image'
-    """
+
     def _get_stem(path_string: TypePath) -> str:
         return Path(path_string).name.split('.')[0]
+
     if isinstance(path, (str, os.PathLike)):
         return _get_stem(path)
     else:  # path is actually a sequence of paths
@@ -63,14 +80,15 @@ def get_stem(
 
 
 def create_dummy_dataset(
-        num_images: int,
-        size_range: Tuple[int, int],
-        directory: Optional[TypePath] = None,
-        suffix: str = '.nii.gz',
-        force: bool = False,
-        verbose: bool = False,
+    num_images: int,
+    size_range: Tuple[int, int],
+    directory: Optional[TypePath] = None,
+    suffix: str = '.nii.gz',
+    force: bool = False,
+    verbose: bool = False,
 ):
     from .data import ScalarImage, LabelMap, Subject
+
     output_dir = tempfile.gettempdir() if directory is None else directory
     output_dir = Path(output_dir)
     images_dir = output_dir / 'dummy_images'
@@ -93,6 +111,7 @@ def create_dummy_dataset(
     else:
         images_dir.mkdir(exist_ok=True, parents=True)
         labels_dir.mkdir(exist_ok=True, parents=True)
+        iterable: Iterable[int]
         if verbose:
             print('Creating dummy dataset...')  # noqa: T201
             iterable = trange(num_images)
@@ -124,13 +143,14 @@ def create_dummy_dataset(
 
 
 def apply_transform_to_file(
-        input_path: TypePath,
-        transform,  # : Transform seems to create a circular import
-        output_path: TypePath,
-        class_: str = 'ScalarImage',
-        verbose: bool = False,
+    input_path: TypePath,
+    transform,  # : Transform seems to create a circular import
+    output_path: TypePath,
+    class_: str = 'ScalarImage',
+    verbose: bool = False,
 ):
     from . import data
+
     image = getattr(data, class_)(input_path)
     subject = data.Subject(image=image)
     transformed = transform(subject)
@@ -168,8 +188,8 @@ def get_torchio_cache_dir() -> Path:
 
 
 def compress(
-        input_path: TypePath,
-        output_path: Optional[TypePath] = None,
+    input_path: TypePath,
+    output_path: Optional[TypePath] = None,
 ) -> Path:
     if output_path is None:
         output_path = Path(input_path).with_suffix('.nii.gz')
@@ -200,11 +220,11 @@ def history_collate(batch: Sequence, collate_transforms=True) -> Dict:
     # Adapted from
     # https://github.com/romainVala/torchQC/blob/master/segmentation/collate_functions.py
     from .data import Subject
+
     first_element = batch[0]
     if isinstance(first_element, Subject):
         dictionary = {
-            key: default_collate([d[key] for d in batch])
-            for key in first_element
+            key: default_collate([d[key] for d in batch]) for key in first_element
         }
         if hasattr(first_element, attr):
             dictionary.update({attr: [getattr(d, attr) for d in batch]})
@@ -252,6 +272,7 @@ def get_subjects_from_batch(batch: Dict) -> List:
         extracting data from a :class:`torchio.SubjectsDataset`.
     """
     from .data import ScalarImage, LabelMap, Subject
+
     subjects = []
     image_names, batch_size = get_batch_images_and_size(batch)
     for i in range(batch_size):
@@ -275,10 +296,10 @@ def get_subjects_from_batch(batch: Dict) -> List:
 
 
 def add_images_from_batch(
-        subjects: List,
-        tensor: torch.Tensor,
-        class_=None,
-        name='prediction',
+    subjects: List,
+    tensor: torch.Tensor,
+    class_=None,
+    name='prediction',
 ) -> None:
     """Add images to subjects in a list, typically from a network prediction.
 
@@ -297,6 +318,7 @@ def add_images_from_batch(
     """
     if class_ is None:
         from . import ScalarImage
+
         class_ = ScalarImage
     for subject, data in zip(subjects, tensor):
         one_image = subject.get_first_image()
@@ -310,8 +332,8 @@ def add_images_from_batch(
 def guess_external_viewer() -> Optional[Path]:
     """Guess the path to an executable that could be used to visualize images.
 
-    Currently, it looks for 1) ITK-SNAP and 2) 3D Slicer. Implemented for macOS
-    and Windows.
+    Currently, it looks for 1) ITK-SNAP and 2) 3D Slicer. Implemented
+    for macOS and Windows.
     """
     if 'SITK_SHOW_COMMAND' in os.environ:
         return Path(os.environ['SITK_SHOW_COMMAND'])

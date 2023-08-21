@@ -1,6 +1,7 @@
 import copy
 
 import numpy as np
+import pytest
 import torch
 import torchio as tio
 
@@ -8,8 +9,6 @@ from ...utils import TorchioTestCase
 
 
 class TestRescaleIntensity(TorchioTestCase):
-    """Tests for :class:`tio.RescaleIntensity` class."""
-
     def test_rescale_to_same_intentisy(self):
         min_t1 = float(self.sample_subject.t1.data.min())
         max_t1 = float(self.sample_subject.t1.data.max())
@@ -25,8 +24,8 @@ class TestRescaleIntensity(TorchioTestCase):
     def test_min_max(self):
         transform = tio.RescaleIntensity(out_min_max=(0, 1))
         transformed = transform(self.sample_subject)
-        self.assertEqual(transformed.t1.data.min(), 0)
-        self.assertEqual(transformed.t1.data.max(), 1)
+        assert transformed.t1.data.min() == 0
+        assert transformed.t1.data.max() == 1
 
     def test_percentiles(self):
         low_quantile = np.percentile(self.sample_subject.t1.data, 5)
@@ -44,7 +43,9 @@ class TestRescaleIntensity(TorchioTestCase):
 
     def test_masking_using_label(self):
         transform = tio.RescaleIntensity(
-            out_min_max=(0, 1), percentiles=(5, 95), masking_method='label',
+            out_min_max=(0, 1),
+            percentiles=(5, 95),
+            masking_method='label',
         )
         transformed = transform(self.sample_subject)
         mask = self.sample_subject.label.data > 0
@@ -56,8 +57,8 @@ class TestRescaleIntensity(TorchioTestCase):
         high_indices = (self.sample_subject.t1.data > high_quantile).nonzero(
             as_tuple=True,
         )
-        self.assertEqual(transformed.t1.data.min(), 0)
-        self.assertEqual(transformed.t1.data.max(), 1)
+        assert transformed.t1.data.min() == 0
+        assert transformed.t1.data.max() == 1
         assert (transformed.t1.data[low_indices] == 0).all()
         assert (transformed.t1.data[high_indices] == 1).all()
 
@@ -78,32 +79,43 @@ class TestRescaleIntensity(TorchioTestCase):
         assert rescaled.data.max() > 1
 
     def test_out_min_higher_than_out_max(self):
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             tio.RescaleIntensity(out_min_max=(1, 0))
 
     def test_too_many_values_for_out_min_max(self):
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             tio.RescaleIntensity(out_min_max=(1, 2, 3))
 
     def test_wrong_out_min_max_type(self):
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             tio.RescaleIntensity(out_min_max='wrong')
 
     def test_min_percentile_higher_than_max_percentile(self):
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             tio.RescaleIntensity(out_min_max=(0, 1), percentiles=(1, 0))
 
     def test_too_many_values_for_percentiles(self):
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             tio.RescaleIntensity(out_min_max=(0, 1), percentiles=(1, 2, 3))
 
     def test_wrong_percentiles_type(self):
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             tio.RescaleIntensity(out_min_max=(0, 1), percentiles='wrong')
 
     def test_empty_mask(self):
         subject = copy.deepcopy(self.sample_subject)
         subject.label.set_data(subject.label.data * 0)
         rescale = tio.RescaleIntensity(masking_method='label')
-        with self.assertWarns(RuntimeWarning):
+        with pytest.warns(RuntimeWarning):
             rescale(subject)
+
+    def test_invert_rescaling(self):
+        torch.manual_seed(0)
+        transform = tio.RescaleIntensity(out_min_max=(0, 1))
+        data = torch.rand(1, 2, 3, 4).double()
+        subject = tio.Subject(t1=tio.ScalarImage(tensor=data))
+        transformed = transform(subject)
+        assert transformed.t1.data.min() == 0
+        assert transformed.t1.data.max() == 1
+        inverted = transformed.apply_inverse_transform()
+        self.assert_tensor_almost_equal(inverted.t1.data, data)

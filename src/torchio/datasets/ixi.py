@@ -1,9 +1,6 @@
-"""
-The `Information eXtraction from Images (IXI)`_
-dataset contains "nearly 600 MR images from normal, healthy subjects",
-including "T1, T2 and PD-weighted images,
-MRA images and Diffusion-weighted images (15 directions)".
-
+"""The `Information eXtraction from Images (IXI)`_ dataset contains "nearly 600
+MR images from normal, healthy subjects", including "T1, T2 and PD-weighted
+images, MRA images and Diffusion-weighted images (15 directions)".
 
 .. note ::
     This data is made available under the
@@ -12,7 +9,7 @@ MRA images and Diffusion-weighted images (15 directions)".
     `the IXI website <https://brain-development.org/ixi-dataset/>`_.
 
 .. _Information eXtraction from Images (IXI): https://brain-development.org/ixi-dataset/
-"""  # noqa: E501
+"""  # noqa: B950
 # Adapted from
 # https://pytorch.org/docs/stable/_modules/torchvision/datasets/mnist.html#MNIST
 import shutil
@@ -63,9 +60,9 @@ class IXI(SubjectsDataset):
         >>> print('Keys in subject:', tuple(sample_subject.keys()))  # ('T1', 'T2')
         >>> print('Shape of T1 data:', sample_subject['T1'].shape)  # [1, 180, 268, 268]
         >>> print('Shape of T2 data:', sample_subject['T2'].shape)  # [1, 241, 257, 188]
-    """  # noqa: E501
+    """  # noqa: B950
 
-    base_url = 'http://biomedic.doc.ic.ac.uk/brain-development/downloads/IXI/IXI-{modality}.tar'  # noqa: FS003,E501
+    base_url = 'http://biomedic.doc.ic.ac.uk/brain-development/downloads/IXI/IXI-{modality}.tar'  # noqa: FS003,B950
     md5_dict = {
         'T1': '34901a0593b41dd19c1a1f746eac2d58',
         'T2': 'e3140d78730ecdd32ba92da48c0a9aaa',
@@ -75,12 +72,12 @@ class IXI(SubjectsDataset):
     }
 
     def __init__(
-            self,
-            root: TypePath,
-            transform: Optional[Transform] = None,
-            download: bool = False,
-            modalities: Sequence[str] = ('T1', 'T2'),
-            **kwargs,
+        self,
+        root: TypePath,
+        transform: Optional[Transform] = None,
+        download: bool = False,
+        modalities: Sequence[str] = ('T1', 'T2'),
+        **kwargs,
     ):
         root = Path(root)
         for modality in modalities:
@@ -93,10 +90,7 @@ class IXI(SubjectsDataset):
         if download:
             self._download(root, modalities)
         if not self._check_exists(root, modalities):
-            message = (
-                'Dataset not found.'
-                ' You can use download=True to download it'
-            )
+            message = 'Dataset not found. You can use download=True to download it'
             raise RuntimeError(message)
         subjects_list = self._get_subjects_list(root, modalities)
         super().__init__(subjects_list, transform=transform, **kwargs)
@@ -127,7 +121,8 @@ class IXI(SubjectsDataset):
             images_dict[one_modality] = ScalarImage(filepath)
             for modality in modalities[1:]:
                 globbed = sglob(
-                    root / modality, f'{subject_id}-{modality}.nii.gz',
+                    root / modality,
+                    f'{subject_id}-{modality}.nii.gz',
                 )
                 if globbed:
                     assert len(globbed) == 1
@@ -144,7 +139,6 @@ class IXI(SubjectsDataset):
 
     def _download(self, root, modalities):
         """Download the IXI data if it does not exist already."""
-
         for modality in modalities:
             modality_dir = root / modality
             if modality_dir.is_dir():
@@ -165,11 +159,10 @@ class IXI(SubjectsDataset):
 
 
 class IXITiny(SubjectsDataset):
-    r"""
-    This is the dataset used in the main `notebook`_.
-    It is a tiny version of IXI, containing 566 :math:`T_1`-weighted brain MR
-    images and their corresponding brain segmentations,
-    all with size :math:`83 \times 44 \times 55`.
+    r"""This is the dataset used in the main `notebook`_. It is a tiny version
+    of IXI, containing 566 :math:`T_1`-weighted brain MR images and their
+    corresponding brain segmentations, all with size :math:`83 \times 44 \times
+    55`.
 
     It can be used as a medical image MNIST.
 
@@ -180,25 +173,22 @@ class IXITiny(SubjectsDataset):
         download: If set to ``True``, will download the data into :attr:`root`.
 
     .. _notebook: https://github.com/fepegar/torchio/blob/main/tutorials/README.md
-    """  # noqa: E501
+    """  # noqa: B950
     url = 'https://www.dropbox.com/s/ogxjwjxdv5mieah/ixi_tiny.zip?dl=1'
     md5 = 'bfb60f4074283d78622760230bfa1f98'
 
     def __init__(
-            self,
-            root: TypePath,
-            transform: Optional[Transform] = None,
-            download: bool = False,
-            **kwargs,
+        self,
+        root: TypePath,
+        transform: Optional[Transform] = None,
+        download: bool = False,
+        **kwargs,
     ):
         root = Path(root)
         if download:
             self._download(root)
         if not root.is_dir():
-            message = (
-                'Dataset not found.'
-                ' You can use download=True to download it'
-            )
+            message = 'Dataset not found. You can use download=True to download it'
             raise RuntimeError(message)
         subjects_list = self._get_subjects_list(root)
         super().__init__(subjects_list, transform=transform, **kwargs)
@@ -209,8 +199,7 @@ class IXITiny(SubjectsDataset):
         label_paths = sglob(root / 'label', '*.nii.gz')
         if not (image_paths and label_paths):
             message = (
-                f'Images not found. Remove the root directory ({root})'
-                ' and try again'
+                f'Images not found. Remove the root directory ({root}) and try again'
             )
             raise FileNotFoundError(message)
 

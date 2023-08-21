@@ -8,6 +8,7 @@ import nibabel as nib
 import numpy as np
 import SimpleITK as sitk
 import torch
+from nibabel.spatialimages import SpatialImage
 
 from ..constants import REPO_URL
 from ..typing import TypeData
@@ -33,10 +34,8 @@ def read_image(path: TypePath) -> TypeDataAffine:
     try:
         result = _read_sitk(path)
     except RuntimeError as e:  # try with NiBabel
-        message = (
-            f'Error loading image with SimpleITK:\n{e}\n\nTrying NiBabel...'
-        )
-        warnings.warn(message)
+        message = f'Error loading image with SimpleITK:\n{e}\n\nTrying NiBabel...'
+        warnings.warn(message, stacklevel=2)
         try:
             result = _read_nibabel(path)
         except nib.loadsave.ImageFileError as e:
@@ -51,7 +50,7 @@ def read_image(path: TypePath) -> TypeDataAffine:
 
 
 def _read_nibabel(path: TypePath) -> TypeDataAffine:
-    img = nib.load(str(path), mmap=False)
+    img: SpatialImage = nib.load(str(path), mmap=False)  # type: ignore[assignment]
     data = img.get_fdata(dtype=np.float32)
     if data.ndim == 5:
         data = data[..., 0, :]
@@ -80,10 +79,7 @@ def _read_dicom(directory: TypePath):
     reader = sitk.ImageSeriesReader()
     dicom_names = reader.GetGDCMSeriesFileNames(str(directory))
     if not dicom_names:
-        message = (
-            f'The directory "{directory}"'
-            ' does not seem to contain DICOM files'
-        )
+        message = f'The directory "{directory}" does not seem to contain DICOM files'
         raise FileNotFoundError(message)
     reader.SetFileNames(dicom_names)
     image = reader.Execute()
@@ -130,10 +126,10 @@ def get_reader(path: TypePath, read: bool = True) -> sitk.ImageFileReader:
 
 
 def write_image(
-        tensor: torch.Tensor,
-        affine: TypeData,
-        path: TypePath,
-        squeeze: Optional[bool] = None,
+    tensor: torch.Tensor,
+    affine: TypeData,
+    path: TypePath,
+    squeeze: Optional[bool] = None,
 ) -> None:
     args = tensor, affine, path
     try:
@@ -142,13 +138,14 @@ def write_image(
         _write_sitk(*args, squeeze=squeeze)
 
 def _write_nibabel(
-        tensor: torch.Tensor,
-        affine: TypeData,
-        path: TypePath,
+    tensor: torch.Tensor,
+    affine: TypeData,
+    path: TypePath,
 ) -> None:
-    """
-    Expects a path with an extension that can be used by nibabel.save
-    to write a NIfTI-1 image, such as '.nii.gz' or '.img'
+    """Write an image using NiBabel.
+
+    Expects a path with an extension that can be used by nibabel.save to
+    write a NIfTI-1 image, such as '.nii.gz' or '.img'
     """
     assert tensor.ndim == 4
     num_components = tensor.shape[0]
@@ -163,12 +160,14 @@ def _write_nibabel(
     if (tensor.dtype is torch.float16) or (tensor.dtype is torch.int64) :
         tensor = tensor.to(torch.float32)
     suffix = Path(str(path).replace('.gz', '')).suffix
+    img: Union[nib.Nifti1Image, nib.Nifti1Pair]
     if '.nii' in suffix:
         img = nib.Nifti1Image(np.asarray(tensor), affine)
     elif '.hdr' in suffix or '.img' in suffix:
         img = nib.Nifti1Pair(np.asarray(tensor), affine)
     else:
         raise nib.loadsave.ImageFileError
+    assert isinstance(img.header, nib.Nifti1Header)
     if num_components > 1:
         img.header.set_intent('vector')
     img.header['qform_code'] = 1
@@ -177,11 +176,11 @@ def _write_nibabel(
 
 
 def _write_sitk(
-        tensor: torch.Tensor,
-        affine: TypeData,
-        path: TypePath,
-        use_compression: bool = True,
-        squeeze: Optional[bool] = None,
+    tensor: torch.Tensor,
+    affine: TypeData,
+    path: TypePath,
+    use_compression: bool = True,
+    squeeze: Optional[bool] = None,
 ) -> None:
     assert tensor.ndim == 4
     path = Path(path)
@@ -189,6 +188,7 @@ def _write_sitk(
         warnings.warn(
             f'Casting to uint 8 before saving to {path}',
             RuntimeWarning,
+            stacklevel=2,
         )
         tensor = tensor.numpy().astype(np.uint8)
     if squeeze is None:
@@ -223,7 +223,7 @@ def write_matrix(matrix: torch.Tensor, path: TypePath):
 
 
 def _to_itk_convention(matrix):
-    """RAS to LPS"""
+    """RAS to LPS."""
     matrix = np.dot(FLIPXY_44, matrix)
     matrix = np.dot(matrix, FLIPXY_44)
     matrix = np.linalg.inv(matrix)
@@ -231,7 +231,7 @@ def _to_itk_convention(matrix):
 
 
 def _from_itk_convention(matrix):
-    """LPS to RAS"""
+    """LPS to RAS."""
     matrix = np.dot(matrix, FLIPXY_44)
     matrix = np.dot(FLIPXY_44, matrix)
     matrix = np.linalg.inv(matrix)
@@ -239,7 +239,7 @@ def _from_itk_convention(matrix):
 
 
 def _read_itk_matrix(path):
-    """Read an affine transform in ITK's .tfm format"""
+    """Read an affine transform in ITK's .tfm format."""
     transform = sitk.ReadTransform(str(path))
     parameters = transform.GetParameters()
     rotation_parameters = parameters[:9]
@@ -267,7 +267,7 @@ def _matrix_to_itk_transform(matrix, dimensions=3):
 
 
 def _read_niftyreg_matrix(trsf_path):
-    """Read a NiftyReg matrix and return it as a NumPy array"""
+    """Read a NiftyReg matrix and return it as a NumPy array."""
     matrix = np.loadtxt(trsf_path)
     matrix = np.linalg.inv(matrix)
     return torch.as_tensor(matrix)
@@ -280,7 +280,7 @@ def _write_niftyreg_matrix(matrix, txt_path):
 
 
 def get_rotation_and_spacing_from_affine(
-        affine: np.ndarray,
+    affine: np.ndarray,
 ) -> Tuple[np.ndarray, np.ndarray]:
     # From https://github.com/nipy/nibabel/blob/master/nibabel/orientations.py
     rotation_zoom = affine[:3, :3]
@@ -290,10 +290,10 @@ def get_rotation_and_spacing_from_affine(
 
 
 def nib_to_sitk(
-        data: TypeData,
-        affine: TypeData,
-        force_3d: bool = False,
-        force_4d: bool = False,
+    data: TypeData,
+    affine: TypeData,
+    force_3d: bool = False,
+    force_4d: bool = False,
 ) -> sitk.Image:
     """Create a SimpleITK image from a tensor and a 4x4 affine matrix."""
     if data.ndim != 4:
@@ -327,14 +327,14 @@ def nib_to_sitk(
     if data.ndim == 4:
         assert image.GetNumberOfComponentsPerPixel() == data.shape[0]
     num_spatial_dims = 2 if is_2d else 3
-    assert image.GetSize() == data.shape[1:1 + num_spatial_dims]
+    assert image.GetSize() == data.shape[1 : 1 + num_spatial_dims]
 
     return image
 
 
 def sitk_to_nib(
-        image: sitk.Image,
-        keepdim: bool = False,
+    image: sitk.Image,
+    keepdim: bool = False,
 ) -> Tuple[np.ndarray, np.ndarray]:
     data = sitk.GetArrayFromImage(image).transpose()
     data = check_uint_to_int(data)
@@ -351,14 +351,14 @@ def sitk_to_nib(
         data = data.transpose(3, 0, 1, 2)
         input_spatial_dims = 3
     if not keepdim:
-        data = ensure_4d(data, num_spatial_dims=input_spatial_dims)
+        data = ensure_4d(data, num_spatial_dims=input_spatial_dims).numpy()
     assert data.shape[0] == num_components
     affine = get_ras_affine_from_sitk(image)
     return data, affine
 
 
 def get_ras_affine_from_sitk(
-        sitk_object: Union[sitk.Image, sitk.ImageFileReader],
+    sitk_object: Union[sitk.Image, sitk.ImageFileReader],
 ) -> np.ndarray:
     spacing = np.array(sitk_object.GetSpacing())
     direction_lps = np.array(sitk_object.GetDirection())
@@ -386,9 +386,9 @@ def get_ras_affine_from_sitk(
 
 
 def get_sitk_metadata_from_ras_affine(
-        affine: np.ndarray,
-        is_2d: bool = False,
-        lps: bool = True,
+    affine: np.ndarray,
+    is_2d: bool = False,
+    lps: bool = True,
 ) -> Tuple[TypeTripletFloat, TypeTripletFloat, TypeDirection]:
     direction_ras, spacing_array = get_rotation_and_spacing_from_affine(affine)
     origin_ras = affine[:3, 3]
@@ -416,7 +416,7 @@ def get_sitk_metadata_from_ras_affine(
     return origin, spacing, direction
 
 
-def ensure_4d(tensor: TypeData, num_spatial_dims=None) -> TypeData:
+def ensure_4d(tensor: TypeData, num_spatial_dims=None) -> torch.Tensor:
     # I wish named tensors were properly supported in PyTorch
     tensor = torch.as_tensor(tensor)
     num_dimensions = tensor.ndim

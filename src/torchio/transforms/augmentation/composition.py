@@ -25,8 +25,8 @@ class Compose(Transform):
             :class:`~torchio.transforms.Transform`.
         **kwargs: See :class:`~torchio.transforms.Transform` for additional
             keyword arguments.
-
     """
+
     def __init__(self, transforms: Sequence[Transform], **kwargs):
         super().__init__(parse_input=False, **kwargs)
         for transform in transforms:
@@ -67,11 +67,15 @@ class Compose(Transform):
                 transforms.append(transform.inverse())
             elif warn:
                 message = f'Skipping {transform.name} as it is not invertible'
-                warnings.warn(message, RuntimeWarning)
+                warnings.warn(message, RuntimeWarning, stacklevel=2)
         transforms.reverse()
         result = Compose(transforms)
         if not transforms and warn:
-            warnings.warn('No invertible transforms found', RuntimeWarning)
+            warnings.warn(
+                'No invertible transforms found',
+                RuntimeWarning,
+                stacklevel=2,
+            )
         return result
 
 
@@ -96,13 +100,9 @@ class OneOf(RandomTransform):
         ... }  # Using 3 and 1 as probabilities would have the same effect
         >>> transform = tio.OneOf(transforms_dict)
         >>> transformed = transform(colin)
-
     """
-    def __init__(
-            self,
-            transforms: TypeTransformsDict,
-            **kwargs
-    ):
+
+    def __init__(self, transforms: TypeTransformsDict, **kwargs):
         super().__init__(parse_input=False, **kwargs)
         self.transforms_dict = self._get_transforms_dict(transforms)
 
@@ -115,8 +115,8 @@ class OneOf(RandomTransform):
         return transformed  # type: ignore[return-value]
 
     def _get_transforms_dict(
-            self,
-            transforms: TypeTransformsDict,
+        self,
+        transforms: TypeTransformsDict,
     ) -> Dict[Transform, float]:
         if isinstance(transforms, dict):
             transforms_dict = dict(transforms)
@@ -142,13 +142,12 @@ class OneOf(RandomTransform):
 
     @staticmethod
     def _normalize_probabilities(
-            transforms_dict: Dict[Transform, float],
+        transforms_dict: Dict[Transform, float],
     ) -> None:
         probabilities = np.array(list(transforms_dict.values()), dtype=float)
         if np.any(probabilities < 0):
             message = (
-                'Probabilities must be greater or equal to zero,'
-                f' not "{probabilities}"'
+                f'Probabilities must be greater or equal to zero, not "{probabilities}"'
             )
             raise ValueError(message)
         if np.all(probabilities == 0):

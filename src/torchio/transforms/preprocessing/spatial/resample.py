@@ -76,16 +76,16 @@ class Resample(SpatialTransform):
         t1_resampled = resample(subject.t1)
         subject.add_image(t1_resampled, 'Downsampled')
         subject.plot()
+    """  # noqa: B950
 
-    """  # noqa: E501
     def __init__(
-            self,
-            target: Union[TypeSpacing, str, Path, Image, None] = 1,
-            image_interpolation: str = 'linear',
-            label_interpolation: str = 'nearest',
-            pre_affine_name: Optional[str] = None,
-            scalars_only: bool = False,
-            **kwargs
+        self,
+        target: Union[TypeSpacing, str, Path, Image, None] = 1,
+        image_interpolation: str = 'linear',
+        label_interpolation: str = 'nearest',
+        pre_affine_name: Optional[str] = None,
+        scalars_only: bool = False,
+        **kwargs,
     ):
         super().__init__(**kwargs)
         self.target = target
@@ -126,10 +126,7 @@ class Resample(SpatialTransform):
     @staticmethod
     def check_affine(affine_name: str, image: Image):
         if not isinstance(affine_name, str):
-            message = (
-                'Affine name argument must be a string,'
-                f' not {type(affine_name)}'
-            )
+            message = f'Affine name argument must be a string, not {type(affine_name)}'
             raise TypeError(message)
         if affine_name in image:
             matrix = image[affine_name]
@@ -140,10 +137,7 @@ class Resample(SpatialTransform):
                 )
                 raise TypeError(message)
             if matrix.shape != (4, 4):
-                message = (
-                    'The affine matrix shape must be (4, 4),'
-                    f' not {matrix.shape}'
-                )
+                message = f'The affine matrix shape must be (4, 4), not {matrix.shape}'
                 raise ValueError(message)
 
     @staticmethod
@@ -210,11 +204,11 @@ class Resample(SpatialTransform):
         return subject
 
     def _set_resampler_reference(
-            self,
-            resampler: sitk.ResampleImageFilter,
-            target: Union[TypeSpacing, TypePath, Image],
-            floating_sitk,
-            subject,
+        self,
+        resampler: sitk.ResampleImageFilter,
+        target: Union[TypeSpacing, TypePath, Image],
+        floating_sitk,
+        subject,
     ):
         # Target can be:
         # 1) An instance of torchio.Image
@@ -254,13 +248,13 @@ class Resample(SpatialTransform):
             shape, affine = target
             if not (isinstance(shape, Sized) and len(shape) == 3):
                 message = (
-                    f'Target shape must be a sequence of three integers, but'
+                    'Target shape must be a sequence of three integers, but'
                     f' "{shape}" was passed'
                 )
                 raise RuntimeError(message)
             if not affine.shape == (4, 4):
                 message = (
-                    f'Target affine must have shape (4, 4) but the following'
+                    'Target affine must have shape (4, 4) but the following'
                     f' was passed:\n{shape}'
                 )
                 raise RuntimeError(message)
@@ -291,8 +285,8 @@ class Resample(SpatialTransform):
 
     @staticmethod
     def get_reference_image(
-            floating_sitk: sitk.Image,
-            spacing: TypeTripletFloat,
+        floating_sitk: sitk.Image,
+        spacing: TypeTripletFloat,
     ) -> sitk.Image:
         old_spacing = np.array(floating_sitk.GetSpacing())
         new_spacing = np.array(spacing)
@@ -318,10 +312,10 @@ class Resample(SpatialTransform):
     def get_sigma(downsampling_factor, spacing):
         """Compute optimal standard deviation for Gaussian kernel.
 
-        From Cardoso et al., "Scale factor point spread function matching:
-        beyond aliasing in image resampling", MICCAI 2015
+        From Cardoso et al., "Scale factor point spread function
+        matching: beyond aliasing in image resampling", MICCAI 2015
         """
         k = downsampling_factor
-        variance = (k ** 2 - 1 ** 2) * (2 * np.sqrt(2 * np.log(2))) ** (-2)
+        variance = (k**2 - 1**2) * (2 * np.sqrt(2 * np.log(2))) ** (-2)
         sigma = spacing * np.sqrt(variance)
         return sigma

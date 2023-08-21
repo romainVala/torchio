@@ -1,24 +1,48 @@
 # pylint: disable=import-outside-toplevel
-"""Console script for torchio."""
-import sys
+from pathlib import Path
 
-import click
+import typer
 
 
-@click.command()
-@click.argument('input-path', type=click.Path(exists=True))
-@click.option('--plot/--no-plot', '-p', default=False)
-@click.option('--show/--no-show', '-s', default=False)
-@click.option('--label/--scalar', '-l', default=False)
-def main(input_path, plot, show, label):
+app = typer.Typer()
+
+
+@app.command()
+def main(
+    input_path: Path = typer.Argument(  # noqa: B008
+        ...,
+        exists=True,
+        file_okay=True,
+        dir_okay=True,
+        readable=True,
+    ),
+    plot: bool = typer.Option(  # noqa: B008
+        False,
+        '--plot/--no-plot',
+        '-p/-P',
+        help='Plot the image using Matplotlib or Pillow.',
+    ),
+    show: bool = typer.Option(  # noqa: B008
+        False,
+        '--show/--no-show',
+        '-s/-S',
+        help='Show the image using specialized visualisation software.',
+    ),
+    label: bool = typer.Option(  # noqa: B008
+        False,
+        '--label/--scalar',
+        '-l/-s',
+        help='Use torchio.LabelMap to instantiate the image.',
+    ),
+):
     """Print information about an image and, optionally, show it.
 
-    \b
     Example:
     $ tiohd input.nii.gz
     """
     # Imports are placed here so that the tool loads faster if not being run
     import torchio as tio
+
     class_ = tio.LabelMap if label else tio.ScalarImage
     image = class_(input_path)
     image.load()
@@ -27,9 +51,7 @@ def main(input_path, plot, show, label):
         image.plot()
     if show:
         image.show()
-    return 0
 
 
 if __name__ == '__main__':
-    # pylint: disable=no-value-for-parameter
-    sys.exit(main())  # pragma: no cover
+    app()

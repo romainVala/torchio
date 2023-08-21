@@ -5,7 +5,9 @@ from .remap_labels import RemapLabels
 
 
 class RemoveLabels(RemapLabels):
-    r"""Remove labels from a label map by remapping them to the background label.
+    r"""Remove labels from a label map.
+
+    The removed labels are remapped to the background label.
 
     This transformation is not `invertible <invertibility>`_.
 
@@ -53,12 +55,13 @@ class RemoveLabels(RemapLabels):
         }
         colin.plot(cmap_dict={'cls': colors, 'brain': colors})
     """
+
     def __init__(
-            self,
-            labels: Sequence[int],
-            background_label: int = 0,
-            masking_method: TypeMaskingMethod = None,
-            **kwargs
+        self,
+        labels: Sequence[int],
+        background_label: int = 0,
+        masking_method: TypeMaskingMethod = None,
+        **kwargs,
     ):
         remapping = {label: background_label for label in labels}
         super().__init__(remapping, masking_method, **kwargs)

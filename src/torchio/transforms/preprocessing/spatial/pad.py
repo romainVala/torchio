@@ -1,3 +1,4 @@
+import warnings
 from numbers import Number
 from typing import Dict
 from typing import Union
@@ -6,6 +7,7 @@ import nibabel as nib
 import numpy as np
 import torch
 
+from ....data.image import LabelMap
 from ....data.subject import Subject
 from .bounds_transform import BoundsTransform
 from .bounds_transform import TypeBounds
@@ -38,7 +40,7 @@ class Pad(BoundsTransform):
         :class:`~torchio.transforms.CropOrPad` instead.
 
     .. _NumPy docs: https://numpy.org/doc/stable/reference/generated/numpy.pad.html
-    """  # noqa: E501
+    """  # noqa: B950
 
     PADDING_MODES = (
         'empty',
@@ -55,10 +57,10 @@ class Pad(BoundsTransform):
     )
 
     def __init__(
-            self,
-            padding: TypeBounds,
-            padding_mode: Union[str, float] = 0,
-            **kwargs
+        self,
+        padding: TypeBounds,
+        padding_mode: Union[str, float] = 0,
+        **kwargs,
     ):
         super().__init__(padding, **kwargs)
         self.padding = padding
@@ -69,10 +71,11 @@ class Pad(BoundsTransform):
     @classmethod
     def check_padding_mode(cls, padding_mode):
         is_number = isinstance(padding_mode, Number)
-        if not (padding_mode in cls.PADDING_MODES or is_number):
+        is_callable = callable(padding_mode)
+        if not (padding_mode in cls.PADDING_MODES or is_number or is_callable):
             message = (
                 f'Padding mode "{padding_mode}" not valid. Valid options are'
-                f' {list(cls.PADDING_MODES)} or a number'
+                f' {list(cls.PADDING_MODES)}, a number or a function'
             )
             raise KeyError(message)
 
@@ -80,6 +83,11 @@ class Pad(BoundsTransform):
         assert self.bounds_parameters is not None
         low = self.bounds_parameters[::2]
         for image in self.get_images(subject):
+            if isinstance(image, LabelMap) and self.padding_mode == 'mean':
+                message = (
+                    'Padding mode "mean" might create non-integer values in label maps'
+                )
+                warnings.warn(message, RuntimeWarning, stacklevel=2)
             new_origin = nib.affines.apply_affine(image.affine, -np.array(low))
             new_affine = image.affine.copy()
             new_affine[:3, 3] = new_origin
@@ -93,11 +101,12 @@ class Pad(BoundsTransform):
                 kwargs = {'mode': self.padding_mode}
             pad_params = self.bounds_parameters
             paddings = (0, 0), pad_params[:2], pad_params[2:4], pad_params[4:]
-            padded = np.pad(image.data, paddings, **kwargs)  # type: ignore[call-overload]  # noqa: E501
+            padded = np.pad(image.data, paddings, **kwargs)  # type: ignore[call-overload]  # noqa: B950
             image.set_data(torch.as_tensor(padded))
             image.affine = new_affine
         return subject
 
     def inverse(self):
         from .crop import Crop
+
         return Crop(self.padding)

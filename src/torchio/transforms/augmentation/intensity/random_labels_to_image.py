@@ -127,8 +127,8 @@ class RandomLabelsToImage(RandomTransform, IntensityTransform):
         >>> transformed = transform(subject)  # subject's key 't1' has been replaced with the simulated image
 
     .. seealso:: :class:`~torchio.transforms.preprocessing.label.remap_labels.RemapLabels`.
+    """  # noqa: B950
 
-    """  # noqa: E501
     def __init__(
             self,
             label_key: Optional[str] = None,
@@ -151,7 +151,8 @@ class RandomLabelsToImage(RandomTransform, IntensityTransform):
         self.special_mean = special_mean
         self.nb_labels = nb_labels
         self.default_mean = self.parse_gaussian_parameter(
-            default_mean, 'default_mean',
+            default_mean,
+            'default_mean',
         )
         self.default_std = self.parse_gaussian_parameter(
             default_std,
@@ -169,9 +170,9 @@ class RandomLabelsToImage(RandomTransform, IntensityTransform):
         self.random_shape = random_shape
 
     def parse_mean_and_std(
-            self,
-            mean: Sequence[TypeRangeFloat],
-            std: Sequence[TypeRangeFloat],
+        self,
+        mean: Sequence[TypeRangeFloat],
+        std: Sequence[TypeRangeFloat],
     ) -> Tuple[List[TypeRangeFloat], List[TypeRangeFloat]]:
 
         if self.special_mean is not None:
@@ -185,16 +186,15 @@ class RandomLabelsToImage(RandomTransform, IntensityTransform):
             std = self.parse_gaussian_parameters(std, 'std')
         if mean is not None and std is not None:
             message = (
-                'If both "mean" and "std" are defined they must have the same'
-                'length'
+                'If both "mean" and "std" are defined they must have the samelength'
             )
             assert len(mean) == len(std), message
         return mean, std
 
     def parse_gaussian_parameters(
-            self,
-            params: Sequence[TypeRangeFloat],
-            name: str,
+        self,
+        params: Sequence[TypeRangeFloat],
+        name: str,
     ) -> List[TypeRangeFloat]:
         check_sequence(params, name)
         params = [
@@ -204,23 +204,22 @@ class RandomLabelsToImage(RandomTransform, IntensityTransform):
         if self.used_labels is not None:
             message = (
                 f'If both "{name}" and "used_labels" are defined, '
-                f'they must have the same length'
+                'they must have the same length'
             )
             assert len(params) == len(self.used_labels), message
         return params
 
     @staticmethod
     def parse_gaussian_parameter(
-            nums_range: TypeRangeFloat,
-            name: str,
+        nums_range: TypeRangeFloat,
+        name: str,
     ) -> Tuple[float, float]:
         if isinstance(nums_range, (int, float)):
             return nums_range, nums_range
 
         if len(nums_range) != 2:
             raise ValueError(
-                f'If {name} is a sequence,'
-                f' it must be of len 2, not {nums_range}',
+                f'If {name} is a sequence, it must be of len 2, not {nums_range}',
             )
         min_value, max_value = nums_range
         if min_value > max_value:
@@ -277,7 +276,7 @@ class RandomLabelsToImage(RandomTransform, IntensityTransform):
             labels = range(label_map.shape[0])
 
         # Raise error if mean and std are not defined for every label
-        _check_mean_and_std_length(labels, self.mean, self.std)  # type: ignore[arg-type]  # noqa: E501
+        _check_mean_and_std_length(labels, self.mean, self.std)  # type: ignore[arg-type]  # noqa: B950
 
         for label in labels:
             mean, std = self.get_params(label)
@@ -355,6 +354,7 @@ class LabelsToImage(IntensityTransform):
         realistic. See
         :class:`~torchio.transforms.augmentation.RandomBlur`.
     """
+
     def __init__(
             self,
             label_key: str,
@@ -487,9 +487,9 @@ class LabelsToImage(IntensityTransform):
 
     @staticmethod
     def generate_tissue(
-            data: TypeData,
-            mean: float,
-            std: float,
+        data: TypeData,
+        mean: float,
+        std: float,
     ) -> TypeData:
         # Create the simulated tissue using a gaussian random variable
         gaussian = torch.randn(data.shape) * std + mean
@@ -498,15 +498,13 @@ class LabelsToImage(IntensityTransform):
 
 def _parse_label_key(label_key: Optional[str]) -> Optional[str]:
     if label_key is not None and not isinstance(label_key, str):
-        message = (
-            f'"label_key" must be a string or None, not {type(label_key)}'
-        )
+        message = f'"label_key" must be a string or None, not {type(label_key)}'
         raise TypeError(message)
     return label_key
 
 
 def _parse_used_labels(
-        used_labels: Optional[Sequence[int]],
+    used_labels: Optional[Sequence[int]],
 ) -> Optional[Sequence[int]]:
     if used_labels is None:
         return None
@@ -522,9 +520,9 @@ def _parse_used_labels(
 
 
 def _check_mean_and_std_length(
-        labels: Sequence[int],
-        means: Optional[Sequence[TypeRangeFloat]],
-        stds: Optional[Sequence[TypeRangeFloat]],
+    labels: Sequence[int],
+    means: Optional[Sequence[TypeRangeFloat]],
+    stds: Optional[Sequence[TypeRangeFloat]],
 ) -> None:
     num_labels = len(labels)
     if means is not None:

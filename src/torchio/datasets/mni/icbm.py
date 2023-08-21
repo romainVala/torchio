@@ -32,8 +32,8 @@ class ICBM2009CNonlinearSymmetric(SubjectMNI):
         >>> icbm = tio.datasets.ICBM2009CNonlinearSymmetric(load_4d_tissues=False)
         >>> icbm
         ICBM2009CNonlinearSymmetric(Keys: ('t1', 'eyes', 'face', 'brain', 't2', 'pd', 'gm', 'wm', 'csf'); images: 9)
+    """  # noqa: B950
 
-    """  # noqa: E501
     def __init__(self, load_4d_tissues: bool = True):
         self.name = 'mni_icbm152_nlin_sym_09c_nifti'
         self.url_base = 'http://www.bic.mni.mcgill.ca/~vfonov/icbm/2009/'
@@ -76,7 +76,8 @@ class ICBM2009CNonlinearSymmetric(SubjectMNI):
         }
         if load_4d_tissues:
             subject_dict['tissues'] = LabelMap(
-                tissues_path, channels_last=True,
+                tissues_path,
+                channels_last=True,
             )
         else:
             subject_dict['gm'] = LabelMap(f'{p}_gm_{m}{s}')

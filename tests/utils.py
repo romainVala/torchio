@@ -10,14 +10,12 @@ from typing import Sequence
 from typing import Set
 
 import numpy as np
+import pytest
 import torch
 import torchio as tio
-from numpy.testing import assert_array_almost_equal
-from numpy.testing import assert_array_equal
 
 
 class TorchioTestCase(unittest.TestCase):
-
     def setUp(self):
         """Set up test fixtures, if any."""
         self.dir = Path(tempfile.gettempdir()) / os.urandom(24).hex()
@@ -25,12 +23,14 @@ class TorchioTestCase(unittest.TestCase):
         random.seed(42)
         np.random.seed(42)
 
-        registration_matrix = np.array([
-            [1, 0, 0, 10],
-            [0, 1, 0, 0],
-            [0, 0, 1.2, 0],
-            [0, 0, 0, 1],
-        ])
+        registration_matrix = np.array(
+            [
+                [1, 0, 0, 10],
+                [0, 1, 0, 0],
+                [0, 0, 1.2, 0],
+                [0, 0, 0, 1],
+            ]
+        )
 
         subject_a = tio.Subject(
             t1=tio.ScalarImage(self.get_image_path('t1_a')),
@@ -107,7 +107,7 @@ class TorchioTestCase(unittest.TestCase):
         return subject
 
     def get_reference_image_and_path(self):
-        """Return a reference image and its path"""
+        """Return a reference image and its path."""
         path = self.get_image_path(
             'ref',
             shape=(10, 20, 31),
@@ -124,7 +124,9 @@ class TorchioTestCase(unittest.TestCase):
             ),
             label=tio.LabelMap(
                 self.get_image_path(
-                    'label_d2', binary=False, components=components,
+                    'label_d2',
+                    binary=False,
+                    components=components,
                 ),
             ),
         )
@@ -133,7 +135,8 @@ class TorchioTestCase(unittest.TestCase):
         return tio.Subject(
             label=tio.LabelMap(
                 self.get_image_path(
-                    'label_multi', labels=labels,
+                    'label_multi',
+                    labels=labels,
                 ),
             ),
         )
@@ -157,16 +160,16 @@ class TorchioTestCase(unittest.TestCase):
         return tio.datasets.IXITiny(root_dir, download=True)
 
     def get_image_path(
-            self,
-            stem,
-            binary=False,
-            labels=None,
-            shape=(10, 20, 30),
-            spacing=(1, 1, 1),
-            components=1,
-            add_nans=False,
-            suffix=None,
-            force_binary_foreground=True,
+        self,
+        stem,
+        binary=False,
+        labels=None,
+        shape=(10, 20, 30),
+        spacing=(1, 1, 1),
+        components=1,
+        add_nans=False,
+        suffix=None,
+        force_binary_foreground=True,
     ):
         shape = (*shape, 1) if len(shape) == 2 else shape
         data = np.random.rand(components, *shape)
@@ -209,21 +212,30 @@ class TorchioTestCase(unittest.TestCase):
     def get_tests_data_dir(self):
         return Path(__file__).parent / 'image_data'
 
-    def assertTensorNotEqual(self, *args, **kwargs):  # noqa: N802
-        message_kwarg = {'msg': args[2]} if len(args) == 3 else {}
-        with self.assertRaises(AssertionError, **message_kwarg):
-            self.assertTensorEqual(*args, **kwargs)
+    def assert_tensor_not_equal(self, *args, **kwargs):  # noqa: N802
+        with pytest.raises(AssertionError):
+            self.assert_tensor_equal(*args, **kwargs)
 
     @staticmethod
-    def assertTensorEqual(*args, **kwargs):  # noqa: N802
-        assert_array_equal(*args, **kwargs)
+    def assert_tensor_equal(*args, **kwargs):  # noqa: N802
+        torch.testing.assert_close(
+            *args,
+            rtol=0,
+            atol=0,
+            check_dtype=False,
+            **kwargs,
+        )
 
     @staticmethod
-    def assertTensorAlmostEqual(*args, **kwargs):  # noqa: N802
-        assert_array_almost_equal(*args, **kwargs)
+    def assert_tensor_almost_equal(*args, **kwargs):  # noqa: N802
+        torch.testing.assert_close(
+            *args,
+            **kwargs,
+            check_dtype=False,
+        )
 
     @staticmethod
-    def assertTensorAllZeros(tensor):  # noqa: N802
+    def assert_tensor_all_zeros(tensor):  # noqa: N802
         assert torch.all(tensor == 0)
 
     def get_large_composed_transform(self):
@@ -240,9 +252,7 @@ class TorchioTestCase(unittest.TestCase):
 
 def get_all_random_transforms():
     transforms_names = [
-        name
-        for name in dir(tio.transforms)
-        if name.startswith('Random')
+        name for name in dir(tio.transforms) if name.startswith('Random')
     ]
     classes = [getattr(tio.transforms, name) for name in transforms_names]
     return classes

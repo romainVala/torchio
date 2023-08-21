@@ -35,13 +35,13 @@ class Clamp(IntensityTransform):
         ct_clamped = clamp(ct)
         subject.add_image(ct_clamped, 'Clamped')
         subject.plot()
-
     """
+
     def __init__(
-            self,
-            out_min: Optional[float] = None,
-            out_max: Optional[float] = None,
-            **kwargs
+        self,
+        out_min: Optional[float] = None,
+        out_max: Optional[float] = None,
+        **kwargs,
     ):
         super().__init__(**kwargs)
         self.out_min, self.out_max = out_min, out_max
