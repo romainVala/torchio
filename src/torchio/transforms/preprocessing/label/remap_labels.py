@@ -144,7 +144,7 @@ class RemapLabels(LabelTransform):
     ):
         super().__init__(**kwargs)
         self.kwargs = kwargs
-        self.remapping = remapping
+        self.remapping = {int(key): int(value) for key,value in remapping.items()} #force dict to be int for keys and values
         self.masking_method = masking_method
         self.new_key = new_key
         self.args_names = ['remapping', 'masking_method']
@@ -152,13 +152,16 @@ class RemapLabels(LabelTransform):
     def apply_transform(self, subject):
         for name, image in self.get_images_dict(subject).items():
             if image.data.shape[0] > 1 : #4d label, either one hot, or Partial Volume
-                original_label_set = set([str(ii) for ii in range(0,image.data.shape[0])])
+                original_label_set = set([int(ii) for ii in range(0,image.data.shape[0])])
             else:
-                original_label_set = set([str(int(ii)) for ii in image.data.int().unique().tolist()])
+                #original_label_set = set([str(int(ii)) for ii in image.data.int().unique().tolist()])
+                original_label_set = set(image.data.int().unique().tolist()) #adding casting to int because unique is not defind for half precision float
+
             source_label_set = set(self.remapping.keys())
             # Do nothing if no keys in the mapping are found in the image
             if not source_label_set.intersection(original_label_set):
-                print('WARNIGN skiping remap because impossible mapping')
+                print('WARNIGN skiping remap because mapping keys are not in the label values')
+                ppp
                 continue
             new_data = image.data.clone()
             mask = self.get_mask_from_masking_method(
@@ -168,12 +171,13 @@ class RemapLabels(LabelTransform):
             )
             if image.data.shape[0] > 1 : #4d label, either one hot, or Partial Volume
                 import torch
-                remap_list = [(int(k), v) for k, v in self.remapping.items()] # int because with json, dict keys must be a string
+                #remap_list = [(int(k), v) for k, v in self.remapping.items()] # int because with json, dict keys must be a string
+                remap_list = list(self.remapping.items())
                 remap_list.sort(key=lambda x:x[1]) #sort with increasing new_id
                 max_new_id = torch.tensor(remap_list)[:,1].max() + 1
                 max_old_id = torch.tensor(remap_list)[:,0].max()
                 if max_old_id > image.data.shape[0]:
-                    print('warning bad mappin skiping remap label')
+                    print(f' the key value {max_old_id} is not present in 4D data (shape is {image.data.shape[0]} ) ')
                     continue
                 new_data = torch.zeros([max_new_id]+list(image.data.shape[1:]))
                 for old_id, new_id in remap_list:
@@ -185,7 +189,7 @@ class RemapLabels(LabelTransform):
                     subject.add_image(new_image, self.new_key)
             else:
                 for old_id, new_id in self.remapping.items():
-                    new_data[mask & (image.data == int(old_id))] = int(new_id)
+                    new_data[mask & (image.data == old_id)] = new_id
                 image.set_data(new_data)
         return subject
 
