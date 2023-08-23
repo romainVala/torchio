@@ -20,7 +20,7 @@ from .spatial.to_canonical import ToCanonical
 #romainadd
 from .spatial.coregister import Coregister
 from .intensity.apply_mask import ApplyMask
-
+from .label.random_fusion_labels_sets import RandomFusionLabels
 
 __all__ = [
     'Pad',
@@ -43,5 +43,6 @@ __all__ = [
     'SequentialLabels',
     'KeepLargestComponent',
     'Coregister',
-    'ApplyMask'
+    'ApplyMask',
+    'RandomFusionLabels',
 ]
