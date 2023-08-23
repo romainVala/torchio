@@ -58,7 +58,10 @@ class RandomFusionLabels(LabelTransform):
             for ii, val in reversed(list(enumerate(mixing_index))):
                 if val not in original_label_values:
                     mixing_index.pop(ii)
-            
+            if len(mixing_index)==0:
+                print(f'no label fusion for {image.path}')
+                continue
+
             #random split into len(output_label_set) set            
             #shuffle
             mixing_index = torch.tensor(mixing_index)
