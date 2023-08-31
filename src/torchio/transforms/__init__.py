@@ -29,6 +29,7 @@ from .augmentation.intensity import RandomGhosting, Ghosting
 from .augmentation.intensity import RandomBiasField, BiasField
 from .augmentation.intensity import RandomLabelsToImage, LabelsToImage
 from .augmentation.intensity import RandomMotionFromTimeCourse, MotionFromTimeCourse
+from .augmentation.intensity import RandomConv
 
 # Preprocessing
 from .preprocessing import Pad
@@ -115,4 +116,5 @@ __all__ = [
     'Coregister',
     'RandomCropOrPad',
     'RandomFusionLabels',
+    'RandomConv'
 ]
