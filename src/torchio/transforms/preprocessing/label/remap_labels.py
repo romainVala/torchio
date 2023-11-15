@@ -140,6 +140,7 @@ class RemapLabels(LabelTransform):
             remapping: Dict[int, int],
             masking_method: TypeMaskingMethod = None,
             new_key=None,
+            suj_regex=None,
             **kwargs
     ):
         super().__init__(**kwargs)
@@ -147,10 +148,16 @@ class RemapLabels(LabelTransform):
         self.remapping = {int(key): int(value) for key,value in remapping.items()} #force dict to be int for keys and values
         self.masking_method = masking_method
         self.new_key = new_key
+        self.suj_regex = suj_regex
         self.args_names = ['remapping', 'masking_method']
 
     def apply_transform(self, subject):
+        if self.suj_regex:
+            if self.suj_regex not in subject['name'] :
+                return subject
+
         for name, image in self.get_images_dict(subject).items():
+
             if image.data.shape[0] > 1 : #4d label, either one hot, or Partial Volume
                 original_label_set = set([int(ii) for ii in range(0,image.data.shape[0])])
             else:
@@ -174,12 +181,18 @@ class RemapLabels(LabelTransform):
                 #remap_list = [(int(k), v) for k, v in self.remapping.items()] # int because with json, dict keys must be a string
                 remap_list = list(self.remapping.items())
                 remap_list.sort(key=lambda x:x[1]) #sort with increasing new_id
-                max_new_id = torch.tensor(remap_list)[:,1].max() + 1
                 max_old_id = torch.tensor(remap_list)[:,0].max()
                 if max_old_id > image.data.shape[0]:
                     print(f' the key value {max_old_id} is not present in 4D data (shape is {image.data.shape[0]} ) ')
                     continue
-                new_data = torch.zeros([max_new_id]+list(image.data.shape[1:]))
+
+                new_data = torch.zeros(list(image.data.shape))
+                #bug fix keep same size and untouche label extend remap to assign all
+                remap_all = {i:i for i in range(image.data.shape[0])}
+                for old_id, new_id in remap_list:
+                    remap_all[old_id] = new_id
+                remap_list = list(remap_all.items())
+
                 for old_id, new_id in remap_list:
                     new_data[new_id,::] += image.data[old_id,::]
                 if self.new_key is None:
