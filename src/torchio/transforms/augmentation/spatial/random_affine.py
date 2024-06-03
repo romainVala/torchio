@@ -117,7 +117,7 @@ class RandomAffine(RandomTransform, SpatialTransform):
             isotropic: bool = False,
             center: str = 'image',
             default_pad_value: Union[str, float] = 'minimum',
-            default_pad_label: int = -1,
+            default_pad_label: int = 0,
             image_interpolation: str = 'linear',
             label_interpolation: str = 'nearest',
             check_shape: bool = True,
@@ -397,6 +397,8 @@ class Affine(SpatialTransform):
                 indd =  im_res.sum(dim=0) < 0.5
                 im_res[self.default_pad_label,indd] = 1
                 image.set_data(im_res)
+                print(f'RdAff, 4D labels seting {indd.sum()} vox to backgroug index default pad label {self.default_pad_label}')
+
             else:
                 image.set_data(torch.stack(transformed_tensors))
         return subject
