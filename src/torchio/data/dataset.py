@@ -169,6 +169,7 @@ class SubjectsDataset(Dataset):
             subject = self._transform(subject)
 
         if self.save_to_dir is not None:
+            import os
             res_dir = self.save_to_dir
             fname = 'subjectel'.format(index)
             if 'image_orig' in subject: subject.pop('image_orig')
