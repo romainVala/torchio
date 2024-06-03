@@ -182,11 +182,12 @@ class RemapLabels(LabelTransform):
                 remap_list = list(self.remapping.items())
                 remap_list.sort(key=lambda x:x[1]) #sort with increasing new_id
                 max_old_id = torch.tensor(remap_list)[:,0].max()
+                max_new_id = torch.tensor(remap_list)[:,1].max()
                 if max_old_id > image.data.shape[0]:
                     print(f' the key value {max_old_id} is not present in 4D data (shape is {image.data.shape[0]} ) ')
                     continue
-
-                new_data = torch.zeros(list(image.data.shape))
+                new_size = list(image.data.shape); new_size[0] = max_new_id+1
+                new_data = torch.zeros(new_size)
                 #bug fix keep same size and untouche label extend remap to assign all
                 remap_all = {i:i for i in range(image.data.shape[0])}
                 for old_id, new_id in remap_list:
