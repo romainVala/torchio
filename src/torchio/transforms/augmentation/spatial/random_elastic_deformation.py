@@ -293,7 +293,7 @@ class ElasticDeformation(SpatialTransform):
                 indd =  im_res.sum(dim=0) < 0.5
                 im_res[0,indd] = 1 #totdo should be a parameter like self.default_pad_label
                 image.set_data(im_res)
-                print(f'RdElast, 4D labels seting {indd.sum()} vox to backgroug index 0')
+                #print(f'RdElast, 4D labels seting {indd.sum()} vox to backgroug index 0')
             else:
                 image.set_data(transformed)
         return subject
