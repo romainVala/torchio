@@ -314,6 +314,10 @@ def nib_to_sitk(
     if not is_multichannel and not force_4d:
         array = array[0]
     array = array.transpose()  # (W, H, D, C) or (W, H, D)
+
+    if array.dtype==np.float16: # load from dir with apex  ??? to check ???
+        array = array.astype(np.float32)
+
     image = sitk.GetImageFromArray(array, isVector=is_multichannel)
 
     origin, spacing, direction = get_sitk_metadata_from_ras_affine(
