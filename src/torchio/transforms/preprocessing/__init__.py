@@ -18,7 +18,7 @@ from .spatial.resample import Resample
 from .spatial.resize import Resize
 from .spatial.to_canonical import ToCanonical
 #romainadd
-from .spatial.coregister import Coregister
+# from .spatial.coregister import Coregister   #need SimpleITK from simple elastix
 from .intensity.apply_mask import ApplyMask
 from .label.random_fusion_labels_sets import RandomFusionLabels
 

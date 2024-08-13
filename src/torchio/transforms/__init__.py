@@ -53,7 +53,7 @@ from .preprocessing import RemapLabels
 from .preprocessing import RemoveLabels
 from .preprocessing import SequentialLabels
 from .preprocessing import KeepLargestComponent
-from .preprocessing import Coregister
+#from .preprocessing import Coregister
 from .preprocessing import RandomFusionLabels
 
 __all__ = [
@@ -113,7 +113,7 @@ __all__ = [
     'RemoveLabels',
     'SequentialLabels',
     'KeepLargestComponent',
-    'Coregister',
+    #'Coregister',
     'RandomCropOrPad',
     'RandomFusionLabels',
     'RandomConv'
