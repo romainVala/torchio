@@ -98,6 +98,7 @@ class SubjectsDataset(Dataset):
             if sujtio_filepath.endswith('.pt'):
                 subject = torch.load(f'{sujtio_dir}/{sujtio_filepath}')
             else:
+                #TODO with with tarfile.open(filename_tar, "r") as tar:    suj = torch.load(tar.extractfile(filename_torch))
                 cmd = f'cd {sujtio_dir}; tar -xzf {sujtio_filepath}'
                 os.system(cmd)
                 subject = torch.load(f'{sujtio_dir}/{sujtio_filepath[:-7]}')
