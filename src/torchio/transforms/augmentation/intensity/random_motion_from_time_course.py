@@ -122,7 +122,7 @@ class RandomMotionFromTimeCourse(RandomTransform, IntensityTransform):
             self.euler_motion_params = None
             self.simulate_displacement = True
         else:
-            self.euler_motion_params = read_euler_motion_params(euler_motion_params)
+            self.euler_motion_params = self.read_euler_motion_params(euler_motion_params)
             self.simulate_displacement = False
         self.oversampling_pct = oversampling_pct
         self.to_subtract = None
@@ -279,7 +279,7 @@ class RandomMotionFromTimeCourse(RandomTransform, IntensityTransform):
         self.euler_motion_params = euler_motion_params
 
 
-    def read_euler_motion_params(euler_motion_params):
+    def read_euler_motion_params(self,euler_motion_params):
         '''
         :param euler_motion_params:
         '''
@@ -302,7 +302,7 @@ class RandomMotionFromTimeCourse(RandomTransform, IntensityTransform):
             fpars = fpars[:, :-1]
             if np.any(np.isnan(fpars)):
                 warnings.warn('There is still NaN in the euler_motion_params, it will crash the nufft')
-
+        return fpars
 
     def _rand_uniform(self, min=0.0, max=1.0, shape=1):
         rand = torch.FloatTensor(shape).uniform_(min, max)
@@ -442,7 +442,15 @@ class MotionFromTimeCourse(IntensityTransform, FourierTransform):
         elastixImageFilter.SetMovingImage(i1)
         elastixImageFilter.SetParameterMap(sitk.GetDefaultParameterMap("rigid"))
         elastixImageFilter.LogToConsoleOff()
-        elastixImageFilter.Execute()
+        try:
+            elastixImageFilter.Execute()
+        except Exception as e:
+            print(e)
+            print("TODO elastix bug, return origg")
+
+            return img_src
+            # Logs the error appropriately.
+
 
         reslice_img = np.transpose(sitk.GetArrayFromImage(elastixImageFilter.GetResultImage()))
 
